@@ -2,6 +2,7 @@ import copy
 import inspect
 
 
+
 from binaryninja import (
     core_version,
     log_info,
@@ -129,19 +130,47 @@ class Gproxy:
         addr = int(address, 0)
         start_addr = self.view.get_previous_function_start_before(addr)
         func = self.view.get_function_at(start_addr)
+
+        log_info("%s" %start_addr)
         return func.set_comment(addr, comment)
 
     @expose
     def setcolor(self, address, color='0xff0000'):
         """ setcolor(int addr [, int color]) => None
         Set the location pointed by `address` with `color`.
-        Example: binaryninja setcolor 0x40000 0xff0000
+        Example: cmdcolor 0x40000 0xff0000
         """
         addr = int(address, 0)
         color = int(color, 0)
         R,G,B = (color >> 16)&0xff, (color >> 8)&0xff, (color&0xff)
         color = highlight.HighlightColor(red=R, blue=G, green=B)
         return self.highlight(addr, color)
+
+    @expose
+    def setcolorblock(self, color):
+        """
+        Example: cmdcolorblock
+        Example: cmdcolorblock 0xff0000
+        """
+
+        if color == '':
+            color = '0xff0000'
+
+        addr = self.view.offset
+        bbs = self.view.get_basic_blocks_at(addr)
+
+        if (bbs):
+            color = int(color, 0)
+            R,G,B = (color >> 16)&0xff, (color >> 8)&0xff, (color&0xff)
+            color = highlight.HighlightColor(red=R, blue=G, green=B)
+
+            bb = bbs[0]
+            bb.highlight = color
+
+            return True
+        else:
+            return False
+
 
     @expose
     def sync(self, off, added, removed):

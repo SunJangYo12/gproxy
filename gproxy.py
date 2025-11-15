@@ -1,6 +1,13 @@
 import copy
 import inspect
 
+from .ui import (
+    ui_sync_view,
+    ui_reset_view,
+    enable_widgets,
+    disable_widgets,
+    ui_set_arch
+)
 
 
 from binaryninja import (
@@ -106,6 +113,17 @@ class Gproxy:
         Example: binaryninja version
         """
         return self._version
+
+
+
+    @expose
+    def recv_register(self):
+        #ui_sync_view()
+        enable_widgets()
+
+        return True
+
+
 
     @expose
     def jump(self, address):

@@ -1,10 +1,6 @@
-# from binaryninja import *
-#
-
 import socket
 import threading
 import xmlrpc.server, xmlrpc.client
-
 
 
 from binaryninja import (
@@ -14,6 +10,7 @@ from binaryninja import (
     MessageBoxButtonSet,
     MessageBoxIcon,
 )
+from binaryninjaui import DockHandler
 
 from .helpers import (
     info,
@@ -76,6 +73,10 @@ def register_gef_breakpoint_menu():
         is_valid = lambda view, addr: is_service_started()
     )
     return
+
+
+
+
 
 
 def start_service(host, port, bv):
@@ -143,6 +144,8 @@ def gef_stop(bv):
         MessageBoxIcon.InformationIcon
     )
     return
+
+
 
 
 PluginCommand.register(

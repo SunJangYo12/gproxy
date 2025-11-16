@@ -123,6 +123,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
         # contoh action umum
         menu.addAction("Copy")
+        menu.addAction("Move to stashed")
         menu.addAction("History bbl_addr")
         menu.addAction("History descrip")
         menu.addAction("History jumpkind")
@@ -151,6 +152,13 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
+
+        elif action == "Move to stashed":
+            target_state = state[index_child]
+            GLOBAL.simgr.move(from_stash=key, to_stash="stashed", filter_func=lambda s: s is target_state)
+
+            printf("state is moved, please refresh UI")
+
 
         elif action == "History bbl_addr":
             history = history_perstate.history.bbl_addrs

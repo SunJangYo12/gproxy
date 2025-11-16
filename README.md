@@ -34,18 +34,27 @@ start server setelah address di binaryninja di rebase
 
 test generate state
 ```python
+
+
 import angr
 proj = angr.Project(bv.file.filename)
 state = proj.factory.entry_state(stdin=angr.SimFile)
 simgr = proj.factory.simgr(state)
 while len(simgr.active) == 1:
 	simgr.step()
+
+
 ```
 
-send from console binaryninja to UI
+After import angr and generate state in console paste this for UI consumer
 ```python
+
+
 from gproxy.data_global import GLOBAL, SIGNALS
 
 GLOBAL.stashes = simgr.stashes
+GLOBAL.simgr = simgr
 SIGNALS.state_updated.emit()
+
+
 ```

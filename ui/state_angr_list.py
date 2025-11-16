@@ -63,19 +63,23 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
     def refresh_from_global(self):
         self.tree_widget.clear()
+        self.tree_parent = []
+        self.tree_child = []
 
         font = getMonospaceFont(self)
 
         for stash_name, states in GLOBAL.stashes.items():
             parent = QTreeWidgetItem(self.tree_widget)
+            self.tree_parent.append(parent)
+
             parent.setText(0, "%s %s" % (stash_name, str(len(states)) ) )
             parent.setFont(0, font)
-
-            #parent.setSizeHint(0, QSize(0, 26))
 
             # Tambahkan child setiap state
             for st in states:
                 child = QTreeWidgetItem(parent)
+                self.tree_child.append(child)
+
                 child.setText(0, hex(st.addr))
 
                 child.setFont(0, font)
@@ -105,7 +109,6 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
     def on_item_double_clicked(self, item, column):
         addr = int(item.text(column), 0)
-
         print("jump to:", addr)
 
         self.bv.offset = addr
@@ -119,14 +122,9 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
         menu = QMenu()
 
         # contoh action umum
-        menu.addAction("Copy Name")
-        menu.addAction("Copy Value")
+        menu.addAction("Copy")
+        menu.addAction("History")
 
-        # contoh: jika item punya children (group)
-        if item.childCount() > 0:
-            menu.addSeparator()
-            menu.addAction("Expand All")
-            menu.addAction("Collapse All")
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
         if action:
@@ -134,21 +132,30 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
 
     def handle_tree_action(self, action, item):
-        if action == "Copy Name":
+        if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
 
-        elif action == "Copy Value":
-            QApplication.clipboard().setText(item.text(1))
+        elif action == "History":
+            parent = item.parent()
+            key_raw = parent.text(0).split(" ")
 
-        elif action == "Expand All":
-            item.setExpanded(True)
-            for i in range(item.childCount()):
-                item.child(i).setExpanded(True)
+            #active, unsat, etc
+            key = key_raw[0]
+            index_child = parent.indexOfChild(item)
 
-        elif action == "Collapse All":
-            item.setExpanded(False)
-            for i in range(item.childCount()):
-                item.child(i).setExpanded(False)
+            state = GLOBAL.simgr.stashes[key]
 
+            history_perstate = state[index_child]
+            history = history_perstate.history.bbl_addrs
 
+            print(len(history))
+
+            font = getMonospaceFont(self)
+            for hs in history:
+                child1 = QTreeWidgetItem(self.tree_child[index_child])
+
+                child1.setText(0, hex(hs))
+                child1.setFont(0, font)
+
+            self.tree_child[index_child].setText(0, "%s history %s" % (item.text(0), len(history) ))
 

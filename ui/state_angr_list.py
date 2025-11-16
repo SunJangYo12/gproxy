@@ -123,7 +123,10 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
         # contoh action umum
         menu.addAction("Copy")
-        menu.addAction("History")
+        menu.addAction("History bbl_addr")
+        menu.addAction("History descrip")
+        menu.addAction("History jumpkind")
+        menu.addAction("History events")
 
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
@@ -132,30 +135,61 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
 
     def handle_tree_action(self, action, item):
+        font = getMonospaceFont(self)
+        parent = item.parent()
+        key_raw = parent.text(0).split(" ")
+
+        #active, unsat, etc
+        key = key_raw[0]
+        index_child = parent.indexOfChild(item)
+
+        state = GLOBAL.simgr.stashes[key]
+
+        history_perstate = state[index_child]
+        print("%s %d" % (key, index_child ))
+
+
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
 
-        elif action == "History":
-            font = getMonospaceFont(self)
-            parent = item.parent()
-            key_raw = parent.text(0).split(" ")
-
-            #active, unsat, etc
-            key = key_raw[0]
-            index_child = parent.indexOfChild(item)
-
-            state = GLOBAL.simgr.stashes[key]
-
-            history_perstate = state[index_child]
+        elif action == "History bbl_addr":
             history = history_perstate.history.bbl_addrs
-
-            print("%s %d" % (key, index_child ))
 
             for hs in history:
                 child1 = QTreeWidgetItem(self.tree_child[index_child])
 
                 child1.setText(0, hex(hs))
                 child1.setFont(0, font)
+            self.tree_child[index_child].setText(0, "%s bbl %s" % (item.text(0), len(history) ))
 
-            self.tree_child[index_child].setText(0, "%s history %s" % (item.text(0), len(history) ))
+
+        elif action == "History descrip":
+            des = history_perstate.history.descriptions
+
+            for hs in des:
+                child1 = QTreeWidgetItem(self.tree_child[index_child])
+
+                child1.setText(0, hs)
+                child1.setFont(0, font)
+            self.tree_child[index_child].setText(0, "%s descrip %s" % (item.text(0), len(des) ))
+
+        elif action == "History jumpkind":
+            jumpk = history_perstate.history.jumpkinds
+
+            for hs in jumpk:
+                child1 = QTreeWidgetItem(self.tree_child[index_child])
+
+                child1.setText(0, hs)
+                child1.setFont(0, font)
+            self.tree_child[index_child].setText(0, "%s jumpkind %s" % (item.text(0), len(jumpk) ))
+
+        elif action == "History events":
+            events = history_perstate.history.events
+
+            for hs in events:
+                child1 = QTreeWidgetItem(self.tree_child[index_child])
+
+                child1.setText(0, "%s" %hs)
+                child1.setFont(0, font)
+            self.tree_child[index_child].setText(0, "%s events %s" % (item.text(0), len(events) ))
 

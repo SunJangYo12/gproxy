@@ -1,5 +1,7 @@
 Brigde gdb, binaryninja and angr for binary analyses
 
+![](Screenshot_2025-11-16_10-08-31.png)
+
 
 # Requirenment
 binaryninja 2.0...

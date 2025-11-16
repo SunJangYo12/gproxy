@@ -52,7 +52,6 @@ After import angr and generate state in console paste this for UI consumer
 
 from gproxy.data_global import GLOBAL, SIGNALS
 
-GLOBAL.stashes = simgr.stashes
 GLOBAL.simgr = simgr
 SIGNALS.state_updated.emit()
 

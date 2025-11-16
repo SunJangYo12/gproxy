@@ -68,7 +68,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
         font = getMonospaceFont(self)
 
-        for stash_name, states in GLOBAL.stashes.items():
+        for stash_name, states in GLOBAL.simgr.stashes.items():
             parent = QTreeWidgetItem(self.tree_widget)
             self.tree_parent.append(parent)
 
@@ -136,6 +136,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
             QApplication.clipboard().setText(item.text(0))
 
         elif action == "History":
+            font = getMonospaceFont(self)
             parent = item.parent()
             key_raw = parent.text(0).split(" ")
 
@@ -148,9 +149,8 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
             history_perstate = state[index_child]
             history = history_perstate.history.bbl_addrs
 
-            print(len(history))
+            print("%s %d" % (key, index_child ))
 
-            font = getMonospaceFont(self)
             for hs in history:
                 child1 = QTreeWidgetItem(self.tree_child[index_child])
 

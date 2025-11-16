@@ -7,6 +7,7 @@ Brigde gdb, binaryninja and angr for binary analyses
 ```
 binaryninja 2.0...
 gdb 9
+angr 9.2.102
 ```
 
 # Usage
@@ -22,8 +23,9 @@ mencocokan alamat gdb ke binaryninja
 (gdb) info proc mappings 
           Start Addr           End Addr       Size     Offset objfile
       0x555555554000 
+
+4). binaryninja: file > rebase > 0x555555554000
 ```
-binaryninja: file > rebase > 0x555555554000
 
 # Tips
 start server setelah address di binaryninja di rebase

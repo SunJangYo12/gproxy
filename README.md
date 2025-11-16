@@ -1,3 +1,6 @@
+Brigde gdb, binaryninja and angr for binary analyses
+
+
 # Requirenment
 binaryninja 2.0...
 gdb 9
@@ -20,3 +23,20 @@ binaryninja: file > rebase > 0x555555554000
 
 # Tips
 start server setelah address di binaryninja di rebase
+
+
+
+
+
+import angr
+proj = angr.Project(bv.file.filename)
+state = proj.factory.entry_state(stdin=angr.SimFile)
+simgr = proj.factory.simgr(state)
+while len(simgr.active) == 1:
+	simgr.step()
+
+
+from gproxy.data_global import GLOBAL, SIGNALS
+
+GLOBAL.stashes = simgr.stashes
+SIGNALS.state_updated.emit()

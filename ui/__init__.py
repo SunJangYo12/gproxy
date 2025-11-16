@@ -1,44 +1,25 @@
 from PySide2.QtWidgets import QApplication
 from binaryninjaui import DockHandler, UIAction, UIActionHandler, Menu
 from PySide2.QtCore import Qt
-from .registers_view import RegisterView
 from .registers_gdb import RegGdbDockWidget
+from .state_angr_list import StateAngrListDockWidget
 
 
 RW = None
 HW = None
-
-
-def _get_registerview_widget(name, parent, data):
-    global RW
-    RW = RegisterView(parent, name, data)
-    RW.setEnabled(False)
-
-    return RW
-
-def _registerDynamicWidgets():
-    dock_handler = DockHandler.getActiveDockHandler()
-    dock_handler.addDockWidget(
-        "Gproxy zzzzzzzzz",
-        _get_registerview_widget,
-        Qt.RightDockWidgetArea,
-        Qt.Vertical,
-        False
-    )
-
+ALIST = None
 
 
 def _get_registergdb_widget(name, parent, data):
     global HW
     HW = RegGdbDockWidget(parent, name, data)
-    HW.setEnabled(False)
 
     return HW
 
 def _registerGdbDynamicWidgets():
     dock_handler = DockHandler.getActiveDockHandler()
     dock_handler.addDockWidget(
-        "Gproxy Gdb Registers",
+        "Gproxy => gdb registers",
         _get_registergdb_widget,
         Qt.RightDockWidgetArea,
         Qt.Vertical,
@@ -46,7 +27,22 @@ def _registerGdbDynamicWidgets():
     )
 
 
+def _get_angrstate_widget(name, parent, data):
+    global ALIST
+    ALIST = StateAngrListDockWidget(parent, name, data)
+#    ALIST.setEnabled(False)
 
+    return ALIST
+
+def _registerAngrListWidgets():
+    dock_handler = DockHandler.getActiveDockHandler()
+    dock_handler.addDockWidget(
+        "Gproxy => state list",
+        _get_angrstate_widget,
+        Qt.RightDockWidgetArea,
+        Qt.Vertical,
+        False
+    )
 
 
 def enable_widgets():
@@ -80,6 +76,5 @@ def ui_reset_view():
     RW.reset()
 
 
-_registerDynamicWidgets()
 _registerGdbDynamicWidgets()
-
+_registerAngrListWidgets()

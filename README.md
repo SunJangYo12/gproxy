@@ -4,11 +4,13 @@ Brigde gdb, binaryninja and angr for binary analyses
 
 
 # Requirenment
+```
 binaryninja 2.0...
 gdb 9
-
+```
 
 # Usage
+```
 1). copy this directory in binaryninja plugin path
 2). gdb ./a.out
     (gdb) source /gproxy/gdbinit.py
@@ -20,7 +22,7 @@ mencocokan alamat gdb ke binaryninja
 (gdb) info proc mappings 
           Start Addr           End Addr       Size     Offset objfile
       0x555555554000 
-
+```
 binaryninja: file > rebase > 0x555555554000
 
 # Tips
@@ -28,17 +30,20 @@ start server setelah address di binaryninja di rebase
 
 
 
-
-
+test generate state
+```python
 import angr
 proj = angr.Project(bv.file.filename)
 state = proj.factory.entry_state(stdin=angr.SimFile)
 simgr = proj.factory.simgr(state)
 while len(simgr.active) == 1:
 	simgr.step()
+```
 
-
+send from console binaryninja to UI
+```python
 from gproxy.data_global import GLOBAL, SIGNALS
 
 GLOBAL.stashes = simgr.stashes
 SIGNALS.state_updated.emit()
+```

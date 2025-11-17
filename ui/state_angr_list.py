@@ -14,7 +14,8 @@ from PySide2.QtWidgets import (
      QDialog,
      QLabel,
      QPushButton,
-     QComboBox
+     QComboBox,
+     QCheckBox
 )
 from ..data_global import SIGNALS, GLOBAL
 
@@ -32,7 +33,7 @@ class StepThread(QThread):
         self._run = False
         print("thread stop")
 
-    def run(self):
+    def run_branch(self):
         counter = 0
 
         while self._run:
@@ -44,6 +45,9 @@ class StepThread(QThread):
             print("[%d] Running..." % counter)
 
         self.done.emit(succ)
+
+    def run(self):
+        self.run_branch()
 
 
 class DialogStep(QDialog):
@@ -57,9 +61,21 @@ class DialogStep(QDialog):
         )
         self.setWindowModality(Qt.NonModal)
 
-
         layout = QVBoxLayout()
         font = getMonospaceFont(self)
+
+        self.label_pc = QLabel("Register PC: 0x022")
+        self.label_pc.setFont(font)
+        layout.addWidget(self.label_pc)
+
+        self.btn_step = QPushButton("Step block")
+        self.btn_step.clicked.connect(self.process_step)
+        layout.addWidget(self.btn_step)
+
+        self.chknav = QCheckBox("Auto navigation")
+        self.chknav.setChecked(False)   # default OFF
+        layout.addWidget(self.chknav)
+
 
         # LABEL
         self.label = QLabel(label)
@@ -70,6 +86,21 @@ class DialogStep(QDialog):
         self.lineedit.setFont(font)
         self.lineedit.setText("2")
         layout.addWidget(self.lineedit)
+
+        # BUTTON BAR
+        btn_layout = QHBoxLayout()
+
+        self.btn_ok = QPushButton("Branch")
+        self.btn_ok.clicked.connect(self.process)
+
+        self.btn_cancel = QPushButton("Cancel")
+        self.btn_cancel.setEnabled(False)
+        self.btn_cancel.setFont(font)
+        self.btn_cancel.clicked.connect(self.set_cancel)
+
+        btn_layout.addWidget(self.btn_ok)
+        btn_layout.addWidget(self.btn_cancel)
+        layout.addLayout(btn_layout)
 
         # LABEL
         self.label = QLabel("Result by")
@@ -94,13 +125,17 @@ class DialogStep(QDialog):
         self.resultedit.setFixedHeight(50)
         layout.addWidget(self.resultedit)
 
-        btn_move = QPushButton("Move to stash: active")
-        btn_move.setFont(font)
-        layout.addWidget(btn_move)
+        self.btn_move = QPushButton("Move to stashes: active")
+        self.btn_move.setFont(font)
+        self.btn_move.setEnabled(False)
+        layout.addWidget(self.btn_move)
 
         btn_reg = QPushButton("Show registers")
         btn_reg.setFont(font)
         layout.addWidget(btn_reg)
+        btn_buf = QPushButton("Show buffers")
+        btn_buf.setFont(font)
+        layout.addWidget(btn_buf)
 
         # LABEL
         self.labelrun = QLabel("Running...")
@@ -108,27 +143,10 @@ class DialogStep(QDialog):
         self.labelrun.hide()
         layout.addWidget(self.labelrun)
 
-
-        # BUTTON BAR
-        btn_layout = QHBoxLayout()
-
-        self.btn_ok = QPushButton("Run")
-        self.btn_ok.clicked.connect(self.process)
-
-
-        self.btn_cancel = QPushButton("Cancel")
-        self.btn_cancel.setFont(font)
-        self.btn_cancel.clicked.connect(self.set_cancel)
-
-        btn_layout.addWidget(self.btn_ok)
-        btn_layout.addWidget(self.btn_cancel)
-
-        layout.addLayout(btn_layout)
         self.setLayout(layout)
 
         self.state = state
         self.result_state = None
-        self.thread = StepThread(self.state, int(self.lineedit.text()))
 
 
     # Fungsi untuk ambil teks
@@ -138,39 +156,72 @@ class DialogStep(QDialog):
     def set_cancel(self):
         if hasattr(self, "thread"):
             self.thread.stop()
+            self.btn_cancel.setEnabled(False)
             self.btn_ok.setEnabled(True)
-
 
     def process(self):
         self.labelrun.show()
         self.btn_ok.setEnabled(False)
+        self.btn_cancel.setEnabled(True)
 
+        self.thread = StepThread(self.state, int(self.lineedit.text()))
         self.thread.done.connect(self.on_finish)
         self.thread.start()
 
-    def on_combo_text(self, text):
-        out = None
-        if text == "successors":
-            out = self.result_state.successors
-        elif text == "unsat_successors":
-            out = self.result_state.unsat_successors
-        elif text == "flat_successors":
-            out = self.result_state.flat_successors
-        elif text == "unconstrained_successors":
-            out = self.result_state.unconstrained_successors
-        elif text == "all_successors":
-            out = self.result_state.all_successors
+    def process_step(self):
+        succ = self.state.step()
+        try:
+            self.state = succ.successors[0]
+        except:
+            print("except state!")
+            return
 
-        self.resultedit.setText(repr(out))
+        print(succ)
+        self.result_state = succ
+
+        combo_index = self.combo.currentText()
+        self.on_combo_text(combo_index)
+
+        addr = hex(succ.successors[0].addr)
+        branch = len(succ.successors)
+        self.label_pc.setText("Register PC: %s [%d]" % (addr, branch))
+
+        if self.chknav.isChecked():
+            #self.view.offset = addr
+            tes = self.bv.file.filename
+            print(tes)
 
 
     def on_finish(self, object):
         self.labelrun.setText(f"Complete")
         self.btn_ok.setEnabled(True)
+        self.btn_move.setEnabled(True)
+        self.btn_cancel.setEnabled(False)
 
         self.result_state = object
 
         self.on_combo_text("successors")
+
+    def on_combo_text(self, text):
+        out = None
+        try:
+            if text == "successors":
+                out = self.result_state.successors
+            elif text == "unsat_successors":
+                out = self.result_state.unsat_successors
+            elif text == "flat_successors":
+                out = self.result_state.flat_successors
+            elif text == "unconstrained_successors":
+                out = self.result_state.unconstrained_successors
+            elif text == "all_successors":
+                out = self.result_state.all_successors
+            self.resultedit.setText(repr(out))
+        except:
+            pass
+
+        self.resultedit.setText(repr(out))
+
+
 
 
 

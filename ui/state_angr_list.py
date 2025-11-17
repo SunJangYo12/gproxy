@@ -1,6 +1,6 @@
 from binaryninjaui import DockHandler, DockContextHandler, UIActionHandler, getMonospaceFont
 from PySide2 import QtCore
-from PySide2.QtCore import Qt, QPoint, QEvent, QSize
+from PySide2.QtCore import Qt, QPoint, QEvent, QSize, QThread, Signal
 from PySide2.QtWidgets import (
      QApplication,
      QHBoxLayout,
@@ -10,15 +10,172 @@ from PySide2.QtWidgets import (
      QTreeWidget,
      QTreeWidgetItem,
      QMenu,
-     QLineEdit
+     QLineEdit,
+     QDialog,
+     QLabel,
+     QPushButton,
+     QComboBox
 )
-
 from ..data_global import SIGNALS, GLOBAL
 
 
+class StepThread(QThread):
+    done = Signal(object)
+
+    def __init__(self, state, branch):
+        super().__init__()
+        self.state = state
+        self.branch = branch
+        self._run = True
+
+    def stop(self):
+        self._run = False
+        print("thread stop")
+
+    def run(self):
+        counter = 0
+
+        while self._run:
+            succ = self.state.step()
+            counter += 1
+            if len(succ.successors) == self.branch:
+                break
+            self.state = succ.successors[0]
+            print("[%d] Running..." % counter)
+
+        self.done.emit(succ)
+
+
+class DialogStep(QDialog):
+    def __init__(self, title="Input", label="Masukkan data:", parent=None, state=None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.setWindowFlags(
+            Qt.Window |
+            Qt.WindowMinimizeButtonHint |
+            Qt.WindowCloseButtonHint
+        )
+        self.setWindowModality(Qt.NonModal)
+
+
+        layout = QVBoxLayout()
+        font = getMonospaceFont(self)
+
+        # LABEL
+        self.label = QLabel(label)
+        self.label.setFont(font)
+        layout.addWidget(self.label)
+        # TEXTBOX
+        self.lineedit = QLineEdit()
+        self.lineedit.setFont(font)
+        self.lineedit.setText("2")
+        layout.addWidget(self.lineedit)
+
+        # LABEL
+        self.label = QLabel("Result by")
+        self.label.setFont(font)
+        layout.addWidget(self.label)
+        # ComboBox
+        self.combo = QComboBox()
+        self.combo.setFont(font)
+        self.combo.addItems([
+            "successors",
+            "unsat_successors",
+            "flat_successors",
+            "unconstrained_successors",
+            "all_successors"
+        ])
+        self.combo.currentTextChanged.connect(self.on_combo_text)
+        layout.addWidget(self.combo)
+
+        # TEXTBOX
+        self.resultedit = QLineEdit()
+        self.resultedit.setFont(font)
+        self.resultedit.setFixedHeight(50)
+        layout.addWidget(self.resultedit)
+
+        btn_move = QPushButton("Move to stash: active")
+        btn_move.setFont(font)
+        layout.addWidget(btn_move)
+
+        btn_reg = QPushButton("Show registers")
+        btn_reg.setFont(font)
+        layout.addWidget(btn_reg)
+
+        # LABEL
+        self.labelrun = QLabel("Running...")
+        self.labelrun.setFont(font)
+        self.labelrun.hide()
+        layout.addWidget(self.labelrun)
+
+
+        # BUTTON BAR
+        btn_layout = QHBoxLayout()
+
+        self.btn_ok = QPushButton("Run")
+        self.btn_ok.clicked.connect(self.process)
+
+
+        self.btn_cancel = QPushButton("Cancel")
+        self.btn_cancel.setFont(font)
+        self.btn_cancel.clicked.connect(self.set_cancel)
+
+        btn_layout.addWidget(self.btn_ok)
+        btn_layout.addWidget(self.btn_cancel)
+
+        layout.addLayout(btn_layout)
+        self.setLayout(layout)
+
+        self.state = state
+        self.result_state = None
+        self.thread = StepThread(self.state, int(self.lineedit.text()))
+
+
+    # Fungsi untuk ambil teks
+    def get_text(self):
+        return self.lineedit.text()
+
+    def set_cancel(self):
+        if hasattr(self, "thread"):
+            self.thread.stop()
+            self.btn_ok.setEnabled(True)
+
+
+    def process(self):
+        self.labelrun.show()
+        self.btn_ok.setEnabled(False)
+
+        self.thread.done.connect(self.on_finish)
+        self.thread.start()
+
+    def on_combo_text(self, text):
+        out = None
+        if text == "successors":
+            out = self.result_state.successors
+        elif text == "unsat_successors":
+            out = self.result_state.unsat_successors
+        elif text == "flat_successors":
+            out = self.result_state.flat_successors
+        elif text == "unconstrained_successors":
+            out = self.result_state.unconstrained_successors
+        elif text == "all_successors":
+            out = self.result_state.all_successors
+
+        self.resultedit.setText(repr(out))
+
+
+    def on_finish(self, object):
+        self.labelrun.setText(f"Complete")
+        self.btn_ok.setEnabled(True)
+
+        self.result_state = object
+
+        self.on_combo_text("successors")
+
+
+
+
 class StateAngrListDockWidget(QWidget, DockContextHandler):
-
-
     def __init__(self, parent, name, data):
         QWidget.__init__(self, parent)
         DockContextHandler.__init__(self, self, name)
@@ -36,8 +193,6 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
         tree_widget.setColumnCount(1)
         tree_widget.headerItem().setText(0, "State List")
-        tree_widget.installEventFilter(self)
-
 
         # contoh kategori
         #reg_group = QTreeWidgetItem(["Active (12)", ""])
@@ -86,16 +241,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
 
 
-    def eventFilter(self, source, event) -> bool:
-        """Event filter to create hook management context menu"""
-        if event.type() == QEvent.ContextMenu and source is self.tree_widget:
-            pos = source.viewport().mapFromParent(event.pos())
-            item = source.itemAt(pos)
 
-            # Right clicked outside an item
-            if not item:
-                return True
-        return super().eventFilter(source, event)
 
     def shouldBeVisible(self, view_frame):
         if view_frame is None:
@@ -108,10 +254,13 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
 
     def on_item_double_clicked(self, item, column):
-        addr = int(item.text(column), 0)
-        print("jump to:", addr)
+        try:
+            addr = int(item.text(column), 0)
+            print("jump to:", hex(addr))
 
-        self.bv.offset = addr
+            self.bv.offset = addr
+        except:
+            pass
 
 
     def on_tree_context_menu(self, position: QPoint):
@@ -121,13 +270,20 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
         menu = QMenu()
 
-        # contoh action umum
-        menu.addAction("Copy")
-        menu.addAction("Move to stashed")
-        menu.addAction("History bbl_addr")
-        menu.addAction("History descrip")
-        menu.addAction("History jumpkind")
-        menu.addAction("History events")
+
+        if item.parent() is None:
+            print("Is parent")
+        elif item.parent().parent() is None:
+            menu.addAction("Copy")
+            menu.addAction("State manager")
+            menu.addAction("Taint to this")
+            menu.addAction("Move to stashed")
+            menu.addAction("History bbl_addr")
+            menu.addAction("History descrip")
+            menu.addAction("History jumpkind")
+            menu.addAction("History events")
+        elif item.parent().parent().parent() is None:
+            menu.addAction("Copy")
 
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
@@ -137,34 +293,59 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
     def handle_tree_action(self, action, item):
         font = getMonospaceFont(self)
-        parent = item.parent()
-        key_raw = parent.text(0).split(" ")
+        parent = None
+        index_child = None
+
+        if item.parent().parent() is None:
+            print("Is child")
+            parent = item.parent()
+
+        elif item.parent().parent().parent() is None:
+            print("Is child1")
+            parent = item.parent().parent()
+
+        index_child = item.parent().indexOfChild(item)
+
 
         #active, unsat, etc
+        key_raw = parent.text(0).split(" ")
         key = key_raw[0]
-        index_child = parent.indexOfChild(item)
+
+        print("key:%s index:%d" % (key, index_child ))
 
         state = GLOBAL.simgr.stashes[key]
-
         history_perstate = state[index_child]
-        print("%s %d" % (key, index_child ))
 
 
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
 
+        elif action == "State manager":
+            self.dlg = DialogStep(title="State Manager", label="Break after any branch", state=state[index_child] )
+            self.dlg.show()
+            self.dlg.raise_()
+            self.dlg.activateWindow()
+
+        elif action == "Taint to this":
+            print("Taint Wait...")
+            input_data = state[index_child].posix.stdin.load(0, state[index_child].posix.stdin.size)
+
+            out = state[index_child].solver.eval(input_data, cast_to=bytes)
+            print(out)
+
+
         elif action == "Move to stashed":
             target_state = state[index_child]
             GLOBAL.simgr.move(from_stash=key, to_stash="stashed", filter_func=lambda s: s is target_state)
 
-            printf("state is moved, please refresh UI")
+            print("state is moved, please refresh UI")
 
 
         elif action == "History bbl_addr":
             history = history_perstate.history.bbl_addrs
 
             for hs in history:
-                child1 = QTreeWidgetItem(self.tree_child[index_child])
+                child1 = QTreeWidgetItem(item)
 
                 child1.setText(0, hex(hs))
                 child1.setFont(0, font)
@@ -175,7 +356,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
             des = history_perstate.history.descriptions
 
             for hs in des:
-                child1 = QTreeWidgetItem(self.tree_child[index_child])
+                child1 = QTreeWidgetItem(item)
 
                 child1.setText(0, hs)
                 child1.setFont(0, font)
@@ -185,7 +366,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
             jumpk = history_perstate.history.jumpkinds
 
             for hs in jumpk:
-                child1 = QTreeWidgetItem(self.tree_child[index_child])
+                child1 = QTreeWidgetItem(item)
 
                 child1.setText(0, hs)
                 child1.setFont(0, font)
@@ -195,7 +376,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
             events = history_perstate.history.events
 
             for hs in events:
-                child1 = QTreeWidgetItem(self.tree_child[index_child])
+                child1 = QTreeWidgetItem(item)
 
                 child1.setText(0, "%s" %hs)
                 child1.setFont(0, font)

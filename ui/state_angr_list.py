@@ -1,5 +1,6 @@
 from binaryninjaui import DockHandler, DockContextHandler, UIActionHandler, getMonospaceFont
 from PySide2 import QtCore
+from PySide2.QtGui import QColor
 from PySide2.QtCore import Qt, QPoint, QEvent, QSize, QThread, Signal
 from PySide2.QtWidgets import (
      QApplication,
@@ -142,6 +143,10 @@ class DialogRegisters(QDialog):
         out = QTableWidgetItem(str(val))
         out.setFlags(Qt.ItemIsEnabled)
         out.setFont(getMonospaceFont(self))
+
+        if val == "<symbolic>":
+            out.setForeground(QColor("red"))
+
         if center:
             out.setTextAlignment(Qt.AlignCenter)
         return out
@@ -175,7 +180,7 @@ class DialogRegisters(QDialog):
 
 
 class DialogStep(QDialog):
-    def __init__(self, title="Input", label="Masukkan data:", parent=None, state=None):
+    def __init__(self, title="Input", label="Masukkan data:", parent=None, state=None, bv=None):
         super().__init__(parent)
         self.setWindowTitle(title)
         self.setWindowFlags(
@@ -187,6 +192,8 @@ class DialogStep(QDialog):
 
         layout = QVBoxLayout()
         font = getMonospaceFont(self)
+
+        self.bv = bv
 
         self.label_pc = QLabel("Register PC: 0x0000000")
         self.label_pc.setFont(font)
@@ -317,12 +324,19 @@ class DialogStep(QDialog):
 
         addr = hex(succ.successors[0].addr)
         branch = len(succ.successors)
-        self.label_pc.setText("Register PC: %s [%d]" % (addr, branch))
+
+        if branch > 1:
+            self.label_pc.setText("Register PC: %s [%d]" % (addr, branch))
+            self.label_pc.setStyleSheet("color: red;")
+        else:
+            self.label_pc.setText("Register PC: %s [%d]" % (addr, branch))
 
         if self.chknav.isChecked():
-            #self.view.offset = addr
-            tes = self.bv.file.filename
-            print(tes)
+            try:
+                xaddr = int(addr, 0)
+                self.bv.offset = xaddr
+            except:
+                pass
 
 
     def on_finish(self, object):
@@ -505,7 +519,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
             QApplication.clipboard().setText(item.text(0))
 
         elif action == "State manager":
-            self.dlg = DialogStep(title="State Manager", label="Break after any branch", state=state[index_child] )
+            self.dlg = DialogStep(title="State Manager", label="Break after any branch", state=state[index_child], bv=self.bv)
             self.dlg.show()
             self.dlg.raise_()
             self.dlg.activateWindow()

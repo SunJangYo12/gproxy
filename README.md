@@ -28,7 +28,12 @@ mencocokan alamat gdb ke binaryninja
 ```
 
 # Tips
-start server setelah address di binaryninja di rebase
+Start server setelah address di binaryninja di rebase.<br>
+Menyamakan binaryninja dan angr:
+```python
+hex(state.project.loader.main_object.mapped_base)
+```
+
 
 
 

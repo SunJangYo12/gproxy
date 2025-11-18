@@ -259,6 +259,7 @@ class DialogStep(QDialog):
         self.btn_move = QPushButton("Move to stashes: active")
         self.btn_move.setFont(font)
         self.btn_move.setEnabled(False)
+        self.btn_move.clicked.connect(self.move_state)
         layout.addWidget(self.btn_move)
 
         btn_reg = QPushButton("Show registers")
@@ -280,6 +281,14 @@ class DialogStep(QDialog):
 
         self.state = state
         self.result_state = None
+
+    def move_state(self):
+        GLOBAL.simgr.stashes['temp'] = [self.state]
+        GLOBAL.simgr.move(from_stash='temp', to_stash='active', filter_func=lambda s: True)
+        del GLOBAL.simgr.stashes['temp']
+
+        print("state is moved, please refresh UI")
+
 
 
     def show_registers(self):
@@ -312,6 +321,7 @@ class DialogStep(QDialog):
         succ = self.state.step()
         try:
             self.state = succ.successors[0]
+            self.btn_move.setEnabled(True)
         except:
             print("except state!")
             return
@@ -470,7 +480,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
 
         if item.parent() is None:
-            print("Is parent")
+            menu.addAction("Delete stashes")
         elif item.parent().parent() is None:
             menu.addAction("Copy")
             menu.addAction("State manager")
@@ -480,6 +490,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
             menu.addAction("History descrip")
             menu.addAction("History jumpkind")
             menu.addAction("History events")
+            menu.addAction("Delete state")
         elif item.parent().parent().parent() is None:
             menu.addAction("Copy")
 
@@ -491,6 +502,16 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
     def handle_tree_action(self, action, item):
         font = getMonospaceFont(self)
+
+        if action == "Delete stashes":
+            key_raw = item.text(0).split(" ")
+            key = key_raw[0]
+
+            del GLOBAL.simgr.stashes[key]
+
+            print("[+] Stashses %s removed, please refresh UI " % key)
+            return
+
         parent = None
         index_child = None
 
@@ -518,6 +539,10 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
 
+        elif action == "Delete state":
+            GLOBAL.simgr.stashes[key].pop(index_child)
+            print("[+] State removed, please refresh UI ")
+
         elif action == "State manager":
             self.dlg = DialogStep(title="State Manager", label="Break after any branch", state=state[index_child], bv=self.bv)
             self.dlg.show()
@@ -536,7 +561,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
             target_state = state[index_child]
             GLOBAL.simgr.move(from_stash=key, to_stash="stashed", filter_func=lambda s: s is target_state)
 
-            print("state is moved, please refresh UI")
+            print("[+] state is moved, please refresh UI")
 
 
         elif action == "History bbl_addr":

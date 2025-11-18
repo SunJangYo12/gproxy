@@ -283,11 +283,16 @@ class DialogStep(QDialog):
         self.result_state = None
 
     def move_state(self):
-        GLOBAL.simgr.stashes['temp'] = [self.state]
-        GLOBAL.simgr.move(from_stash='temp', to_stash='active', filter_func=lambda s: True)
-        del GLOBAL.simgr.stashes['temp']
+        self.labelrun.show()
+        try:
+            GLOBAL.simgr.stashes['temp'] = [self.state]
+            GLOBAL.simgr.move(from_stash='temp', to_stash='active', filter_func=lambda s: True)
+            del GLOBAL.simgr.stashes['temp']
 
-        print("state is moved, please refresh UI")
+            print("[+] state is moved, please refresh UI")
+            self.labelrun.setText(f"Complete move")
+        except:
+            self.labelrun.setText(f"Failed! move")
 
 
 

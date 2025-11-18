@@ -2,6 +2,8 @@ Brigde gdb, binaryninja and angr for binary analyses
 
 ![](Screenshot_2025-11-16_10-08-31.png)
 
+Demo 1
+[![Demo 1](https://img.youtube.com/vi/GSqoDsAwt-Y/maxresdefault.jpg)](https://m.youtube.com/watch?v=GSqoDsAwt-Y)
 
 # Requirenment
 ```
@@ -31,7 +33,10 @@ mencocokan alamat gdb ke binaryninja
 Start server setelah address di binaryninja di rebase.<br>
 Menyamakan binaryninja dan angr:
 ```python
+
 hex(state.project.loader.main_object.mapped_base)
+
+
 ```
 
 

@@ -2,7 +2,7 @@ import gdb
 import xmlrpc.client
 
 
-proxy = xmlrpc.client.ServerProxy("http://192.168.43.53:1337", allow_none=True)
+proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 
 
 class RegsCommand(gdb.Command):
@@ -94,9 +94,12 @@ class CommandColorBlock(gdb.Command):
 
             result = proxy.setcolorblock(addr, color)
             print(result)
-            print("Color in: %s" % arg)
         except:
-            print(proxy.setcolorblock(arg))
+            #rip = int(gdb.parse_and_eval("$rip"))
+            rip = int(gdb.parse_and_eval("$eip"))
+            rip = str(hex(rip))
+
+            print(proxy.setcolorblock(rip))
 
 
 
@@ -113,7 +116,8 @@ class StepSync:
 
     def on_stop(self, event):
         try:
-            rip = int(gdb.parse_and_eval("$rip"))
+            #rip = int(gdb.parse_and_eval("$rip"))
+            rip = int(gdb.parse_and_eval("$eip"))
         except gdb.error:
             return
 

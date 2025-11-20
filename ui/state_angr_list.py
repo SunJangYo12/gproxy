@@ -26,6 +26,7 @@ from ..data_global import SIGNALS, GLOBAL
 class StepThread(QThread):
     done = Signal(object)
 
+    # branch = -1: for other thread
     def __init__(self, state, branch):
         super().__init__()
         self.state = state
@@ -49,8 +50,15 @@ class StepThread(QThread):
 
         self.done.emit(succ)
 
+    def run_explore(self):
+        print("sd")
+
     def run(self):
-        self.run_branch()
+        if self.branch == -1:
+            self.run_explore()
+        else:
+            self.run_branch()
+
 
 class DialogRegisters(QDialog):
     def __init__(self, title="Input", parent=None, state=None):
@@ -452,6 +460,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
                 child.setFont(0, font)
 
+        self.tree_widget.expandAll()
 
 
 

@@ -165,14 +165,15 @@ class Gproxy:
         return self.highlight(addr, color)
 
     @expose
-    def setcolorblock(self, color):
+    def setcolorblock(self, addr, color=None):
         """
         Example: cmdcolorblock
-        Example: cmdcolorblock 0xff0000
+        Example: cmdcolorblock 0x121212 <=address
         """
 
-        if color == '':
-            color = '0xff0000'
+        if color == None:
+            color = '0xaa00aa'
+
 
         addr = self.view.offset
         bbs = self.view.get_basic_blocks_at(addr)

@@ -173,8 +173,6 @@ class Gproxy:
 
         if color == None:
             color = '0xaa00aa'
-
-
         addr = self.view.offset
         bbs = self.view.get_basic_blocks_at(addr)
 
@@ -189,6 +187,19 @@ class Gproxy:
             return True
         else:
             return False
+
+    @expose
+    def setgeneratesymbol(self):
+        """
+        generate symbol to file
+        """
+        with open("/tmp/funcs.txt", "w") as out:
+            for f in self.view.functions:
+
+                out.write(f"{hex(f.start)} {f.symbol.full_name}\n")
+
+        return True
+
 
 
     @expose

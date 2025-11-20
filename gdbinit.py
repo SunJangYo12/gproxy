@@ -133,6 +133,75 @@ class StepSync:
             proxy.jump("%#x" % self.last_rip)
 
 
+class TraceBreakpoint(gdb.Breakpoint):
+    def __init__(self, addr, func_name=None):
+        super(TraceBreakpoint, self).__init__("*{}".format(addr),
+                                              gdb.BP_BREAKPOINT,
+                                              internal=False)
+        self.silent = True            # tidak menampilkan pesan GDB default
+        self.func_name = func_name
+
+    def stop(self):
+
+        # Print informasi
+        if self.func_name:
+            print(f"[TRACE] Hit {self.func_name}  => {self.location}")
+        else:
+            print(f"[TRACE] Hit {self.location}")
+
+        # lanjutkan jalannya program
+        return False     # False = auto-continue
+
+
+class LoadTrace(gdb.Command):
+    def __init__(self):
+        super(LoadTrace, self).__init__("cmdbreaktrace", gdb.COMMAND_USER)
+
+    def invoke(self, arg, from_tty):
+        #path = arg.strip()
+        if arg == "run":
+            print("[+] starting traces..")
+
+        elif arg == "generate":
+            proc = proxy.setgeneratesymbol()
+            if proc:
+                print("[+] success generate symbol in /tmp/funcs.txt")
+            else:
+                print("[+] failed!")
+            return
+
+        else:
+            print("Important: binaryninja harus di rebase mengikuti base address gdb")
+            print("Usage: cmdbreaktrace generate <= generate function addr from binja")
+            print("Usage: cmdbreaktrace run <= set breakpoint, then continue")
+            return
+
+        path = "/tmp/funcs.txt"
+
+        try:
+            with open(path) as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    parts = line.split()
+                    addr = parts[0]
+                    name = parts[1] if len(parts) > 1 else None
+
+                    # Pasang trace-breakpoint
+                    TraceBreakpoint(addr, name)
+
+                    if name:
+                        print(f"[+] Tracepoint at {addr} ({name})")
+                    else:
+                        print(f"[+] Tracepoint at {addr}")
+
+        except Exception as e:
+            print(f"Error: {e}")
+
+
+
 RegsCommand()
 CommandVersion()
 CommandJump()
@@ -140,3 +209,4 @@ CommandComment()
 CommandColor()
 CommandColorBlock()
 StepSync()
+LoadTrace()

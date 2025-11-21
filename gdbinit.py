@@ -1,6 +1,19 @@
 import gdb
 import xmlrpc.client
 
+import sys,os
+
+# point to absolute path of peda.py
+MYFILE = os.path.abspath(os.path.expanduser(__file__))
+if os.path.islink(MYFILE):
+    MYFILE = os.readlink(MYFILE)
+sys.path.insert(0, os.path.dirname(MYFILE) + "/gdblib")
+
+
+import trace_memory
+
+
+
 
 proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 
@@ -155,7 +168,7 @@ class TraceBreakpoint(gdb.Breakpoint):
 
 class LoadTrace(gdb.Command):
     def __init__(self):
-        super(LoadTrace, self).__init__("cmdbreaktrace", gdb.COMMAND_USER)
+        super(LoadTrace, self).__init__("cmdtracefunc", gdb.COMMAND_USER)
 
     def invoke(self, arg, from_tty):
         #path = arg.strip()
@@ -172,8 +185,8 @@ class LoadTrace(gdb.Command):
 
         else:
             print("Important: binaryninja harus di rebase mengikuti base address gdb")
-            print("Usage: cmdbreaktrace generate <= generate function addr from binja")
-            print("Usage: cmdbreaktrace run <= set breakpoint, then continue")
+            print("Usage: cmdtracefunc generate <= generate function addr from binja")
+            print("Usage: cmdtracefunc run <= set breakpoint, then continue")
             return
 
         path = "/tmp/funcs.txt"
@@ -201,6 +214,18 @@ class LoadTrace(gdb.Command):
             print(f"Error: {e}")
 
 
+class LoadTraceMemory(gdb.Command):
+    def __init__(self):
+        super(LoadTraceMemory, self).__init__("cmdtracememory", gdb.COMMAND_USER)
+
+    def invoke(self, arg, from_tty):
+        if arg == "run":
+            trace_memory.detect_arch()
+            trace_memory.log("[*] Detected arch: %s" % trace_memory.arch)
+            trace_memory.install_all()
+        else:
+            print("usage: cmdtracememory run")
+
 
 RegsCommand()
 CommandVersion()
@@ -210,3 +235,4 @@ CommandColor()
 CommandColorBlock()
 StepSync()
 LoadTrace()
+LoadTraceMemory()

@@ -6,6 +6,7 @@
 
 import gdb
 import traceback
+import re
 
 # -------------------------
 # Configuration
@@ -27,8 +28,8 @@ arch = None   # "x86_64" or "i386"
 # -------------------------
 MODULE_FILTER = {
     "enabled": False,
-    "start": 0x555555554000,      # explicit start address (hex or int) or None
-    "end": 0x555555559000,        # explicit end address or None
+    "start": 0x7743d000,      # explicit start address (hex or int) or None
+    "end": 0x77449000,        # explicit end address or None
 }
 
 def in_module_range(addr):
@@ -63,7 +64,31 @@ def get_caller_pc():
             pass
     return None
 
+def get_module_from_addr(addr):
+    """Return (module_name, base_addr) where addr resides, or (None, None)."""
+    try:
+       out = gdb.execute("info files", to_string=True)
+       pat = re.compile(r'0x([0-9a-fA-F]+)\s*-\s*0x([0-9a-fA-F]+)\s+is\s+(.+)')
 
+       for m in pat.finditer(out):
+           start = int(m.group(1), 16)
+           end   = int(m.group(2), 16)
+           name  = m.group(3).strip()
+           #print("%s: %s - %s (size: %d)" % (name, hex(start), hex(end), end-start))
+
+           if start <= addr < end:
+               # Nama file modul (misalnya "/usr/lib/libhello.so")
+               #mod = obj.filename.split("/")[-1]
+               try:
+                   mod = name.split("target:")
+                   mod = mod[1]
+               except:
+                   mod = "zzz"
+               return mod, start
+
+    except Exception:
+        pass
+    return None, None
 
 
 
@@ -100,8 +125,6 @@ def detect_arch():
             arch = "x86_64"
     except Exception:
         arch = "x86_64"
-detect_arch()
-log("[*] Detected arch: %s" % arch)
 
 # -------------------------
 # Arg extraction helpers
@@ -241,11 +264,12 @@ WRITE_FUNCS = {
 # Breakpoint classes
 # -------------------------
 class ReturnHandler(gdb.FinishBreakpoint):
-    def __init__(self, arg_vals, meta, funcname):
+    def __init__(self, arg_vals, meta, funcname, caller_mod):
         super().__init__(gdb.newest_frame(), internal=True)
         self.arg_vals = arg_vals
         self.meta = meta
         self.funcname = funcname
+        self.caller_mod = caller_mod
         self.silent = True
 
     def stop(self):
@@ -274,7 +298,7 @@ class ReturnHandler(gdb.FinishBreakpoint):
         # store allocation
         if ret and ret != 0:
             allocs[ret] = {"size": size, "caller": None, "alloc_fn": self.funcname}
-            log("[ALLOC] %s -> addr=%s size=%s" % (self.funcname, hex(ret), (hex(size) if size else "unknown")))
+            log("[ALLOC] %s -> addr=%s size=%s   caller=%s" % (self.funcname, hex(ret), (hex(size) if size else "unknown"), self.caller_mod ))
 
         return False
 
@@ -291,6 +315,12 @@ class AllocBreakpoint(gdb.Breakpoint):
             if not in_module_range(caller):
                 return False
 
+            caller_mod, caller_base = get_module_from_addr(caller)
+            if caller_mod is None:
+                caller_mod = "??"
+
+            #log(f"[ALLOC] {self.funcname} called from {hex(caller)} in {caller_mod}")
+
 
             # read args before calling finish
             arg_vals = []
@@ -303,7 +333,7 @@ class AllocBreakpoint(gdb.Breakpoint):
             # use "finish" to run the function and return to caller
             #gdb.execute("finish", to_string=True) # ERROR
 
-            ReturnHandler(arg_vals, self.meta, self.funcname) #pengganti baris atas
+            ReturnHandler(arg_vals, self.meta, self.funcname, caller_mod) #pengganti baris atas
 
 
         except Exception:
@@ -399,4 +429,8 @@ def install_all():
 
     log("\n\n[+] Installation done. Tracing ready.")
 
-install_all()
+#detect_arch()
+#log("[*] Detected arch: %s" % arch)
+#install_all()
+
+

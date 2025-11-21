@@ -19,6 +19,54 @@ DETECT_OVERFLOW = False
 allocs = {}   # addr -> {"size": int or None, "caller": str, "alloc_fn": name}
 arch = None   # "x86_64" or "i386"
 
+
+
+
+# -------------------------
+# Module range filter (optional)
+# -------------------------
+MODULE_FILTER = {
+    "enabled": False,
+    "start": 0x555555554000,      # explicit start address (hex or int) or None
+    "end": 0x555555559000,        # explicit end address or None
+}
+
+def in_module_range(addr):
+    if not MODULE_FILTER.get("enabled"):
+        return True
+    if addr is None:
+        return False
+    s = MODULE_FILTER.get("start")
+    e = MODULE_FILTER.get("end")
+    if s is None or e is None:
+        return False
+    return (s <= addr < e)
+
+def get_caller_pc():
+    """Return caller return address (PC) from stack for current frame.
+       Works for x86_64 and i386 based on `arch` global.
+    """
+    try:
+        if arch == "x86_64":
+            # return address is at ($rsp)
+            return int(gdb.parse_and_eval("*(unsigned long*)($rsp)"))
+        else:
+            # i386: return address at ($esp)
+            return int(gdb.parse_and_eval("*(unsigned int*)($esp)"))
+    except Exception:
+        # fallback: try $pc of previous frame
+        try:
+            f = gdb.newest_frame().older()
+            if f:
+                return int(f.pc())
+        except Exception:
+            pass
+    return None
+
+
+
+
+
 # -------------------------
 # Helper IO
 # -------------------------
@@ -239,6 +287,11 @@ class AllocBreakpoint(gdb.Breakpoint):
 
     def stop(self):
         try:
+            caller = get_caller_pc()
+            if not in_module_range(caller):
+                return False
+
+
             # read args before calling finish
             arg_vals = []
             for i, a in enumerate(self.meta.get("args", [])):

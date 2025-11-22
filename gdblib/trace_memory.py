@@ -1,7 +1,6 @@
 
 # heap_trace.py
 # GDB Python heap tracer: supports x86_64 and x86 (i386)
-# Usage: source heap_trace.py
 # Add/remove functions in ALLOC_FUNCS / WRITE_FUNCS as needed.
 
 import gdb

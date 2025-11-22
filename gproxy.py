@@ -39,7 +39,7 @@ from xmlrpc.server import (
     list_public_methods
 )
 
-
+from .data_global import SIGNALS, GLOBAL
 
 
 
@@ -195,8 +195,19 @@ class Gproxy:
         """
         with open("/tmp/funcs.txt", "w") as out:
             for f in self.view.functions:
-
                 out.write(f"{hex(f.start)} {f.symbol.full_name}\n")
+
+        return True
+
+    @expose
+    def settogdb(self, data):
+        """
+        send from gdb to binja
+        """
+        #log_info("zzzzzzz: %s" %data)
+
+        GLOBAL.append_gdbfunc(data)
+        SIGNALS.gdb_updated.emit()
 
         return True
 

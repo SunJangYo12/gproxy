@@ -1,5 +1,6 @@
 import gdb
 import xmlrpc.client
+import base64
 
 import sys,os
 
@@ -147,23 +148,33 @@ class StepSync:
 
 
 class TraceBreakpoint(gdb.Breakpoint):
-    def __init__(self, addr, func_name=None):
+    def __init__(self, addr, func_name=None, bn=None):
         super(TraceBreakpoint, self).__init__("*{}".format(addr),
                                               gdb.BP_BREAKPOINT,
                                               internal=False)
         self.silent = True            # tidak menampilkan pesan GDB default
         self.func_name = func_name
+        self.addr = addr
+        self.bn = bn
 
     def stop(self):
 
-        # Print informasi
         if self.func_name:
-            print(f"[TRACE] Hit {self.func_name}  => {self.location}")
+            print(f"[TRACE] Hit {self.func_name}  => {self.addr}")
+
+            if self.bn:
+                output = f"{self.addr}|||{self.func_name}"
+                output = base64.b64encode(output.encode()).decode()
+                proxy.settogdb(output)
         else:
-            print(f"[TRACE] Hit {self.location}")
+            print(f"[TRACE] Hit {self.addr}")
+
+            if self.bn:
+                proxy.settogdb(self.addr)
+
 
         # lanjutkan jalannya program
-        return False     # False = auto-continue
+        return False
 
 
 class LoadTrace(gdb.Command):
@@ -172,8 +183,13 @@ class LoadTrace(gdb.Command):
 
     def invoke(self, arg, from_tty):
         #path = arg.strip()
+        bn = False
         if arg == "run":
             print("[+] starting traces..")
+
+        elif arg == "run-bn":
+            print("[+] starting traces..")
+            bn = True
 
         elif arg == "generate":
             proc = proxy.setgeneratesymbol()
@@ -184,9 +200,11 @@ class LoadTrace(gdb.Command):
             return
 
         else:
-            print("Important: binaryninja harus di rebase mengikuti base address gdb")
+            print("\nImportant: binaryninja harus di rebase mengikuti base address gdb")
             print("Usage: cmdtracefunc generate <= generate function addr from binja")
-            print("Usage: cmdtracefunc run <= set breakpoint, then continue")
+            print("Usage: cmdtracefunc run <= setup breakpoint, continue for start")
+            print("Usage: cmdtracefunc run-bn <= setup breakpoint, continue for start, with send to binaryninja")
+            print("\n")
             return
 
         path = "/tmp/funcs.txt"
@@ -203,7 +221,7 @@ class LoadTrace(gdb.Command):
                     name = parts[1] if len(parts) > 1 else None
 
                     # Pasang trace-breakpoint
-                    TraceBreakpoint(addr, name)
+                    TraceBreakpoint(addr, name, bn)
 
                     if name:
                         print(f"[+] Tracepoint at {addr} ({name})")

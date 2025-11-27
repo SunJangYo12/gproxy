@@ -2,10 +2,10 @@ Bridge gdb, binaryninja and angr for binary analyses
 
 ![](Screenshot_2025-11-16_10-08-31.png)
 
-Demo 1
+Youtube Demo 1
 [![Demo 1](https://img.youtube.com/vi/GSqoDsAwt-Y/maxresdefault.jpg)](https://m.youtube.com/watch?v=GSqoDsAwt-Y)
 
-Demo 2 (real target)
+Youtube Demo 2 (real target)
 [![Demo 2](https://img.youtube.com/vi/qLTcykEyN0I/maxresdefault.jpg)](https://m.youtube.com/watch?v=qLTcykEyN0I)
 
 

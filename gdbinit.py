@@ -4,16 +4,15 @@ import base64
 
 import sys,os
 
-# point to absolute path of peda.py
 MYFILE = os.path.abspath(os.path.expanduser(__file__))
 if os.path.islink(MYFILE):
     MYFILE = os.readlink(MYFILE)
-sys.path.insert(0, os.path.dirname(MYFILE) + "/gdblib")
+sys.path.insert(0, os.path.dirname(MYFILE) + "/gdbutils")
 
 
 import trace_memory
-
-
+import kernel_cmd
+import detect_struct
 
 
 proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
@@ -245,6 +244,17 @@ class LoadTraceMemory(gdb.Command):
             print("usage: cmdtracememory run")
 
 
+class KernelProcList(gdb.Command):
+    def __init__(self):
+        super(KernelProcList, self).__init__("cmdkernelproclist", gdb.COMMAND_USER)
+
+    def invoke(self, arg, from_tty):
+        if arg == "run":
+            kernel_cmd.getListProcess()
+        else:
+            print("\nusage: cmdkernelproclist run\n")
+
+
 RegsCommand()
 CommandVersion()
 CommandJump()
@@ -254,3 +264,5 @@ CommandColorBlock()
 StepSync()
 LoadTrace()
 LoadTraceMemory()
+KernelProcList()
+detect_struct.install_all()

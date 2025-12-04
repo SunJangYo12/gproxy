@@ -189,3 +189,7 @@ bv.write(addr, raw)
 bv.add_function(addr)
 
 ```
+
+Untuk refresh visual proses linux, klik simbol di sidebar dan
+lihat juga di sidebar function list berapa kali hook load_elf_binary di HIT
+yang menandakan jumlah proses baru saat os baru boot.

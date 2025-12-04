@@ -40,7 +40,7 @@ from xmlrpc.server import (
 )
 
 from .data_global import SIGNALS, GLOBAL
-
+import base64
 
 
 class Gproxy:
@@ -199,14 +199,42 @@ class Gproxy:
 
         return True
 
+
+    @expose
+    def cekgdb_hook(self):
+        reg = GLOBAL.gdb_hookname
+        stru = GLOBAL.gdb_hookstructname
+
+        if reg == "":
+            return ""
+        else:
+            return(reg+"T_T"+stru)
+
     @expose
     def settogdb(self, data):
         """
         send from gdb to binja
         """
-        #log_info("zzzzzzz: %s" %data)
 
-        GLOBAL.append_gdbfunc(data)
+        s = base64.b64decode(data).decode()
+        s = s.split("T_T")
+
+        # Result hook mem register
+        try:
+            memreg = s[1].split("\n")
+            GLOBAL.gdb_memregs = memreg
+        except:
+            pass
+
+        # Result hook mem structure
+        try:
+            memstruct = s[2].split("\n")
+            GLOBAL.gdb_memstruct = memstruct
+        except:
+            pass
+
+
+        GLOBAL.append_gdbfunc(s[0])
         SIGNALS.gdb_updated.emit()
 
         return True

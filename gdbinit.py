@@ -1,6 +1,7 @@
 import gdb
 import xmlrpc.client
 import base64
+import re
 
 import sys,os
 
@@ -13,7 +14,6 @@ sys.path.insert(0, os.path.dirname(MYFILE) + "/gdbutils")
 import trace_memory
 import kernel_cmd
 import detect_struct
-
 
 proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 
@@ -157,15 +157,56 @@ class TraceBreakpoint(gdb.Breakpoint):
         self.bn = bn
         self.hook = hook
 
+
+    def get_registers(self):
+        out = gdb.execute("info registers", to_string=True)
+        regs = []
+
+        # regex ambil nama reg di awal baris
+        for line in out.splitlines():
+            m = re.match(r"^([a-zA-Z0-9]+)\s+", line)
+            if m:
+                regs.append(m.group(1))
+        return regs
+
+    def collect_registers(self):
+        result = []
+        for r in self.get_registers():
+            val = gdb.parse_and_eval("$" + r)
+            result.append(f"{r}={val}\n")
+
+        return "".join(result)
+
+    def collect_structure(self, arg):
+        aa =  detect_struct.runn(arg, in_gdb=False)
+        return aa
+
+
     def stop(self):
+        gdb_memregs = ""
+        gdb_memstruct = ""
+
+        hook_name = proxy.cekgdb_hook().split("T_T")
+
+        # Dynamic hook for monitoring data
+        if hook_name[0] == self.func_name or hook_name[0] == self.addr:
+            gdb_memregs = self.collect_registers()
+
+            try:
+                gdb_memstruct = self.collect_structure(hook_name[1])
+            except:
+                pass
+
+
         if self.func_name:
             print(f"[TRACE] Hit {self.func_name}  => {self.addr}")
 
             if self.bn:
-                output = f"{self.addr}|||{self.func_name}"
+                output = f"{self.addr}|||{self.func_name}T_T{gdb_memregs}T_T{gdb_memstruct}"
                 output = base64.b64encode(output.encode()).decode()
                 proxy.settogdb(output)
 
+            # Custom hook
             if self.hook:
                 kernel_cmd.hook(self.func_name, proxy)
 

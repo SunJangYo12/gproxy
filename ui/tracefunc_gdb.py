@@ -1,7 +1,7 @@
 from binaryninjaui import DockHandler, DockContextHandler, UIActionHandler, getMonospaceFont
 from PySide2 import QtCore
-from PySide2.QtGui import QColor
-from PySide2.QtCore import Qt, QPoint, QEvent, QSize, QThread, Signal
+from PySide2.QtGui import QColor, QBrush
+from PySide2.QtCore import Qt, QPoint, QEvent, QSize, QThread, Signal, QTimer
 from PySide2.QtWidgets import (
      QApplication,
      QHBoxLayout,
@@ -22,6 +22,238 @@ from PySide2.QtWidgets import (
 )
 from ..data_global import SIGNALS, GLOBAL
 import base64
+
+
+
+
+
+class DialogDumpStructure(QDialog):
+    def __init__(self, title="", parent=None, reg_name=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"Dump Structure: {reg_name} {title}")
+        self.setWindowFlags(
+            Qt.Window |
+            Qt.WindowMinimizeButtonHint |
+            Qt.WindowCloseButtonHint
+        )
+        self.setWindowModality(Qt.NonModal)
+
+        SIGNALS.gdb_updated.connect(self.setReg)
+
+        layout = QVBoxLayout()
+        font = getMonospaceFont(self)
+
+        # Set up register table
+        self.table = QTableWidget()
+        self.table.setColumnCount(3)
+        self.table.setHorizontalHeaderLabels(['Offset', 'Addr<little', 'Type'])
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.verticalHeader().setVisible(False)
+
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self.show_context_menu)
+
+        layout.addWidget(self.table)
+        self.setLayout(layout)
+
+        self.setReg()
+
+        self.reg_value = None
+        self.reg_raw = None
+
+    def closeEvent(self, event):
+        print("[+] close dialog")
+        GLOBAL.gdb_hookname = ""
+
+
+    def show_context_menu(self, pos):
+        # Dapatkan posisi global
+        global_pos = self.table.viewport().mapToGlobal(pos)
+
+        # Cek row dan column
+        row = self.table.rowAt(pos.y())
+        col = self.table.columnAt(pos.x())
+        if row < 0 or col < 0:
+            return  # klik di area kosong
+
+        item = self.table.item(row, col)
+
+        # Buat menu
+        menu = QMenu()
+
+        #print(col, row, item.text())
+        if col == 0:
+            menu.addAction("Detail", lambda: self.menu_action(item, "Detail"))
+        elif col == 1:
+            menu.addAction("Copy", lambda: self.menu_action(item, "Copy"))
+            menu.addAction("Dump", lambda: self.menu_action(item, "Dump structure"))
+
+        menu.exec_(global_pos)
+
+
+    def menu_action(self, item, aksi=None, solve_reg=None):
+        if aksi == "Copy":
+            QApplication.clipboard().setText(item.text())
+
+        elif aksi == "Detail":
+            print("sd")
+
+        elif aksi == "Dump":
+            print("zz")
+
+
+
+    def _makewidget(self, val, center=False):
+        out = QTableWidgetItem(str(val))
+        out.setFlags(Qt.ItemIsEnabled)
+        out.setFont(getMonospaceFont(self))
+
+        if val == "<symbolic>":
+            out.setForeground(QColor("red"))
+
+        if center:
+            out.setTextAlignment(Qt.AlignCenter)
+        return out
+
+    def setReg(self):
+        regs = GLOBAL.gdb_memstruct
+        self.table.setRowCount(len(regs))
+
+        for i, reg in enumerate(regs):
+            reg = reg.split("===")
+            try:
+                offset = reg[0]
+                addr = reg[1]
+                type = reg[2]
+
+                self.table.setItem(i, 0, self._makewidget(offset))
+                self.table.setItem(i, 1, self._makewidget(addr))
+                self.table.setItem(i, 2, self._makewidget(type))
+            except:
+                pass
+
+
+
+
+
+
+class DialogRegisters(QDialog):
+    def __init__(self, title="", parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"Register Hook: {title}")
+        self.setWindowFlags(
+            Qt.Window |
+            Qt.WindowMinimizeButtonHint |
+            Qt.WindowCloseButtonHint
+        )
+        self.setWindowModality(Qt.NonModal)
+
+        SIGNALS.gdb_updated.connect(self.setReg)
+
+        layout = QVBoxLayout()
+        font = getMonospaceFont(self)
+
+        # Set up register table
+        self.table = QTableWidget()
+        self.table.setColumnCount(2)
+        self.table.setHorizontalHeaderLabels(['Register', 'Value'])
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.verticalHeader().setVisible(False)
+
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self.show_context_menu)
+
+        layout.addWidget(self.table)
+        self.setLayout(layout)
+
+        self.setReg()
+
+        self.reg_value = None
+        self.reg_raw = None
+
+    def closeEvent(self, event):
+        print("[+] close dialog")
+        GLOBAL.gdb_hookname = ""
+
+
+    def show_context_menu(self, pos):
+        # Dapatkan posisi global
+        global_pos = self.table.viewport().mapToGlobal(pos)
+
+        # Cek row dan column
+        row = self.table.rowAt(pos.y())
+        col = self.table.columnAt(pos.x())
+        if row < 0 or col < 0:
+            return  # klik di area kosong
+
+        item = self.table.item(row, col)
+
+        # Buat menu
+        menu = QMenu()
+
+        reg_name = self.table.item(row, 0).text()
+
+        #print(col, row, item.text())
+        if col == 0:
+            menu.addAction("Detail", lambda: self.menu_action(item, "Detail"))
+        elif col == 1:
+            menu.addAction("Copy", lambda: self.menu_action(item, "Copy"))
+            menu.addAction("Dump Structure: ", lambda: self.menu_action(item, "Dump", reg_name))
+
+        menu.exec_(global_pos)
+
+
+    def menu_action(self, item, aksi=None, reg_name=None):
+        if aksi == "Copy":
+            QApplication.clipboard().setText(item.text())
+
+        elif aksi == "Detail":
+            print("sd")
+
+        elif aksi == "Dump":
+            hname = item.text()
+
+            self.dlg = DialogDumpStructure(title=hname, reg_name=reg_name)
+            self.dlg.resize(370, 430) # w,h
+            self.dlg.show()
+            self.dlg.raise_()
+            self.dlg.activateWindow()
+
+            GLOBAL.gdb_hookstructname = hname
+
+
+
+    def _makewidget(self, val, center=False):
+        out = QTableWidgetItem(str(val))
+        out.setFlags(Qt.ItemIsEnabled)
+        out.setFont(getMonospaceFont(self))
+
+        if val == "<symbolic>":
+            out.setForeground(QColor("red"))
+
+        if center:
+            out.setTextAlignment(Qt.AlignCenter)
+        return out
+
+    def setReg(self):
+        regs = GLOBAL.gdb_memregs
+        self.table.setRowCount(len(regs))
+        #print("[+] count regs: ", len(regs))
+
+        for i, reg in enumerate(regs):
+            #print("zz: ", i, reg)
+            reg = reg.split("=")
+            try:
+                regname = reg[0]
+                regvalue = reg[1]
+
+                self.table.setItem(i, 0, self._makewidget(regname))
+                self.table.setItem(i, 1, self._makewidget(regvalue))
+            except:
+                pass
+
+
+
 
 
 class FuncListDockWidget(QWidget, DockContextHandler):
@@ -61,7 +293,31 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         self.func_name = None
         self.func_addr = None
 
+    def fade_in_item(self, item, count, duration=300, steps=15):
 
+        if self.func_count == count:
+            return
+
+
+        item._fade_value = 0.0
+
+        timer = QTimer()
+        item._fade_timer = timer
+
+        interval = duration / steps
+
+        def update():
+            item._fade_value += 1 / steps
+            if item._fade_value >= 1.0:
+                item._fade_value = 1.0
+                timer.stop()
+
+            value = int(255 * item._fade_value)
+            color = QColor(value, value, value)
+            item.setBackground(0, QBrush(color))
+
+        timer.timeout.connect(update)
+        timer.start(interval)
 
 
 
@@ -70,11 +326,12 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         self.tree_widget.clear()
         self.tree_widget.headerItem().setText(0, "Function List  %d" %len(GLOBAL.gdb_functions) )
 
-        for raw_func, count in GLOBAL.gdb_functions.items():
+        for (raw_func, count) in GLOBAL.gdb_functions.items():
             parent = QTreeWidgetItem(self.tree_widget)
+            #self.fade_in_item(parent, count) BUG
 
-            s = base64.b64decode(raw_func).decode()
-            s = s.split("|||")
+            #s = base64.b64decode(raw_func).decode()
+            s = raw_func.split("|||")
 
             func_addr = s[0]
             try:
@@ -122,7 +379,7 @@ class FuncListDockWidget(QWidget, DockContextHandler):
 
         if item.parent() is None:
             menu.addAction("Copy")
-            menu.addAction("Show registers")
+            menu.addAction("Hook2dump")
             menu.addAction("Clear All")
 
 
@@ -136,8 +393,19 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
 
-        elif action == "Show registers":
-            print("dellefkelfk")
+        elif action == "Hook2dump":
+            hname = item.text(0).split("  ")
+            hname = hname[1]
+
+            self.dlg = DialogRegisters(title=hname)
+            self.dlg.resize(250, 430) # w,h
+            self.dlg.show()
+            self.dlg.raise_()
+            self.dlg.activateWindow()
+
+            GLOBAL.gdb_hookname = hname
+
+
 
         elif action == "Clear All":
             self.tree_widget.clear()

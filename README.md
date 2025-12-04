@@ -190,6 +190,13 @@ bv.add_function(addr)
 
 ```
 
+# Tips visualisasi semua proses linux
 Untuk refresh visual proses linux, klik simbol di sidebar dan
 lihat juga di sidebar function list berapa kali hook load_elf_binary di HIT
 yang menandakan jumlah proses baru saat os baru boot.
+
+
+# Tips dynamic hook (monitoring data) analysis
+Jika alamat target misal lokasi struktur ada di tengah fungsi
+anda bisa set alamat di /tmp/funcs.txt alias merubah offset symbol addr.
+otomatis jika klik kanan di function list dia pakai alamat ini.

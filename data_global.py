@@ -5,6 +5,10 @@ class GlobalState:
         self.simgr = None
         self.gdb_functions = {}
         self.gdb_kernelproc = []
+        self.gdb_hookname = ""
+        self.gdb_hookstructname = ""
+        self.gdb_memregs = []
+        self.gdb_memstruct = []
 
 
     def append_gdbfunc(self, s):

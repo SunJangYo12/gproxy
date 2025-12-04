@@ -72,7 +72,7 @@ class Gproxy:
         if not is_exposed(func):
             raise NotImplementedError('Method "%s" is not exposed' % method)
 
-        dbg("Executing %s(%s)" % (method, params))
+        #dbg("Executing %s(%s)" % (method, params))
         return func(*params)
 
 
@@ -208,6 +208,17 @@ class Gproxy:
 
         GLOBAL.append_gdbfunc(data)
         SIGNALS.gdb_updated.emit()
+
+        return True
+
+    @expose
+    def settogdb_addprocess(self, data):
+        """
+        send from gdb to binja
+        """
+        log_info("[+] New proc: %s" %data)
+
+        GLOBAL.gdb_kernelproc.append(data)
 
         return True
 

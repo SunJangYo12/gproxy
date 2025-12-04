@@ -147,7 +147,7 @@ class StepSync:
 
 
 class TraceBreakpoint(gdb.Breakpoint):
-    def __init__(self, addr, func_name=None, bn=None):
+    def __init__(self, addr, func_name=None, bn=None, hook=None):
         super(TraceBreakpoint, self).__init__("*{}".format(addr),
                                               gdb.BP_BREAKPOINT,
                                               internal=False)
@@ -155,9 +155,9 @@ class TraceBreakpoint(gdb.Breakpoint):
         self.func_name = func_name
         self.addr = addr
         self.bn = bn
+        self.hook = hook
 
     def stop(self):
-
         if self.func_name:
             print(f"[TRACE] Hit {self.func_name}  => {self.addr}")
 
@@ -165,11 +165,18 @@ class TraceBreakpoint(gdb.Breakpoint):
                 output = f"{self.addr}|||{self.func_name}"
                 output = base64.b64encode(output.encode()).decode()
                 proxy.settogdb(output)
+
+            if self.hook:
+                kernel_cmd.hook(self.func_name, proxy)
+
         else:
             print(f"[TRACE] Hit {self.addr}")
 
             if self.bn:
                 proxy.settogdb(self.addr)
+
+            if self.hook:
+                kernel_cmd.hook(self.addr)
 
 
         # lanjutkan jalannya program
@@ -183,12 +190,19 @@ class LoadTrace(gdb.Command):
     def invoke(self, arg, from_tty):
         #path = arg.strip()
         bn = False
+        hook = False
+
         if arg == "run":
             print("[+] starting traces..")
 
         elif arg == "run-bn":
             print("[+] starting traces..")
             bn = True
+
+        elif arg == "run-bn-hookIPC":
+            print("[+] starting traces..")
+            bn = True
+            hook = True
 
         elif arg == "generate":
             proc = proxy.setgeneratesymbol()
@@ -202,7 +216,12 @@ class LoadTrace(gdb.Command):
             print("\nImportant: binaryninja harus di rebase mengikuti base address gdb")
             print("Usage: cmdtracefunc generate <= generate function addr from binja")
             print("Usage: cmdtracefunc run <= setup breakpoint, continue for start")
-            print("Usage: cmdtracefunc run-bn <= setup breakpoint, continue for start, with send to binaryninja")
+            print("Usage: cmdtracefunc run-bn")
+            print("          setup breakpoint, continue for start, with send to binaryninja")
+            print("Usage: cmdtracefunc run-bn-hookIPC")
+            print("          setup breakpoint, continue for start, with send to binaryninja")
+            print("          Trace function with custom hook by custom /tmp/funcs.txt")
+            print("          Hook ini melakukan trace fungsi IPC dan list proses di awal kernel boot")
             print("\n")
             return
 
@@ -220,7 +239,7 @@ class LoadTrace(gdb.Command):
                     name = parts[1] if len(parts) > 1 else None
 
                     # Pasang trace-breakpoint
-                    TraceBreakpoint(addr, name, bn)
+                    TraceBreakpoint(addr, name, bn, hook)
 
                     if name:
                         print(f"[+] Tracepoint at {addr} ({name})")

@@ -1,8 +1,10 @@
 from PySide2.QtWidgets import QApplication
-from binaryninjaui import DockHandler, UIAction, UIActionHandler, Menu
+from binaryninjaui import DockHandler, UIAction, UIActionHandler, Menu, ViewType
 from PySide2.QtCore import Qt
 from .state_angr_list import StateAngrListDockWidget
 from .tracefunc_gdb import FuncListDockWidget
+
+from .graph_process import ProcessInit
 
 RW = None
 HW = None
@@ -83,3 +85,4 @@ def ui_reset_view():
 
 _registerAngrListWidgets()
 _registerFuncListGdbWidgets()
+ViewType.registerViewType(ProcessInit())

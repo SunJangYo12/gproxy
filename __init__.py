@@ -34,6 +34,7 @@ from .gproxy import (
 )
 
 
+
 __service_thread = None
 __gef_instance = None
 
@@ -144,7 +145,6 @@ def gef_stop(bv):
         MessageBoxIcon.InformationIcon
     )
     return
-
 
 
 

@@ -1,6 +1,6 @@
 Bridge gdb, binaryninja and angr for binary analyses
 
-![](Screenshot_2025-11-16_10-08-31.png)
+![](Screenshot_2025-12-04_08-46-50.png)
 
 Youtube Demo 1
 [![Demo 1](https://img.youtube.com/vi/GSqoDsAwt-Y/maxresdefault.jpg)](https://m.youtube.com/watch?v=GSqoDsAwt-Y)

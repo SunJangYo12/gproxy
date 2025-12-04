@@ -63,6 +63,9 @@ class FuncListDockWidget(QWidget, DockContextHandler):
 
 
 
+
+
+
     def refresh_from_global(self):
         self.tree_widget.clear()
         self.tree_widget.headerItem().setText(0, "Function List  %d" %len(GLOBAL.gdb_functions) )
@@ -120,6 +123,7 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         if item.parent() is None:
             menu.addAction("Copy")
             menu.addAction("Show registers")
+            menu.addAction("Clear All")
 
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
@@ -134,4 +138,8 @@ class FuncListDockWidget(QWidget, DockContextHandler):
 
         elif action == "Show registers":
             print("dellefkelfk")
+
+        elif action == "Clear All":
+            self.tree_widget.clear()
+            GLOBAL.gdb_functions = {}
 

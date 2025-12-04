@@ -200,3 +200,6 @@ yang menandakan jumlah proses baru saat os baru boot.
 Jika alamat target misal lokasi struktur ada di tengah fungsi
 anda bisa set alamat di /tmp/funcs.txt alias merubah offset symbol addr.
 otomatis jika klik kanan di function list dia pakai alamat ini.
+
+Saat pakai tombol pause lalu play, harus manual alias continue di gdb langsung
+untuk melanjutkan.

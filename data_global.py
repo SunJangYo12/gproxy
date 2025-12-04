@@ -5,6 +5,7 @@ class GlobalState:
         self.simgr = None
         self.gdb_functions = {}
         self.gdb_kernelproc = []
+        self.gdb_hookstop = ""
         self.gdb_hookname = ""
         self.gdb_hookstructname = ""
         self.gdb_memregs = []

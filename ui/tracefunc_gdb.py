@@ -18,7 +18,8 @@ from PySide2.QtWidgets import (
      QLabel,
      QPushButton,
      QComboBox,
-     QCheckBox
+     QCheckBox,
+     QToolButton, QStyle
 )
 from ..data_global import SIGNALS, GLOBAL
 import base64
@@ -163,13 +164,51 @@ class DialogRegisters(QDialog):
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
 
+
+        self.btn = QToolButton()
+        self.btn.setCheckable(True)
+        self.btn.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+        self.btn.setIconSize(QSize(20,20))
+        self.btn.setToolTip("Break After hit")
+
+        self.btnF = QToolButton()
+        self.btnF.setIcon(self.style().standardIcon(QStyle.SP_ArrowForward))
+        self.btnF.setIconSize(QSize(20,20))
+        self.btnF.setToolTip("History forward")
+
+        self.btnB = QToolButton()
+        self.btnB.setIcon(self.style().standardIcon(QStyle.SP_ArrowBack))
+        self.btnB.setIconSize(QSize(20,20))
+        self.btnB.setToolTip("History backward")
+
+
+        self.btn.toggled.connect(self.toggle_state)
+
+        h_layout = QHBoxLayout()
+        h_layout.addWidget(self.btnB)
+        h_layout.addWidget(self.btn)
+        h_layout.addWidget(self.btnF)
+
+
         layout.addWidget(self.table)
+        layout.addLayout(h_layout)
         self.setLayout(layout)
 
         self.setReg()
 
         self.reg_value = None
         self.reg_raw = None
+
+    def toggle_state(self, checked):
+        if checked:
+            # mode PLAY
+            self.btn.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+            GLOBAL.gdb_hookstop = ""
+        else:
+            # mode PAUSE
+            self.btn.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+            GLOBAL.gdb_hookstop = "pause"
+
 
     def closeEvent(self, event):
         print("[+] close dialog")
@@ -398,7 +437,7 @@ class FuncListDockWidget(QWidget, DockContextHandler):
             hname = hname[1]
 
             self.dlg = DialogRegisters(title=hname)
-            self.dlg.resize(250, 430) # w,h
+            self.dlg.resize(250, 470) # w,h
             self.dlg.show()
             self.dlg.raise_()
             self.dlg.activateWindow()

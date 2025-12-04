@@ -185,6 +185,7 @@ class TraceBreakpoint(gdb.Breakpoint):
     def stop(self):
         gdb_memregs = ""
         gdb_memstruct = ""
+        gdb_hookstop = False
 
         hook_name = proxy.cekgdb_hook().split("T_T")
 
@@ -194,6 +195,12 @@ class TraceBreakpoint(gdb.Breakpoint):
 
             try:
                 gdb_memstruct = self.collect_structure(hook_name[1])
+            except:
+                pass
+
+            try:
+                if hook_name[2] == "pause":
+                    gdb_hookstop = True
             except:
                 pass
 
@@ -220,8 +227,8 @@ class TraceBreakpoint(gdb.Breakpoint):
                 kernel_cmd.hook(self.addr)
 
 
-        # lanjutkan jalannya program
-        return False
+        # False lanjutkan jalannya program
+        return gdb_hookstop
 
 
 class LoadTrace(gdb.Command):

@@ -204,11 +204,12 @@ class Gproxy:
     def cekgdb_hook(self):
         reg = GLOBAL.gdb_hookname
         stru = GLOBAL.gdb_hookstructname
+        stop = GLOBAL.gdb_hookstop
 
         if reg == "":
             return ""
         else:
-            return(reg+"T_T"+stru)
+            return(reg+"T_T"+stru+"T_T"+stop)
 
     @expose
     def settogdb(self, data):

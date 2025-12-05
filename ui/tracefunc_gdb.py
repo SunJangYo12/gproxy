@@ -39,7 +39,7 @@ class DialogDumpStructure(QDialog):
         )
         self.setWindowModality(Qt.NonModal)
 
-        SIGNALS.gdb_updated.connect(self.setReg)
+        SIGNALS.gdb_updated_struct.connect(self.setReg)
 
         layout = QVBoxLayout()
         font = getMonospaceFont(self)
@@ -64,7 +64,7 @@ class DialogDumpStructure(QDialog):
 
     def closeEvent(self, event):
         print("[+] close dialog")
-        GLOBAL.gdb_hookname = ""
+        GLOBAL.gdb_hookstructname = ""
 
 
     def show_context_menu(self, pos):
@@ -149,7 +149,13 @@ class DialogRegisters(QDialog):
         )
         self.setWindowModality(Qt.NonModal)
 
-        SIGNALS.gdb_updated.connect(self.setReg)
+        self.reg_value = None
+        self.reg_raw = None
+        self.history = []
+        self.history_curr = 1
+
+
+        SIGNALS.gdb_updated_regs.connect(self.setReg)
 
         layout = QVBoxLayout()
         font = getMonospaceFont(self)
@@ -163,6 +169,9 @@ class DialogRegisters(QDialog):
 
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_context_menu)
+
+        self.label_his = QLabel("[0/0]")
+        self.label_his.setFont(font)
 
 
         self.btn = QToolButton()
@@ -183,6 +192,8 @@ class DialogRegisters(QDialog):
 
 
         self.btn.toggled.connect(self.toggle_state)
+        self.btnF.clicked.connect(self.click_stateF)
+        self.btnB.clicked.connect(self.click_stateB)
 
         h_layout = QHBoxLayout()
         h_layout.addWidget(self.btnB)
@@ -191,13 +202,24 @@ class DialogRegisters(QDialog):
 
 
         layout.addWidget(self.table)
+        layout.addWidget(self.label_his)
         layout.addLayout(h_layout)
         self.setLayout(layout)
 
         self.setReg()
 
-        self.reg_value = None
-        self.reg_raw = None
+    def click_stateF(self):
+        if self.history_curr < len(self.history)-1:
+            self.history_curr += 1
+            self.setReg(self.history_curr)
+
+    def click_stateB(self):
+        if self.history_curr > 1:
+            self.history_curr -= 1
+            self.setReg(self.history_curr)
+
+
+
 
     def toggle_state(self, checked):
         if checked:
@@ -274,13 +296,26 @@ class DialogRegisters(QDialog):
             out.setTextAlignment(Qt.AlignCenter)
         return out
 
-    def setReg(self):
+
+    def setReg(self, tohistory=False):
+
         regs = GLOBAL.gdb_memregs
+
+        if tohistory:
+            regs = self.history[self.history_curr]
+        else:
+            self.history.append(regs)
+
+
+        total = len(self.history) - 1
+        curr = self.history_curr
+
+        self.label_his.setText(f"[{curr}/{total}]")
+
+
         self.table.setRowCount(len(regs))
-        #print("[+] count regs: ", len(regs))
 
         for i, reg in enumerate(regs):
-            #print("zz: ", i, reg)
             reg = reg.split("=")
             try:
                 regname = reg[0]

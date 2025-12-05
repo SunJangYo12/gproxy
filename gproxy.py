@@ -221,18 +221,16 @@ class Gproxy:
         s = s.split("T_T")
 
         # Result hook mem register
-        try:
+        if s[1] != "":
             memreg = s[1].split("\n")
             GLOBAL.gdb_memregs = memreg
-        except:
-            pass
+            SIGNALS.gdb_updated_regs.emit()
 
         # Result hook mem structure
-        try:
+        if s[2] != "":
             memstruct = s[2].split("\n")
             GLOBAL.gdb_memstruct = memstruct
-        except:
-            pass
+            SIGNALS.gdb_updated_struct.emit()
 
 
         GLOBAL.append_gdbfunc(s[0])

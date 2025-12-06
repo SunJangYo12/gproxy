@@ -39,7 +39,7 @@ class DialogDumpStructure(QDialog):
         )
         self.setWindowModality(Qt.NonModal)
 
-        SIGNALS.gdb_updated_struct.connect(self.setReg)
+        SIGNALS.gdb_updated_regs.connect(self.setReg)
 
         layout = QVBoxLayout()
         font = getMonospaceFont(self)

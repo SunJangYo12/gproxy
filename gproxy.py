@@ -230,7 +230,6 @@ class Gproxy:
         if s[2] != "":
             memstruct = s[2].split("\n")
             GLOBAL.gdb_memstruct = memstruct
-            SIGNALS.gdb_updated_struct.emit()
 
 
         GLOBAL.append_gdbfunc(s[0])

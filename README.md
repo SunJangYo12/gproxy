@@ -203,6 +203,7 @@ otomatis jika klik kanan di function list dia pakai alamat ini.
 
 Saat pakai tombol pause lalu play, harus manual alias continue di gdb langsung
 untuk melanjutkan.
+NOTE: Untuk dump structure hanya update saat ini bukan berasal dari history register.
 
 # dump value variable local
 1). dump seluruh frame:

@@ -32,7 +32,6 @@ class GlobalSignals(QObject):
     state_updated = Signal()
     gdb_updated = Signal()
     gdb_updated_regs = Signal()
-    gdb_updated_struct = Signal()
 
 GLOBAL = GlobalState()
 SIGNALS = GlobalSignals()

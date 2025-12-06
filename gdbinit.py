@@ -129,8 +129,7 @@ class StepSync:
 
     def on_stop(self, event):
         try:
-            #rip = int(gdb.parse_and_eval("$rip"))
-            rip = int(gdb.parse_and_eval("$eip"))
+            rip = int(gdb.parse_and_eval("$pc"))
         except gdb.error:
             return
 

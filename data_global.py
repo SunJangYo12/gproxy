@@ -1,4 +1,6 @@
 from PySide2.QtCore import QObject, Signal
+import time
+
 
 class GlobalState:
     def __init__(self):
@@ -13,10 +15,16 @@ class GlobalState:
 
 
     def append_gdbfunc(self, s):
+        now = time.time()
+
         if s in self.gdb_functions:
-            self.gdb_functions[s] += 1
+            self.gdb_functions[s]["count"] += 1
+            self.gdb_functions[s]["time"] = now + 3
         else:
-            self.gdb_functions[s] = 1
+            self.gdb_functions[s] = {
+                "count": 1,
+                "time": now + 3
+            }
 
 
 

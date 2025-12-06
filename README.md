@@ -203,3 +203,8 @@ otomatis jika klik kanan di function list dia pakai alamat ini.
 
 Saat pakai tombol pause lalu play, harus manual alias continue di gdb langsung
 untuk melanjutkan.
+
+# dump value variable local
+1). dump seluruh frame:
+x/64gx $rsp
+x/64gx $rbp-0x100

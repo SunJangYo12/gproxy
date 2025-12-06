@@ -23,7 +23,7 @@ from PySide2.QtWidgets import (
 )
 from ..data_global import SIGNALS, GLOBAL
 import base64
-
+import time
 
 
 
@@ -367,44 +367,14 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         self.func_name = None
         self.func_addr = None
 
-    def fade_in_item(self, item, count, duration=300, steps=15):
-
-        if self.func_count == count:
-            return
-
-
-        item._fade_value = 0.0
-
-        timer = QTimer()
-        item._fade_timer = timer
-
-        interval = duration / steps
-
-        def update():
-            item._fade_value += 1 / steps
-            if item._fade_value >= 1.0:
-                item._fade_value = 1.0
-                timer.stop()
-
-            value = int(255 * item._fade_value)
-            color = QColor(value, value, value)
-            item.setBackground(0, QBrush(color))
-
-        timer.timeout.connect(update)
-        timer.start(interval)
-
-
-
 
     def refresh_from_global(self):
         self.tree_widget.clear()
         self.tree_widget.headerItem().setText(0, "Function List  %d" %len(GLOBAL.gdb_functions) )
 
-        for (raw_func, count) in GLOBAL.gdb_functions.items():
+        for (raw_func, data) in GLOBAL.gdb_functions.items():
             parent = QTreeWidgetItem(self.tree_widget)
-            #self.fade_in_item(parent, count) BUG
 
-            #s = base64.b64decode(raw_func).decode()
             s = raw_func.split("|||")
 
             func_addr = s[0]
@@ -416,9 +386,17 @@ class FuncListDockWidget(QWidget, DockContextHandler):
             self.func_name = func_name
             self.func_addr = func_addr
 
-            parent.setText(0, "%d  %s" % (count, func_name) )
+            parent.setText(0, "%d  %s" % (data['count'], func_name) )
             parent.setFont(0, self.font)
             parent.setData(0, Qt.UserRole, str(func_addr) )
+
+            now = time.time()
+
+            if now < data['time']:
+                parent.setForeground(0, QColor("orange"))
+            else:
+                parent.setForeground(0, QColor("white"))
+
 
 
 

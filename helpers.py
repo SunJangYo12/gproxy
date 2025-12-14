@@ -70,11 +70,22 @@ class Mikrotik():
     def find_handlers(self):
         total = len(os.listdir(self.target))
         count = 0
+        start = 20
+        end = 40
 
         for filename in os.listdir(self.target):
+
             print(f"[{count}/{total}] {filename}")
 
             count += 1
+
+            # paging skip by start, karena hang kehabisan ram
+            if count <= start:
+                continue
+
+            if count > end:
+                break
+
 
             bv = binja.BinaryViewType.get_view_of_file(self.target + filename)
             if bv == None:

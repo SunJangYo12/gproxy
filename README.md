@@ -209,3 +209,32 @@ NOTE: Untuk dump structure hanya update saat ini bukan berasal dari history regi
 1). dump seluruh frame:
 x/64gx $rsp
 x/64gx $rbp-0x100
+
+
+# Utilitis for mikrotik helper
+Open console binaryninja and paste this, this script by https://github.com/tenable/routeros
+
+1). find handlers
+```python
+from gproxy.helpers import Mikrotik
+aa = Mikrotik()
+aa.target = "/media/jin/4abb279b-6d65-4663-97c2-26987f64673a/home/yuna/Lab/DockerImage-mikrotik/modif/npk-routeros/bak/6.42.11/nova/bin/"
+aa.find_handlers()
+
+```
+output, copy all to csv file filter with [1/79] user... etc
+NOTE: this is very slow because bn analysis all. and fix it hex result from int
+```
+[0/79] kidcontrol
+kidcontrol,0,0,0
+[1/79] user
+user,0,0,0,0,0,0,0,0
+[2/79] ping
+[3/79] convertbr
+[4/79] keyman
+[5/79] modprobed
+modprobed,1
+[6/79] telser
+[7/79] licupgr
+
+```

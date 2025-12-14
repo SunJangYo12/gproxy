@@ -98,6 +98,9 @@ class CommandColorBlock(gdb.Command):
     def __init__(self):
         super(CommandColorBlock, self).__init__("cmdcolorblock", gdb.COMMAND_USER)
 
+        # def color: cmdcolorblock
+        # custom : cmdcolorblock $pc 0xffaa00aa => blue
+
     def invoke(self, arg, from_tty):
 
         try:

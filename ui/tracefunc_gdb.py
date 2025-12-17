@@ -25,7 +25,11 @@ from ..data_global import SIGNALS, GLOBAL
 import base64
 import time
 
-
+from binaryninja import (
+    core_version,
+    log_info,
+    highlight,
+)
 
 
 class DialogDumpStructure(QDialog):
@@ -597,6 +601,16 @@ class BasicBlockDockWidget(QWidget, DockContextHandler):
             print("jump to:", hex(addr))
 
             self.bv.offset = addr
+            color = '0xff00aa'
+            bbs = self.bv.get_basic_blocks_at(addr)
+            if (bbs):
+                color = int(color, 0)
+                R,G,B = (color >> 16)&0xff, (color >> 8)&0xff, (color&0xff)
+                color = highlight.HighlightColor(red=R, blue=G, green=B)
+
+                bb = bbs[0]
+                bb.highlight = color
+
         except:
             pass
 

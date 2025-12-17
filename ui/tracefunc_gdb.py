@@ -368,6 +368,7 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         self.tree_widget.clear()
         self.tree_widget.headerItem().setText(0, "Function List  %d" %len(GLOBAL.gdb_functions) )
 
+
         for (raw_func, data) in GLOBAL.gdb_functions.items():
             parent = QTreeWidgetItem(self.tree_widget)
 
@@ -392,8 +393,6 @@ class FuncListDockWidget(QWidget, DockContextHandler):
                 hit_parent = func_name.split("zzblock_")[1]
 
                 GLOBAL.gdb_blocks[hit_parent]['hit'][func_addr] = data['count']
-
-                SIGNALS.gdb_updated_bb.emit()
 
                 continue #comment this for debug block
             except:
@@ -426,6 +425,8 @@ class FuncListDockWidget(QWidget, DockContextHandler):
 
 
     def on_item_double_clicked(self, item, column):
+        SIGNALS.gdb_updated_bb.emit()
+
         try:
             addr = int(item.data(0, Qt.UserRole), 0)
             print("jump to:", hex(addr))

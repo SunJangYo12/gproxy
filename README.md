@@ -252,6 +252,8 @@ modprobed,1
    (gdb) cmdtracefunc run-bn-block
    (gdb) c
 
+NOTE: for update view, double click in function list
+
 View desc:
 [4/18] sub_xxx
     3 0x123 => start-block

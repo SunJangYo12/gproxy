@@ -354,12 +354,8 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         self.tree_widget.customContextMenuRequested.connect(self.on_tree_context_menu)
 
 
-        self.lineEdit = QLineEdit()
-        self.lineEdit.setObjectName(u"lineEdit")
-
         layout = QVBoxLayout()
         layout.addWidget(tree_widget)
-        layout.addWidget(self.lineEdit)
 
         self.setLayout(layout)
         self.bv = data
@@ -379,12 +375,30 @@ class FuncListDockWidget(QWidget, DockContextHandler):
 
             func_addr = s[0]
             try:
-               func_name = s[1]
+                func_name = s[1]
             except:
-               func_name = func_addr
+                func_name = func_addr
 
             self.func_name = func_name
             self.func_addr = func_addr
+
+
+            if len(data['block']) > 0:
+                GLOBAL.gdb_blocks[func_name] = {
+                    'block': data['block'],
+                    'hit': {}
+                }
+            try:
+                hit_parent = func_name.split("zzblock_")[1]
+
+                GLOBAL.gdb_blocks[hit_parent]['hit'][func_addr] = data['count']
+
+                SIGNALS.gdb_updated_bb.emit()
+
+                continue #comment this for debug block
+            except:
+                pass
+
 
             parent.setText(0, "%d  %s" % (data['count'], func_name) )
             parent.setFont(0, self.font)
@@ -432,6 +446,7 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         if item.parent() is None:
             menu.addAction("Copy")
             menu.addAction("Hook2dump")
+            menu.addAction("Generate Block")
             menu.addAction("Clear All")
 
 
@@ -445,6 +460,33 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
 
+        elif action == "Generate Block":
+
+            GLOBAL.gdb_rebreak = 'pause'
+
+            hname = item.text(0).split("  ")
+            hname = hname[1]
+
+            for f in self.bv.functions:
+                if f.symbol.full_name == hname:
+                    key = hex(f.symbol.address)+"|||"+hname
+                    gabung_se = []
+
+                    for bb in f.basic_blocks:
+                        gabung_se.append(hex(bb.start))
+                        gabung_se.append(hex(bb.end))
+
+
+                    GLOBAL.append_gdbfunc_bb(key, gabung_se)
+
+                    with open("/tmp/blocks.txt", "w") as out:
+                        for fout in gabung_se:
+                            out.write(f"{fout} zzblock_{hname}\n")
+
+
+            SIGNALS.gdb_updated_bb.emit()
+
+
         elif action == "Hook2dump":
             hname = item.text(0).split("  ")
             hname = hname[1]
@@ -457,9 +499,127 @@ class FuncListDockWidget(QWidget, DockContextHandler):
 
             GLOBAL.gdb_hookname = hname
 
-
-
         elif action == "Clear All":
             self.tree_widget.clear()
             GLOBAL.gdb_functions = {}
 
+
+
+
+
+class BasicBlockDockWidget(QWidget, DockContextHandler):
+    def __init__(self, parent, name, data):
+        QWidget.__init__(self, parent)
+        DockContextHandler.__init__(self, self, name)
+
+        self.actionHandler = UIActionHandler()
+        self.actionHandler.setupActionHandler(self)
+
+
+        SIGNALS.gdb_updated_bb.connect(self.refresh_from_global)
+
+
+        tree_widget = QTreeWidget()
+        self.tree_widget = tree_widget
+        self.tree_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
+
+        self.tree_widget.headerItem().setText(0, "Basic Block" )
+        tree_widget.setColumnCount(1)
+
+        # MENGAKTIFKAN KLIK KANAN
+        self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree_widget.customContextMenuRequested.connect(self.on_tree_context_menu)
+
+
+        layout = QVBoxLayout()
+        layout.addWidget(tree_widget)
+
+        self.setLayout(layout)
+        self.bv = data
+        self.font = getMonospaceFont(self)
+
+
+    def find_value(self, data, find):
+        out = []
+        for phit in data.items():
+            if find == phit[0]:
+                out.append(find)
+        return out
+
+
+    def refresh_from_global(self):
+        self.tree_widget.clear()
+
+        for func_parent, data in GLOBAL.gdb_blocks.items():
+
+            parent = QTreeWidgetItem(self.tree_widget)
+            parent.setText(0, "[%d/%d] %s" % ( len(data['hit']), len(data['block']), func_parent ) )
+            parent.setFont(0, self.font)
+            parent.setData(0, Qt.UserRole, str(func_parent) )
+
+            for bb in data['block']:
+                child = QTreeWidgetItem(parent)
+
+                is_hit = self.find_value(data['hit'], bb)
+
+                if len(is_hit) == 0:
+                    child.setText(0, f"{bb}")
+                    child.setForeground(0, QColor("white"))
+                else:
+                    child.setText(0, f"{data['hit'][bb]} {bb}")
+                    child.setForeground(0, QColor("orange"))
+
+
+
+                child.setFont(0, self.font)
+                child.setData(0, Qt.UserRole, str(bb) )
+
+            self.tree_widget.expandAll()
+
+
+
+
+
+    def shouldBeVisible(self, view_frame):
+        if view_frame is None:
+            return False
+        else:
+            return True
+
+    def contextMenuEvent(self, event):
+        self.m_contextMenuManager.show(self.m_menu, self.actionHandler)
+
+
+    def on_item_double_clicked(self, item, column):
+        try:
+            addr = int(item.data(0, Qt.UserRole), 0)
+            print("jump to:", hex(addr))
+
+            self.bv.offset = addr
+        except:
+            pass
+
+
+    def on_tree_context_menu(self, position: QPoint):
+        item = self.tree_widget.itemAt(position)
+        if item is None:
+            return   # klik kanan di area kosong → tidak ada menu
+
+        menu = QMenu()
+
+
+        if item.parent() is None:
+            menu.addAction("Copy")
+            menu.addAction("Clear")
+
+        action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
+        if action:
+            self.handle_tree_action(action.text(), item)
+
+
+    def handle_tree_action(self, action, item):
+        if action == "Copy":
+            QApplication.clipboard().setText(item.text(0))
+
+        elif action == "Clear":
+            print("sd")

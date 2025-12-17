@@ -2,7 +2,7 @@ from PySide2.QtWidgets import QApplication
 from binaryninjaui import DockHandler, UIAction, UIActionHandler, Menu, ViewType
 from PySide2.QtCore import Qt
 from .state_angr_list import StateAngrListDockWidget
-from .tracefunc_gdb import FuncListDockWidget
+from .tracefunc_gdb import FuncListDockWidget, BasicBlockDockWidget
 
 from .graph_process import ProcessInit
 
@@ -31,6 +31,14 @@ def _get_funcgdb_widget(name, parent, data):
 
     return ALIST
 
+
+def _get_funcbbgdb_widget(name, parent, data):
+    global ALIST
+    ALIST = BasicBlockDockWidget(parent, name, data)
+
+    return ALIST
+
+
 def _registerAngrListWidgets():
     dock_handler = DockHandler.getActiveDockHandler()
     dock_handler.addDockWidget(
@@ -46,6 +54,16 @@ def _registerFuncListGdbWidgets():
     dock_handler.addDockWidget(
         "Gproxy => function list",
         _get_funcgdb_widget,
+        Qt.RightDockWidgetArea,
+        Qt.Vertical,
+        False
+    )
+
+def _registerFuncBBListGdbWidgets():
+    dock_handler = DockHandler.getActiveDockHandler()
+    dock_handler.addDockWidget(
+        "Gproxy => block list",
+        _get_funcbbgdb_widget,
         Qt.RightDockWidgetArea,
         Qt.Vertical,
         False
@@ -85,4 +103,5 @@ def ui_reset_view():
 
 _registerAngrListWidgets()
 _registerFuncListGdbWidgets()
+_registerFuncBBListGdbWidgets()
 ViewType.registerViewType(ProcessInit())

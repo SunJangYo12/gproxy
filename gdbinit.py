@@ -149,7 +149,7 @@ class StepSync:
 
 
 class TraceBreakpoint(gdb.Breakpoint):
-    def __init__(self, addr, func_name=None, bn=None, hook=None):
+    def __init__(self, addr, func_name=None, bn=None, hook=None, bb=False):
         super(TraceBreakpoint, self).__init__("*{}".format(addr),
                                               gdb.BP_BREAKPOINT,
                                               internal=False)
@@ -158,6 +158,9 @@ class TraceBreakpoint(gdb.Breakpoint):
         self.addr = addr
         self.bn = bn
         self.hook = hook
+
+        if bb:
+            proxy.set_global("")
 
 
     def get_registers(self):
@@ -187,22 +190,30 @@ class TraceBreakpoint(gdb.Breakpoint):
     def stop(self):
         gdb_memregs = ""
         gdb_memstruct = ""
-        gdb_hookstop = False
+        gdb_stop = False
 
-        hook_name = proxy.cekgdb_hook().split("T_T")
+        # Comment ini jika ingin lebih cepat
+        cek_global = proxy.cekgdb_global().split("T_T")
+
+        # update breakpoint with basicblock func
+        try:
+            if cek_global[3] == "pause":
+                gdb_stop = True
+        except:
+            pass
 
         # Dynamic hook for monitoring data
-        if hook_name[0] == self.func_name or hook_name[0] == self.addr:
+        if cek_global[0] == self.func_name or cek_global[0] == self.addr:
             gdb_memregs = self.collect_registers()
 
             try:
-                gdb_memstruct = self.collect_structure(hook_name[1])
+                gdb_memstruct = self.collect_structure(cek_global[1])
             except:
                 pass
 
             try:
-                if hook_name[2] == "pause":
-                    gdb_hookstop = True
+                if cek_global[2] == "pause":
+                    gdb_stop = True
             except:
                 pass
 
@@ -230,7 +241,7 @@ class TraceBreakpoint(gdb.Breakpoint):
 
 
         # False lanjutkan jalannya program
-        return gdb_hookstop
+        return gdb_stop
 
 
 class LoadTrace(gdb.Command):
@@ -241,6 +252,7 @@ class LoadTrace(gdb.Command):
         #path = arg.strip()
         bn = False
         hook = False
+        bblock = False
 
         if arg == "run":
             print("[+] starting traces..")
@@ -248,6 +260,11 @@ class LoadTrace(gdb.Command):
         elif arg == "run-bn":
             print("[+] starting traces..")
             bn = True
+
+        elif arg == "run-bn-block":
+            print("[+] starting traces..")
+            bn = True
+            bblock = True
 
         elif arg == "run-bn-hookIPC":
             print("[+] starting traces..")
@@ -268,6 +285,11 @@ class LoadTrace(gdb.Command):
             print("Usage: cmdtracefunc run <= setup breakpoint, continue for start")
             print("Usage: cmdtracefunc run-bn")
             print("          setup breakpoint, continue for start, with send to binaryninja")
+
+            print("Usage: cmdtracefunc run-bn-block")
+            print("          setup breakpoint, continue for start, with send to binaryninja")
+            print("          this tracing basic block form func by generate in bn block view")
+
             print("Usage: cmdtracefunc run-bn-hookIPC")
             print("          setup breakpoint, continue for start, with send to binaryninja")
             print("          Trace function with custom hook by custom /tmp/funcs.txt")
@@ -276,6 +298,9 @@ class LoadTrace(gdb.Command):
             return
 
         path = "/tmp/funcs.txt"
+        if bblock:
+            path = "/tmp/blocks.txt"
+
 
         try:
             with open(path) as f:
@@ -289,7 +314,10 @@ class LoadTrace(gdb.Command):
                     name = parts[1] if len(parts) > 1 else None
 
                     # Pasang trace-breakpoint
-                    TraceBreakpoint(addr, name, bn, hook)
+                    if bblock:
+                        TraceBreakpoint(addr, name, bn, hook, bb=True)
+                    else:
+                        TraceBreakpoint(addr, name, bn, hook)
 
                     if name:
                         print(f"[+] Tracepoint at {addr} ({name})")

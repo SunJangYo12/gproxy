@@ -238,3 +238,25 @@ modprobed,1
 [7/79] licupgr
 
 ```
+
+# Trace function basic block
+```
+1. open bn > view > block list
+
+2. (gdb) cmdtracefunc generate
+   (gdb) cmdtracefunc run-bn
+   (gdb) c
+
+3. right click in function list > generate block
+         wait breakpoint
+   (gdb) cmdtracefunc run-bn-block
+   (gdb) c
+
+View desc:
+[4/18] sub_xxx
+    3 0x123 => start-block
+    7 0x777 => end-block
+
+[hit/count_hit]
+    3 => berapa kali dipanggil   
+```

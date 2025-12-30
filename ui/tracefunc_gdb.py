@@ -594,6 +594,17 @@ class BasicBlockDockWidget(QWidget, DockContextHandler):
     def contextMenuEvent(self, event):
         self.m_contextMenuManager.show(self.m_menu, self.actionHandler)
 
+    def block_color(self, addr):
+        color = '0xff00aa'
+        bbs = self.bv.get_basic_blocks_at(addr)
+        if (bbs):
+            color = int(color, 0)
+            R,G,B = (color >> 16)&0xff, (color >> 8)&0xff, (color&0xff)
+            color = highlight.HighlightColor(red=R, blue=G, green=B)
+
+            bb = bbs[0]
+            bb.highlight = color
+
 
     def on_item_double_clicked(self, item, column):
         try:
@@ -601,15 +612,7 @@ class BasicBlockDockWidget(QWidget, DockContextHandler):
             print("jump to:", hex(addr))
 
             self.bv.offset = addr
-            color = '0xff00aa'
-            bbs = self.bv.get_basic_blocks_at(addr)
-            if (bbs):
-                color = int(color, 0)
-                R,G,B = (color >> 16)&0xff, (color >> 8)&0xff, (color&0xff)
-                color = highlight.HighlightColor(red=R, blue=G, green=B)
-
-                bb = bbs[0]
-                bb.highlight = color
+            self.block_color(addr)
 
         except:
             pass
@@ -625,7 +628,7 @@ class BasicBlockDockWidget(QWidget, DockContextHandler):
 
         if item.parent() is None:
             menu.addAction("Copy")
-            menu.addAction("Clear")
+            menu.addAction("Hit Coloring")
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
         if action:
@@ -636,5 +639,16 @@ class BasicBlockDockWidget(QWidget, DockContextHandler):
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
 
-        elif action == "Clear":
+        elif action == "Hit Coloring":
             print("sd")
+            #BUG
+            for func_parent, data in GLOBAL.gdb_blocks.items():
+                for bb in data['block']:
+
+                    is_hit = self.find_value(data['hit'], bb)
+
+                    if len(is_hit) == 0:
+                        continue
+                    else:
+                        time.sleep(3)
+                        self.block_color(str(bb))

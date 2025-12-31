@@ -262,3 +262,15 @@ View desc:
 [hit/count_hit]
     3 => berapa kali dipanggil   
 ```
+
+
+# Frida function trace
+```
+$ python fridainit.py
+>> Select target? Linux/Android (l/a): a
+>> remote ip: 192.168.43.1
+>> Chose pid? (1234): 9144
+>> em
+>> et
+>> Module> libc++.so>
+```

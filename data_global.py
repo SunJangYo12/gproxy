@@ -15,6 +15,12 @@ class GlobalState:
         self.gdb_memstruct = []
         self.gdb_rebreak = ""
 
+        self.frida_enummodules = None
+        self.frida_enumsymbols = None
+        self.frida_functions = {}
+
+
+
     def append_gdbfunc_bb(self, s, block):
         self.gdb_functions[s]["block"] = block
 
@@ -32,12 +38,27 @@ class GlobalState:
                 "block": []
             }
 
+    def append_fridafunc(self, s):
+        now = time.time()
+
+        if s in self.frida_functions:
+            self.frida_functions[s]["count"] += 1
+            self.frida_functions[s]["time"] = now + 3
+        else:
+            self.frida_functions[s] = {
+                "count": 1,
+                "time": now + 3
+            }
+
 
 class GlobalSignals(QObject):
     state_updated = Signal()
     gdb_updated = Signal()
     gdb_updated_bb = Signal()
     gdb_updated_regs = Signal()
+    frida_updated = Signal()
+    frida_updatedsym = Signal()
+    frida_updatedsym_trace = Signal()
 
 GLOBAL = GlobalState()
 SIGNALS = GlobalSignals()

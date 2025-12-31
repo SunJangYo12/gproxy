@@ -3,6 +3,7 @@ from binaryninjaui import DockHandler, UIAction, UIActionHandler, Menu, ViewType
 from PySide2.QtCore import Qt
 from .state_angr_list import StateAngrListDockWidget
 from .tracefunc_gdb import FuncListDockWidget, BasicBlockDockWidget
+from .tracefunc_frida import FridaFuncListDockWidget
 
 from .graph_process import ProcessInit
 
@@ -39,6 +40,13 @@ def _get_funcbbgdb_widget(name, parent, data):
     return ALIST
 
 
+def _get_funcfrida_widget(name, parent, data):
+    global ALIST
+    ALIST = FridaFuncListDockWidget(parent, name, data)
+
+    return ALIST
+
+
 def _registerAngrListWidgets():
     dock_handler = DockHandler.getActiveDockHandler()
     dock_handler.addDockWidget(
@@ -64,6 +72,16 @@ def _registerFuncBBListGdbWidgets():
     dock_handler.addDockWidget(
         "Gproxy => block list",
         _get_funcbbgdb_widget,
+        Qt.RightDockWidgetArea,
+        Qt.Vertical,
+        False
+    )
+
+def _registerFridaFuncWidgets():
+    dock_handler = DockHandler.getActiveDockHandler()
+    dock_handler.addDockWidget(
+        "Gproxy => frida list",
+        _get_funcfrida_widget,
         Qt.RightDockWidgetArea,
         Qt.Vertical,
         False
@@ -104,4 +122,5 @@ def ui_reset_view():
 _registerAngrListWidgets()
 _registerFuncListGdbWidgets()
 _registerFuncBBListGdbWidgets()
+_registerFridaFuncWidgets()
 ViewType.registerViewType(ProcessInit())

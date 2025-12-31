@@ -249,6 +249,36 @@ class Gproxy:
 
         return True
 
+    @expose
+    def settofrida_func(self, data, finit):
+
+        if finit:
+            for d in data:
+                if d.get("type") == "function":
+                    func_name = d.get("name")
+                    GLOBAL.append_fridafunc(func_name)
+                    SIGNALS.frida_updatedsym_trace.emit()
+
+        else:
+            GLOBAL.append_fridafunc(data)
+            SIGNALS.frida_updatedsym_trace.emit()
+
+
+        return True
+
+
+    @expose
+    def settofrida_enum(self, data, type):
+
+        if type == "modules":
+            GLOBAL.frida_enummodules = data
+            SIGNALS.frida_updated.emit()
+
+        elif type == "symbols":
+            GLOBAL.frida_enumsymbols = data
+            SIGNALS.frida_updatedsym.emit()
+
+        return True
 
 
     @expose

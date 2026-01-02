@@ -47,6 +47,11 @@ class FuzzerKu
                send({"type": "enum_modules", "log": msg});
            else if (subtype == "es")
                send({"type": "enum_symbols", "log": msg});
+           else if (subtype == "et")
+               send({"type": "enum_threads", "log": msg});
+
+           else if (subtype == "id_threads")
+               send({"type": "id_threads", "log": msg});
 
            else if (subtype == "hook_hit")
                send({"type": "hook_hit", "log": msg});
@@ -128,15 +133,72 @@ class FuzzerKu
 
                this.logDebug("send", output, "es");
             },
+            enumthreads: () => {
+               this.logDebug("send", "Getting thread...", "info");
+               const output = Process.enumerateThreadsSync()
+
+               this.logDebug("send", output, "et");
+            },
             enumsymbolstrace: (module) => {
                this.logDebug("send", "Getting symbols to hook...", "info");
 
                const dick_sym = Module.enumerateSymbols(module)
 
-               this.logDebug("send", dick_sym, "es");
-
                return dick_sym
 
+            },
+            idthreads: () => {
+
+               const aa = Process.enumerateThreadsSync()
+
+               var output = []
+
+               //remove context data
+               for (const key in aa)
+               {
+                  const id = aa[key]["id"];
+                  const state = aa[key]["state"];
+
+                  const out = {
+                     "id": id,
+                     "state": state
+                  };
+
+                  output.push(out)
+               }
+
+               this.logDebug("send", output, "id_threads");
+
+
+            },
+            setstalker: (id) => {
+               this.logDebug("send", "Setup Stalker...", "info");
+
+               const subthis = this
+
+               Stalker.follow(id, {
+                  events: {
+                     call: true,
+                     ret: false,
+                     exec: false,
+                     block: false,
+                     compile: false,
+                  },
+                  onReceive: function (events) {
+                     var calls = Stalker.parse(events, {
+                        annotate: true,
+                     });
+                     for (var i=0; i<calls.length; i++) {
+                        let call = calls[i];
+                        console.log(call[2]);
+
+                        //subthis.logDebug("send", call[2], "stalker");
+                     }
+                  },
+                  onCallSummary: function (summary) {
+                     //console.log(JSON.stringify(summary, null, 4));
+                  }
+               });
             },
             setuphook: (func_name) => {
 

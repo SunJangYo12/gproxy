@@ -17,6 +17,8 @@ class GlobalState:
 
         self.frida_enummodules = None
         self.frida_enumsymbols = None
+        self.frida_enumthreads = None
+        self.frida_idthreads = None
         self.frida_functions = {}
 
 
@@ -51,6 +53,8 @@ class GlobalState:
             }
 
 
+
+
 class GlobalSignals(QObject):
     state_updated = Signal()
     gdb_updated = Signal()
@@ -58,6 +62,8 @@ class GlobalSignals(QObject):
     gdb_updated_regs = Signal()
     frida_updated = Signal()
     frida_updatedsym = Signal()
+    frida_updatedthread = Signal()
+    frida_updatedidthread = Signal()
     frida_updatedsym_trace = Signal()
 
 GLOBAL = GlobalState()

@@ -253,6 +253,7 @@ class Gproxy:
     def settofrida_func(self, data, finit):
 
         if finit:
+            GLOBAL.frida_functions = {}
             for d in data:
                 if d.get("type") == "function":
                     func_name = d.get("name")
@@ -277,6 +278,14 @@ class Gproxy:
         elif type == "symbols":
             GLOBAL.frida_enumsymbols = data
             SIGNALS.frida_updatedsym.emit()
+
+        elif type == "threads":
+            GLOBAL.frida_enumthreads = data
+            SIGNALS.frida_updatedthread.emit()
+
+        elif type == "id_threads":
+            GLOBAL.frida_idthreads = data
+            SIGNALS.frida_updatedidthread.emit()
 
         return True
 

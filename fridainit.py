@@ -7,6 +7,9 @@ import time
 import datetime
 from ctypes import *
 import xmlrpc.client
+import threading
+
+
 
 proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 
@@ -22,13 +25,24 @@ def on_message(message, data):
            proxy.settofrida_enum(modules, "modules")
            print("[+] Done.")
 
-
         elif message['payload']['type'] == 'enum_symbols':
            print("[+] Send to binja...")
            sym = message['payload']['log']
 
            proxy.settofrida_enum(sym, "symbols")
            print("[+] Done.")
+
+        elif message['payload']['type'] == 'enum_threads':
+           print("[+] Send to binja...")
+           threads = message['payload']['log']
+
+           proxy.settofrida_enum(threads, "threads")
+           print("[+] Done.")
+
+
+        elif message['payload']['type'] == 'id_threads':
+           threads = message['payload']['log']
+           proxy.settofrida_enum(threads, "id_threads")
 
 
         elif message['payload']['type'] == 'info':
@@ -38,7 +52,7 @@ def on_message(message, data):
 
         elif message['payload']['type'] == 'hook_hit':
            info = message['payload']['log']
-           print(f"[+] Hit {info}")
+           #print(f"[+] Hit {info}")
            proxy.settofrida_func(info, False)
 
 
@@ -91,6 +105,10 @@ def setup_hook(script, dick_sym, func_target):
             except Exception as e:
                 print(f"{func_name} >>>>>>> {e}")
 
+def thread_livethread(script):
+    while True:
+        script.exports_sync.idthreads()
+        time.sleep(1)
 
 
 def main():
@@ -123,15 +141,16 @@ def main():
     script.on("message", on_message)
     script.load()
 
-    print(f"[+] Inject {fscript} successfully")
+    print(f"\n[+] Inject Agent successfully")
 
-    print("\n============")
-    print("List Command:")
-    print("============")
+    print("\n==============")
+    print(" List Command:")
+    print("==============")
     print("1. shell/reverse_shell_java (s/js)")
-    print("2. enum_module/enum_symbol (em/es)")
+    print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
     print("3. trace (tr)> (back/all/<sym/addr>)")
-    print("4. exit")
+    print("4. stalker (stalker)> (back/<id>)")
+    print("5. exit")
 
     loop_menu = True
 
@@ -144,6 +163,23 @@ def main():
         elif pshell == "es":
             module = input("\n>> Module> ")
             script.exports_sync.enumsymbols(module)
+
+        elif pshell == "et":
+            script.exports_sync.enumthreads()
+
+
+        elif pshell == "stalker":
+
+            thread1 = threading.Thread(target=thread_livethread, args=(script,))
+            thread1.start()
+
+            in_id = input("\n>> Stalker> ")
+
+            if in_id == "back":
+                continue
+
+            script.exports_sync.setstalker(int(in_id))
+
 
         elif pshell == "tr":
             script.exports_sync.enummodules()

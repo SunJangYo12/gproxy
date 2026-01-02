@@ -29,6 +29,9 @@ from binaryninja import (
     core_version,
     log_info,
     highlight,
+    show_message_box,
+    MessageBoxButtonSet,
+    MessageBoxIcon
 )
 
 import binaryninja as binja
@@ -45,6 +48,10 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
         SIGNALS.frida_updated.connect(self.refresh_from_global)
         SIGNALS.frida_updatedsym.connect(self.refresh_from_global_sym)
+        SIGNALS.frida_updatedthread.connect(self.refresh_from_global_thread)
+
+        SIGNALS.frida_updatedidthread.connect(self.refresh_from_global_id_thread)
+
         SIGNALS.frida_updatedsym_trace.connect(self.refresh_from_global_sym_trace)
 
 
@@ -67,6 +74,14 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         self.bv = data
         self.font = getMonospaceFont(self)
 
+    def format_size(self, size):
+        units = ['B', 'K', 'M', 'G', 'T']
+        index = 0
+        while size >= 1024 and index < len(units) - 1:
+            size /= 1024
+            index += 1
+        return f'{size:.1f}{units[index]}'
+
 
     def refresh_from_global(self):
         self.tree_widget.clear()
@@ -75,9 +90,73 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         for data in GLOBAL.frida_enummodules:
             parent = QTreeWidgetItem(self.tree_widget)
 
-            parent.setText(0, "%s" %data.get('name'))
+            msize = self.format_size(int(data.get('size')) )
+
+            parent.setText(0, "%s" %(data.get('name')) )
             parent.setFont(0, self.font)
             parent.setData(0, Qt.UserRole, data )
+            parent.setExpanded(True)
+
+            child1 = QTreeWidgetItem(parent)
+            child1.setText(0, "Size: %s" %(msize) )
+            child1.setFont(0, self.font)
+
+            child2 = QTreeWidgetItem(parent)
+            child2.setText(0, "%s" %(data.get('path')) )
+            child2.setFont(0, self.font)
+
+
+    def refresh_from_global_id_thread(self):
+        self.tree_widget.clear()
+        self.tree_widget.headerItem().setText(0, "ID Thread List: %d" %len(GLOBAL.frida_idthreads) )
+
+        for data in GLOBAL.frida_idthreads:
+            parent = QTreeWidgetItem(self.tree_widget)
+
+            try:
+                parent.setText(0, "%s(%s): %s" %(data["id"], data["name"], data["state"])  )
+            except:
+                parent.setText(0, "%s: %s" %(data["id"], data["state"])  )
+
+
+            if data["state"] == "running":
+                parent.setForeground(0, QColor("orange"))
+
+            parent.setFont(0, self.font)
+            parent.setData(0, Qt.UserRole, data )
+
+
+    def refresh_from_global_thread(self):
+        self.tree_widget.clear()
+        self.tree_widget.headerItem().setText(0, "Thread List: %d" %len(GLOBAL.frida_enumthreads) )
+
+        for data in GLOBAL.frida_enumthreads:
+            parent = QTreeWidgetItem(self.tree_widget)
+
+            try:
+                parent.setText(0, "%s(%s): %s" %(data["id"], data["name"], data["state"])  )
+            except:
+                parent.setText(0, "%s: %s" %(data["id"], data["state"])  )
+
+            if data["state"] == "running":
+                parent.setForeground(0, QColor("orange"))
+
+            parent.setFont(0, self.font)
+            parent.setData(0, Qt.UserRole, data )
+
+
+            child1 = QTreeWidgetItem(parent)
+            child1.setText(0, "context")
+            child1.setFont(0, self.font)
+            child1.setExpanded(True)
+
+            for key in data["context"]:
+                child2 = QTreeWidgetItem(child1)
+                child2.setText(0, "%s: %s"% (key, data["context"][key]) )
+                child2.setFont(0, self.font)
+
+
+
 
     def refresh_from_global_sym(self):
         self.tree_widget.clear()
@@ -167,11 +246,32 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
             base = item.data(0, Qt.UserRole)
             print(base.get("base"))
 
+            show_message_box(
+                "G-proxy",
+                "Base: %s" %base.get("base"),
+                MessageBoxButtonSet.OKButtonSet,
+                MessageBoxIcon.InformationIcon
+            )
+
         elif action == "Size":
             base = item.data(0, Qt.UserRole)
             print(base.get("size"))
 
+            show_message_box(
+                "G-proxy",
+                "Size: %s" %base.get("size"),
+                MessageBoxButtonSet.OKButtonSet,
+                MessageBoxIcon.InformationIcon
+            )
+
         elif action == "Path":
             base = item.data(0, Qt.UserRole)
             print(base.get("path"))
+
+            show_message_box(
+                "G-proxy",
+                "Path: %s" %base.get("path"),
+                MessageBoxButtonSet.OKButtonSet,
+                MessageBoxIcon.InformationIcon
+            )
 

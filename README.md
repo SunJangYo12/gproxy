@@ -272,5 +272,13 @@ $ python fridainit.py
 >> Chose pid? (1234): 9144
 >> em
 >> et
->> Module> libc++.so>
+>> Module> libc++.so> #bug jika module cukup besar
+```
+Cheatshet frida patch
+```
+# enumerate JNI function (ident with "Java_")
+$ frida-trace -i "Java_*" com.android.tes
+
+# enumerate all function by module
+$ frida-trace -I "openssl_mybank.so" com.android.tes
 ```

@@ -20,6 +20,8 @@ class GlobalState:
         self.frida_enumthreads = None
         self.frida_idthreads = None
         self.frida_functions = {}
+        self.frida_stalkers = {}
+        self.window_frida_stalker_title = ""
 
 
 
@@ -65,6 +67,8 @@ class GlobalSignals(QObject):
     frida_updatedthread = Signal()
     frida_updatedidthread = Signal()
     frida_updatedsym_trace = Signal()
+    frida_stalker = Signal()
+    window_frida_stalker = Signal()
 
 GLOBAL = GlobalState()
 SIGNALS = GlobalSignals()

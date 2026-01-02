@@ -270,7 +270,6 @@ class Gproxy:
 
     @expose
     def settofrida_enum(self, data, type):
-
         if type == "modules":
             GLOBAL.frida_enummodules = data
             SIGNALS.frida_updated.emit()
@@ -287,7 +286,18 @@ class Gproxy:
             GLOBAL.frida_idthreads = data
             SIGNALS.frida_updatedidthread.emit()
 
+        elif type == "stalker":
+            GLOBAL.frida_stalkers = data
+            SIGNALS.frida_stalker.emit()
+
         return True
+
+    @expose
+    def settofrida_openwindow(self, type, data):
+        if type == "stalker":
+            GLOBAL.window_frida_stalker_title = data
+            SIGNALS.window_frida_stalker.emit()
+
 
 
     @expose

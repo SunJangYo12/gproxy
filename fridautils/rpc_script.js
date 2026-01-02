@@ -49,12 +49,13 @@ class FuzzerKu
                send({"type": "enum_symbols", "log": msg});
            else if (subtype == "et")
                send({"type": "enum_threads", "log": msg});
-
            else if (subtype == "id_threads")
                send({"type": "id_threads", "log": msg});
-
            else if (subtype == "hook_hit")
                send({"type": "hook_hit", "log": msg});
+
+           else if (subtype == "stalker")
+               send({"type": "stalker", "log": msg});
 
            else if (subtype == "info")
                send({"type": "info", "log": msg});
@@ -168,10 +169,14 @@ class FuzzerKu
                }
 
                this.logDebug("send", output, "id_threads");
-
-
             },
-            setstalker: (id) => {
+            setstalker: (control, id) => {
+               if (control == "exit")
+               {
+                  Stalker.unfollow(id);
+                  return
+               }
+
                this.logDebug("send", "Setup Stalker...", "info");
 
                const subthis = this
@@ -188,15 +193,18 @@ class FuzzerKu
                      var calls = Stalker.parse(events, {
                         annotate: true,
                      });
-                     for (var i=0; i<calls.length; i++) {
+                     /*for (var i=0; i<calls.length; i++) {
                         let call = calls[i];
                         console.log(call[2]);
 
                         //subthis.logDebug("send", call[2], "stalker");
-                     }
+                     }*/
                   },
                   onCallSummary: function (summary) {
-                     //console.log(JSON.stringify(summary, null, 4));
+                     //const data = JSON.stringify(summary, null, 4);
+                     //console.log(data)
+
+                     subthis.logDebug("send", summary, "stalker");
                   }
                });
             },

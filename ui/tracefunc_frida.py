@@ -37,6 +37,56 @@ from binaryninja import (
 import binaryninja as binja
 
 
+class DialogStalker(QDialog):
+    def __init__(self, parent=None, sid=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"Stalker({sid})")
+        self.setWindowFlags(
+            Qt.Window |
+            Qt.WindowMinimizeButtonHint |
+            Qt.WindowCloseButtonHint
+        )
+        self.setWindowModality(Qt.NonModal)
+
+        SIGNALS.frida_stalker.connect(self.setData)
+
+        self.sid = sid
+
+
+        self.tree_widget = QTreeWidget()
+
+        self.tree_widget.setColumnCount(2)
+        self.tree_widget.headerItem().setText(0, "func addr" )
+        self.tree_widget.headerItem().setText(1, "call count" )
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.tree_widget)
+
+        self.setLayout(layout)
+        self.font = getMonospaceFont(self)
+
+    def setData(self):
+        self.tree_widget.clear()
+        self.setWindowTitle(f"Stalker({self.sid}) {len(GLOBAL.frida_stalkers)}")
+
+        #self.tree_widget.headerItem().setText(0, "Function List: %d" %len(GLOBAL.frida_stalkers) )
+
+        for call_addr, call_count in GLOBAL.frida_stalkers.items():
+            parent = QTreeWidgetItem(self.tree_widget)
+
+            parent.setText(0, "%s" %call_addr )
+            parent.setFont(0, self.font)
+
+            parent.setText(1, "%s" %call_count )
+            parent.setFont(1, self.font)
+            #parent.setData(0, Qt.UserRole, data )
+
+
+
+
+
+
+
 class FridaFuncListDockWidget(QWidget, DockContextHandler):
     def __init__(self, parent, name, data):
         QWidget.__init__(self, parent)
@@ -49,10 +99,10 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         SIGNALS.frida_updated.connect(self.refresh_from_global)
         SIGNALS.frida_updatedsym.connect(self.refresh_from_global_sym)
         SIGNALS.frida_updatedthread.connect(self.refresh_from_global_thread)
-
         SIGNALS.frida_updatedidthread.connect(self.refresh_from_global_id_thread)
-
         SIGNALS.frida_updatedsym_trace.connect(self.refresh_from_global_sym_trace)
+
+        SIGNALS.window_frida_stalker.connect(self.refresh_from_global_owindow)
 
 
         tree_widget = QTreeWidget()
@@ -81,6 +131,17 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
             size /= 1024
             index += 1
         return f'{size:.1f}{units[index]}'
+
+
+    def refresh_from_global_owindow(self):
+        title = GLOBAL.window_frida_stalker_title
+
+        self.dlg = DialogStalker(sid=title)
+        self.dlg.resize(210, 520) # w,h
+        self.dlg.show()
+        self.dlg.raise_()
+        self.dlg.activateWindow()
+
 
 
     def refresh_from_global(self):

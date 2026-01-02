@@ -39,10 +39,14 @@ def on_message(message, data):
            proxy.settofrida_enum(threads, "threads")
            print("[+] Done.")
 
-
         elif message['payload']['type'] == 'id_threads':
            threads = message['payload']['log']
            proxy.settofrida_enum(threads, "id_threads")
+
+
+        elif message['payload']['type'] == 'stalker':
+           sdata = message['payload']['log']
+           proxy.settofrida_enum(sdata, "stalker")
 
 
         elif message['payload']['type'] == 'info':
@@ -105,10 +109,20 @@ def setup_hook(script, dick_sym, func_target):
             except Exception as e:
                 print(f"{func_name} >>>>>>> {e}")
 
-def thread_livethread(script):
-    while True:
-        script.exports_sync.idthreads()
-        time.sleep(1)
+
+class MyThread(threading.Thread):
+    def __init__(self, script):
+        super().__init__()
+        self.stop_event = threading.Event()
+        self.script = script
+
+    def run(self):
+        while not self.stop_event.is_set():
+            self.script.exports_sync.idthreads()
+            time.sleep(1)
+
+    def stop(self):
+        self.stop_event.set()
 
 
 def main():
@@ -149,7 +163,7 @@ def main():
     print("1. shell/reverse_shell_java (s/js)")
     print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
     print("3. trace (tr)> (back/all/<sym/addr>)")
-    print("4. stalker (stalker)> (back/<id>)")
+    print("4. stalker (stl)> (back/<id>/window)")
     print("5. exit")
 
     loop_menu = True
@@ -168,17 +182,29 @@ def main():
             script.exports_sync.enumthreads()
 
 
-        elif pshell == "stalker":
+        elif pshell == "stl":
 
-            thread1 = threading.Thread(target=thread_livethread, args=(script,))
-            thread1.start()
+            thread = MyThread(script)
+            thread.start()
 
-            in_id = input("\n>> Stalker> ")
+            tmpid = 0
 
-            if in_id == "back":
-                continue
 
-            script.exports_sync.setstalker(int(in_id))
+            while True:
+                in_id = input("\n>> Stalker> ")
+
+                if in_id == "back":
+                    print(f"[+] Exit stalker: {tmpid}")
+                    thread.stop()
+                    script.exports_sync.setstalker("exit", tmpid)
+                    break
+                elif in_id == "window":
+                    proxy.settofrida_openwindow("stalker")
+
+                else:
+                    tmpid = int(in_id)
+                    proxy.settofrida_openwindow("stalker", in_id)
+                    script.exports_sync.setstalker("run", int(in_id))
 
 
         elif pshell == "tr":

@@ -38,7 +38,7 @@ import binaryninja as binja
 
 
 class DialogStalker(QDialog):
-    def __init__(self, parent=None, sid=None):
+    def __init__(self, parent=None, sid=None, data=None):
         super().__init__(parent)
         self.setWindowTitle(f"Stalker({sid})")
         self.setWindowFlags(
@@ -51,6 +51,7 @@ class DialogStalker(QDialog):
 
         SIGNALS.frida_stalker.connect(self.setData)
 
+        self.bv = data
         self.sid = sid
         self.history = []
         self.curr_history = 0
@@ -59,13 +60,14 @@ class DialogStalker(QDialog):
         self.tree_widget = QTreeWidget()
 
         self.tree_widget.setColumnCount(7)
-        self.tree_widget.headerItem().setText(0, "name" )
-        self.tree_widget.headerItem().setText(1, "moduleName" )
+        self.tree_widget.headerItem().setText(0, "name/offset" )
+        self.tree_widget.headerItem().setText(1, "module" )
         self.tree_widget.headerItem().setText(2, "call count" )
         self.tree_widget.headerItem().setText(3, "addr" )
         self.tree_widget.headerItem().setText(4, "fileName" )
         self.tree_widget.headerItem().setText(5, "lineNumber" )
         self.tree_widget.headerItem().setText(6, "column" )
+        self.tree_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
 
 
         #count history
@@ -134,9 +136,11 @@ class DialogStalker(QDialog):
 
             parent.setText(0, "%s" % data["name"] )
             parent.setFont(0, self.font)
+            parent.setData(0, Qt.UserRole, data["name"])
 
             parent.setText(1, "%s" % data["moduleName"] )
             parent.setFont(1, self.font)
+            parent.setData(1, Qt.UserRole, data["moduleName"])
 
             parent.setText(2, "%s" % data["call_count"] )
             parent.setFont(2, self.font)
@@ -172,7 +176,17 @@ class DialogStalker(QDialog):
     def click_search(self):
         print("fvvv")
 
+    def on_item_double_clicked(self, item, column):
+        data = item.data(column, Qt.UserRole)
 
+        try:
+            addr = int(data, 0)
+            print("jump to:", addr)
+
+            self.bv.offset = addr
+        except:
+            print("data is:", data)
+            pass
 
 
 
@@ -227,7 +241,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
     def refresh_from_global_owindow(self):
         title = GLOBAL.window_frida_stalker_title
 
-        self.dlg = DialogStalker(sid=title)
+        self.dlg = DialogStalker(sid=title, data=self.bv)
         self.dlg.resize(340, 550) # w,h
         self.dlg.show()
         self.dlg.raise_()

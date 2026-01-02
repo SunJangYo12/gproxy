@@ -163,7 +163,7 @@ def main():
     print("1. shell/reverse_shell_java (s/js)")
     print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
     print("3. trace (tr)> (back/all/<sym/addr>)")
-    print("4. stalker (stl)> (back/<id>/window)")
+    print("4. stalker (stl)> (back/<id>/window)/stoplivethread/startlivethread")
     print("5. exit")
 
     loop_menu = True
@@ -198,6 +198,15 @@ def main():
                     thread.stop()
                     script.exports_sync.setstalker("exit", tmpid)
                     break
+
+                elif in_id == "stoplivethread":
+                    print(f"[+] Stop Live thread view")
+                    thread.stop()
+
+                elif in_id == "startlivethread":
+                    print(f"[+] Start Live thread view")
+                    thread.start()
+
                 elif in_id == "window":
                     proxy.settofrida_openwindow("stalker")
 

@@ -118,6 +118,37 @@ class FuzzerKu
        });
     }
 
+    addrToSymb(summary)
+    {
+      /* this sample data of summary
+         {
+            "0x73739255c4": 1,
+         }
+      */
+       var output = []
+
+       for (const addr in summary)
+       {
+          const cc = summary[addr]
+          const sym = DebugSymbol.fromAddress(ptr(addr))
+
+          const out = {
+             "addr": addr,
+             "call_count": cc,
+             "column": sym.column,
+             "fileName": sym.fileName,
+             "lineNumber": sym.lineNumber,
+             "moduleName": sym.moduleName,
+             "name": sym.name
+          };
+
+          output.push(out)
+       }
+       return output
+    }
+
+
+
     rpc_setup()
     {
         rpc.exports = {
@@ -203,8 +234,10 @@ class FuzzerKu
                   onCallSummary: function (summary) {
                      //const data = JSON.stringify(summary, null, 4);
                      //console.log(data)
+                     const out_stalker = subthis.addrToSymb(summary)
 
-                     subthis.logDebug("send", summary, "stalker");
+                     subthis.logDebug("send", out_stalker, "stalker");
+
                   }
                });
             },

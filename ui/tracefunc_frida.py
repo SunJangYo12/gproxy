@@ -55,9 +55,14 @@ class DialogStalker(QDialog):
 
         self.tree_widget = QTreeWidget()
 
-        self.tree_widget.setColumnCount(2)
-        self.tree_widget.headerItem().setText(0, "func addr" )
-        self.tree_widget.headerItem().setText(1, "call count" )
+        self.tree_widget.setColumnCount(7)
+        self.tree_widget.headerItem().setText(0, "name" )
+        self.tree_widget.headerItem().setText(1, "moduleName" )
+        self.tree_widget.headerItem().setText(2, "call count" )
+        self.tree_widget.headerItem().setText(3, "addr" )
+        self.tree_widget.headerItem().setText(4, "fileName" )
+        self.tree_widget.headerItem().setText(5, "lineNumber" )
+        self.tree_widget.headerItem().setText(6, "column" )
 
         layout = QVBoxLayout()
         layout.addWidget(self.tree_widget)
@@ -69,17 +74,30 @@ class DialogStalker(QDialog):
         self.tree_widget.clear()
         self.setWindowTitle(f"Stalker({self.sid}) {len(GLOBAL.frida_stalkers)}")
 
-        #self.tree_widget.headerItem().setText(0, "Function List: %d" %len(GLOBAL.frida_stalkers) )
-
-        for call_addr, call_count in GLOBAL.frida_stalkers.items():
+        for data in GLOBAL.frida_stalkers:
             parent = QTreeWidgetItem(self.tree_widget)
 
-            parent.setText(0, "%s" %call_addr )
+            parent.setText(0, "%s" % data["name"] )
             parent.setFont(0, self.font)
 
-            parent.setText(1, "%s" %call_count )
+            parent.setText(1, "%s" % data["moduleName"] )
             parent.setFont(1, self.font)
-            #parent.setData(0, Qt.UserRole, data )
+
+            parent.setText(2, "%s" % data["call_count"] )
+            parent.setFont(2, self.font)
+
+            parent.setText(3, "%s" % data["addr"] )
+            parent.setFont(3, self.font)
+
+            parent.setText(4, "%s" % data["fileName"] )
+            parent.setFont(4, self.font)
+
+
+            parent.setText(5, "%s" % data["lineNumber"] )
+            parent.setFont(5, self.font)
+
+            parent.setText(6, "%s" % data["column"] )
+            parent.setFont(6, self.font)
 
 
 
@@ -137,7 +155,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         title = GLOBAL.window_frida_stalker_title
 
         self.dlg = DialogStalker(sid=title)
-        self.dlg.resize(210, 520) # w,h
+        self.dlg.resize(340, 550) # w,h
         self.dlg.show()
         self.dlg.raise_()
         self.dlg.activateWindow()
@@ -163,8 +181,12 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
             child1.setFont(0, self.font)
 
             child2 = QTreeWidgetItem(parent)
-            child2.setText(0, "%s" %(data.get('path')) )
+            child2.setText(0, "Base: %s" %data.get('base') )
             child2.setFont(0, self.font)
+
+            child3 = QTreeWidgetItem(parent)
+            child3.setText(0, "%s" %(data.get('path')) )
+            child3.setFont(0, self.font)
 
 
     def refresh_from_global_id_thread(self):

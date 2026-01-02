@@ -47,10 +47,13 @@ class DialogStalker(QDialog):
             Qt.WindowCloseButtonHint
         )
         self.setWindowModality(Qt.NonModal)
+        self.font = getMonospaceFont(self)
 
         SIGNALS.frida_stalker.connect(self.setData)
 
         self.sid = sid
+        self.history = []
+        self.curr_history = 0
 
 
         self.tree_widget = QTreeWidget()
@@ -64,17 +67,69 @@ class DialogStalker(QDialog):
         self.tree_widget.headerItem().setText(5, "lineNumber" )
         self.tree_widget.headerItem().setText(6, "column" )
 
+
+        #count history
+        self.label_his = QLabel("")
+        self.label_his.setFont(self.font)
+
+        #forward
+        self.btnF = QToolButton()
+        self.btnF.setIcon(self.style().standardIcon(QStyle.SP_ArrowForward))
+        self.btnF.setIconSize(QSize(20,20))
+        self.btnF.setToolTip("History forward")
+
+        #back
+        self.btnB = QToolButton()
+        self.btnB.setIcon(self.style().standardIcon(QStyle.SP_ArrowBack))
+        self.btnB.setIconSize(QSize(20,20))
+        self.btnB.setToolTip("History backward")
+
+        #search
+        self.lineEdit = QLineEdit()
+        self.lineEdit.setObjectName(u"lineEdit")
+
+        self.btnS = QToolButton()
+        self.btnS.setIcon(self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
+        self.btnS.setIconSize(QSize(20,20))
+        self.btnS.setToolTip("Search")
+
+        # set layout
+        h_layout = QHBoxLayout()
+        h_layout.addWidget(self.btnB)
+        h_layout.addWidget(self.btnF)
+        h_layout.addWidget(self.label_his)
+        h_layout.addWidget(self.lineEdit)
+        h_layout.addWidget(self.btnS)
+
         layout = QVBoxLayout()
         layout.addWidget(self.tree_widget)
+        layout.addLayout(h_layout)
 
         self.setLayout(layout)
-        self.font = getMonospaceFont(self)
+
+        # action
+        self.btnF.clicked.connect(self.click_stateF)
+        self.btnB.clicked.connect(self.click_stateB)
+        self.btnS.clicked.connect(self.click_search)
+
+        # init
+        self.label_his.setText("[%s/%s]" % (self.curr_history, len(self.history)) )
+
+
 
     def setData(self):
-        self.tree_widget.clear()
-        self.setWindowTitle(f"Stalker({self.sid}) {len(GLOBAL.frida_stalkers)}")
+        self.history.append(GLOBAL.frida_stalkers)
+        self.label_his.setText("[%s/%s]" % (self.curr_history, len(self.history)-1) )
 
-        for data in GLOBAL.frida_stalkers:
+    def showData(self):
+        self.tree_widget.clear()
+
+        total = len(self.history[self.curr_history])-1
+
+        self.setWindowTitle(f"Stalker({self.sid}) {total}")
+        self.label_his.setText("[%s/%s]" % (self.curr_history, len(self.history)-1) )
+
+        for data in self.history[self.curr_history]:
             parent = QTreeWidgetItem(self.tree_widget)
 
             parent.setText(0, "%s" % data["name"] )
@@ -98,6 +153,24 @@ class DialogStalker(QDialog):
 
             parent.setText(6, "%s" % data["column"] )
             parent.setFont(6, self.font)
+
+
+    def click_stateF(self):
+        if self.curr_history < len(self.history)-1:
+            self.curr_history += 1
+            self.showData()
+
+        self.label_his.setText("[%s/%s]" % (self.curr_history, len(self.history)-1) )
+
+    def click_stateB(self):
+        if self.curr_history != 0:
+            self.curr_history -= 1
+            self.showData()
+
+        self.label_his.setText("[%s/%s]" % (self.curr_history, len(self.history)-1) )
+
+    def click_search(self):
+        print("fvvv")
 
 
 

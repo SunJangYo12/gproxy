@@ -190,10 +190,12 @@ class FuzzerKu
                {
                   const id = aa[key]["id"];
                   const state = aa[key]["state"];
+                  const name = aa[key]["name"];
 
                   const out = {
                      "id": id,
-                     "state": state
+                     "state": state,
+                     "name": name
                   };
 
                   output.push(out)

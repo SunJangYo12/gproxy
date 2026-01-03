@@ -144,19 +144,24 @@ class DialogStalker(QDialog):
 
             parent.setText(2, "%s" % data["call_count"] )
             parent.setFont(2, self.font)
+            parent.setData(2, Qt.UserRole, data["call_count"])
 
             parent.setText(3, "%s" % data["addr"] )
             parent.setFont(3, self.font)
+            parent.setData(3, Qt.UserRole, data["addr"])
 
             parent.setText(4, "%s" % data["fileName"] )
             parent.setFont(4, self.font)
+            parent.setData(4, Qt.UserRole, data["fileName"])
 
 
             parent.setText(5, "%s" % data["lineNumber"] )
             parent.setFont(5, self.font)
+            parent.setData(5, Qt.UserRole, data["lineNumber"])
 
             parent.setText(6, "%s" % data["column"] )
             parent.setFont(6, self.font)
+            parent.setData(6, Qt.UserRole, data["column"])
 
 
     def click_stateF(self):
@@ -185,7 +190,10 @@ class DialogStalker(QDialog):
 
             self.bv.offset = addr
         except:
-            print("data is:", data)
+            print("Copy data:", data)
+            if column == 3:
+               data = hex(data)
+            QApplication.clipboard().setText(data)
             pass
 
 
@@ -278,7 +286,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
     def refresh_from_global_id_thread(self):
         self.tree_widget.clear()
-        self.tree_widget.headerItem().setText(0, "ID Thread List: %d" %len(GLOBAL.frida_idthreads) )
+        self.tree_widget.headerItem().setText(0, "%s ID Thread List: %d" % (GLOBAL.refresh_view, len(GLOBAL.frida_idthreads)) )
 
         for data in GLOBAL.frida_idthreads:
             parent = QTreeWidgetItem(self.tree_widget)

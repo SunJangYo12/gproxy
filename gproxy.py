@@ -283,12 +283,21 @@ class Gproxy:
             SIGNALS.frida_updatedthread.emit()
 
         elif type == "id_threads":
+            # untuk melihat update
+            if GLOBAL.refresh_view == "0":
+                GLOBAL.refresh_view = "o"
+            else:
+                GLOBAL.refresh_view = "0"
+
             GLOBAL.frida_idthreads = data
             SIGNALS.frida_updatedidthread.emit()
 
         elif type == "stalker":
             GLOBAL.frida_stalkers = data
             SIGNALS.frida_stalker.emit()
+
+        elif type == "bnlog":
+            log_info(data)
 
         return True
 

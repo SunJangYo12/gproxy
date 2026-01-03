@@ -57,8 +57,12 @@ class FuzzerKu
            else if (subtype == "stalker")
                send({"type": "stalker", "log": msg});
 
+           else if (subtype == "bnlog")
+               send({"type": "bnlog", "log": msg});
+
            else if (subtype == "info")
                send({"type": "info", "log": msg});
+
         }
         else if (type == "console") {
            console.log(msg);
@@ -147,8 +151,45 @@ class FuzzerKu
        return output
     }
 
+    stalkingfunc(addr, filter)
+    {
+        console.log("[+] Done."); //entah kenapa console ini penting
 
+        const subthis = this
 
+        Interceptor.attach(addr, {
+            onEnter(args) {
+                console.log("[+] Hit: "+addr);
+
+                Stalker.follow(this.threadId, {
+                    transform: function(iterator) {
+                        let instruction = iterator.next();
+                        do {
+                            if (filter != "all") {
+                                if (instruction.mnemonic == filter) {
+                                    iterator.putCallout(printRet);
+                                }
+                            }
+                            else {
+                                //console.log(instruction);
+                                subthis.logDebug("send", instruction, "bnlog");
+                            }
+                            iterator.keep();
+                        } while ((instruction = iterator.next()) !== null);
+                    },
+
+                });
+        },
+        onLeave(retval) {
+            Stalker.unfollow(this.threadId);
+        }
+        });
+
+        function printRet(context) {
+            //console.log(filter+' @ ' + context.pc);
+            subthis.logDebug("send", filter+" @ "+context.pc, "bnlog");
+        }
+    }
     rpc_setup()
     {
         rpc.exports = {
@@ -203,9 +244,15 @@ class FuzzerKu
 
                this.logDebug("send", output, "id_threads");
             },
-            setstalker: (control, id) => {
-               if (control == "exit")
-               {
+            setstalker: (sw, id) => {
+               if (sw == "intruksi") {
+                  this.logDebug("send", "Setup Stalker inctuction: "+id, "info");
+
+                  this.stalkingfunc(ptr(id), "all")
+
+                  return
+               }
+               else if (sw == "exit") {
                   Stalker.unfollow(id);
                   return
                }
@@ -233,26 +280,43 @@ class FuzzerKu
                         //subthis.logDebug("send", call[2], "stalker");
                      }*/
                   },
-                  onCallSummary: function (summary) {
+                  onCallSummary: function (summary) { //only function call
                      //const data = JSON.stringify(summary, null, 4);
                      //console.log(data)
                      const out_stalker = subthis.addrToSymb(summary)
 
                      subthis.logDebug("send", out_stalker, "stalker");
 
-                  }
+                  }/*,
+                  transform: function (iterator) { //with intruction
+                     let instruction = iterator.next();
+                     do {
+                        console.log(instruction.address);
+                        //console.log(instruction.mnemonic);
+
+                        iterator.keep();
+                     } while ( (instruction = iterator.next()) !== null );
+                  }*/
                });
             },
-            setuphook: (func_name) => {
+            setuphook: (func_name, fstalking) => {
 
                const subthis = this;
                const addr = DebugSymbol.fromName(func_name).address;
 
-               Interceptor.attach(addr, {
-                   onEnter: function(args) {
-                       subthis.logDebug("send", func_name, "hook_hit");
-                   }
-               });
+               if (fstalking != -1) {
+                   this.logDebug("send", "Setup hook: "+func_name+" with stalking: "+fstalking, "info");
+
+                   this.stalkingfunc(addr, fstalking)
+               }
+               else {
+                   this.logDebug("send", "Setup hook: "+func_name, "info");
+                   Interceptor.attach(addr, {
+                       onEnter: function(args) {
+                           subthis.logDebug("send", func_name, "hook_hit");
+                       }
+                   });
+               }
 
             },
             reshelljava: (sip, sport) => {

@@ -49,6 +49,10 @@ def on_message(message, data):
            proxy.settofrida_enum(sdata, "stalker")
 
 
+        elif message['payload']['type'] == 'bnlog':
+           bnlog = message['payload']['log']
+           proxy.settofrida_enum(bnlog, "bnlog")
+
         elif message['payload']['type'] == 'info':
            info = message['payload']['log']
            print(f"[+] {info}")
@@ -91,8 +95,20 @@ def inject_module(script, target):
        exit()
     return triggerAddr
 
-def setup_hook(script, dick_sym, func_target):
-    #print(dick_sym)
+def setup_hook(script, dick_sym, func_target, fstalking):
+
+    if func_target:
+        try:
+            if fstalking != "":
+                print(f"[+] hook: {func_target} intruction filter: {fstalking}")
+                script.exports_sync.setuphook(func_target, fstalking)
+            else:
+                print(f"[+] hook: {func_target}")
+                script.exports_sync.setuphook(func_target, -1)
+        except Exception as e:
+            print(f"{func_name} >>>>>>> {e}")
+
+        return
 
     for data in dick_sym:
         if data.get("type") == "function":
@@ -105,7 +121,7 @@ def setup_hook(script, dick_sym, func_target):
 
             print(f"[+] hook: {func_name} is {func_addr}")
             try:
-                script.exports_sync.setuphook(func_name)
+                script.exports_sync.setuphook(func_name, -1)
             except Exception as e:
                 print(f"{func_name} >>>>>>> {e}")
 
@@ -119,7 +135,7 @@ class MyThread(threading.Thread):
     def run(self):
         while not self.stop_event.is_set():
             self.script.exports_sync.idthreads()
-            time.sleep(1)
+            time.sleep(0.3)
 
     def stop(self):
         self.stop_event.set()
@@ -162,8 +178,9 @@ def main():
     print("==============")
     print("1. shell/reverse_shell_java (s/js)")
     print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
-    print("3. trace (tr)> (back/all/<sym/addr>)")
-    print("4. stalker (stl)> (back/<id>/window)/stoplivethread/startlivethread")
+    print("3. trace (tr)> (all/<symbol>/back)> (all/mnemonic(ret,jne)/<enter-none>)")
+    print("4. stalker (stl)> (back/<id>/window/intruksi/stoplivethread/startlivethread)")
+    print("           (intruksi)> <func_addr>")
     print("5. exit")
 
     loop_menu = True
@@ -183,12 +200,10 @@ def main():
 
 
         elif pshell == "stl":
-
             thread = MyThread(script)
             thread.start()
 
             tmpid = 0
-
 
             while True:
                 in_id = input("\n>> Stalker> ")
@@ -207,9 +222,13 @@ def main():
                     print(f"[+] Start Live thread view")
                     thread.start()
 
+                elif in_id == "intruksi":
+                    in_sintr = input("\n>> Stalker> intruksi> ")
+                    script.exports_sync.setstalker("intruksi", in_sintr)
+
+
                 elif in_id == "window":
                     proxy.settofrida_openwindow("stalker")
-
                 else:
                     tmpid = int(in_id)
                     proxy.settofrida_openwindow("stalker", in_id)
@@ -228,14 +247,15 @@ def main():
             #init total symbol
             proxy.settofrida_func(dick_sym, True)
 
-            in_symbol = input(f"\n>> Module> {in_module}> ")
+            in_symbol = input(f"\n>> {in_module}> symbol> ")
 
             if in_symbol == "back":
                 continue
             elif in_symbol == "all":
-                setup_hook(script, dick_sym, None)
-            #else:
-            #    setup_hook(script, dick_sym, in_symbol)
+                setup_hook(script, dick_sym, None, None)
+            else:
+                in_fstalking = input(f"\n>> {in_module}> {in_symbol}> Stalking filter> ")
+                setup_hook(script, dick_sym, in_symbol, in_fstalking)
 
 
 

@@ -23,6 +23,8 @@ class GlobalState:
         self.frida_stalkers = {}
         self.window_frida_stalker_title = ""
 
+        self.refresh_view = "0"
+
 
 
     def append_gdbfunc_bb(self, s, block):

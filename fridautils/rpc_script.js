@@ -159,7 +159,8 @@ class FuzzerKu
 
         Interceptor.attach(addr, {
             onEnter(args) {
-                console.log("[+] Hit: "+addr);
+                const sym = DebugSymbol.fromAddress(addr)
+                subthis.logDebug("send", sym.name, "hook_hit");
 
                 Stalker.follow(this.threadId, {
                     transform: function(iterator) {

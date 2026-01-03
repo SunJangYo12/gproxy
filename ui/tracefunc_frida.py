@@ -186,15 +186,17 @@ class DialogStalker(QDialog):
 
         try:
             addr = int(data, 0)
-            print("jump to:", addr)
+            print("jump to:", hex(addr))
+
+            QApplication.clipboard().setText(str(hex(addr)))
 
             self.bv.offset = addr
         except:
             print("Copy data:", data)
             if column == 3:
-               data = hex(data)
-            QApplication.clipboard().setText(data)
-            pass
+               addr = int(data, 0)
+               data = hex(addr)
+            QApplication.clipboard().setText(str(data))
 
 
 
@@ -268,19 +270,22 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
             parent.setText(0, "%s" %(data.get('name')) )
             parent.setFont(0, self.font)
-            parent.setData(0, Qt.UserRole, data )
+            parent.setData(0, Qt.UserRole, data.get('name') )
             parent.setExpanded(True)
 
             child1 = QTreeWidgetItem(parent)
             child1.setText(0, "Size: %s" %(msize) )
+            child1.setData(0, Qt.UserRole, data.get('size') )
             child1.setFont(0, self.font)
 
             child2 = QTreeWidgetItem(parent)
             child2.setText(0, "Base: %s" %data.get('base') )
+            child2.setData(0, Qt.UserRole, data.get('base') )
             child2.setFont(0, self.font)
 
             child3 = QTreeWidgetItem(parent)
             child3.setText(0, "%s" %(data.get('path')) )
+            child3.setData(0, Qt.UserRole, data.get('path') )
             child3.setFont(0, self.font)
 
 
@@ -332,6 +337,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
                 child2 = QTreeWidgetItem(child1)
                 child2.setText(0, "%s: %s"% (key, data["context"][key]) )
                 child2.setFont(0, self.font)
+                child2.setData(0, Qt.UserRole, "%s: %s"% (key, data["context"][key]) )
 
 
 
@@ -392,7 +398,13 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
 
     def on_item_double_clicked(self, item, column):
-        pass
+
+        data = item.data(column, Qt.UserRole)
+
+        QApplication.clipboard().setText(str(data))
+
+        print("[+] copy: ", data)
+
 
 
     def on_tree_context_menu(self, position: QPoint):

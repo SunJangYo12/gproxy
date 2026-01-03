@@ -153,7 +153,7 @@ class FuzzerKu
 
     stalkingfunc(addr, filter)
     {
-        console.log("[+] Done."); //entah kenapa console ini penting
+        console.log("[+] Agent @ Done."); //entah kenapa console ini penting
 
         const subthis = this
 
@@ -172,7 +172,6 @@ class FuzzerKu
                                 }
                             }
                             else {
-                                //console.log(instruction);
                                 subthis.logDebug("send", instruction, "bnlog");
                             }
                             iterator.keep();
@@ -195,26 +194,26 @@ class FuzzerKu
     {
         rpc.exports = {
             enummodules: () => {
-               this.logDebug("send", "Getting modules...", "info");
+               this.logDebug("send", "Agent @ Getting modules...", "info");
 
                const output = Process.enumerateModulesSync();
 
                this.logDebug("send", output, "em");
             },
             enumsymbols: (module) => {
-               this.logDebug("send", "Getting symbols...", "info");
+               this.logDebug("send", "Agent @ Getting symbols...", "info");
                const output = Module.enumerateSymbols(module)
 
                this.logDebug("send", output, "es");
             },
             enumthreads: () => {
-               this.logDebug("send", "Getting thread...", "info");
+               this.logDebug("send", "Agent @ Getting thread...", "info");
                const output = Process.enumerateThreadsSync()
 
                this.logDebug("send", output, "et");
             },
             enumsymbolstrace: (module) => {
-               this.logDebug("send", "Getting symbols to hook...", "info");
+               this.logDebug("send", "Agent @ Getting symbols to hook...", "info");
 
                const dick_sym = Module.enumerateSymbols(module)
 
@@ -247,7 +246,7 @@ class FuzzerKu
             },
             setstalker: (sw, id) => {
                if (sw == "intruksi") {
-                  this.logDebug("send", "Setup Stalker inctuction: "+id, "info");
+                  this.logDebug("send", "Agent @ Setup Stalker inctuction: "+id, "info");
 
                   this.stalkingfunc(ptr(id), "all")
 
@@ -258,7 +257,7 @@ class FuzzerKu
                   return
                }
 
-               this.logDebug("send", "Setup Stalker...", "info");
+               this.logDebug("send", "Agent @ Setup Stalker...", "info");
 
                const subthis = this
 
@@ -288,16 +287,7 @@ class FuzzerKu
 
                      subthis.logDebug("send", out_stalker, "stalker");
 
-                  }/*,
-                  transform: function (iterator) { //with intruction
-                     let instruction = iterator.next();
-                     do {
-                        console.log(instruction.address);
-                        //console.log(instruction.mnemonic);
-
-                        iterator.keep();
-                     } while ( (instruction = iterator.next()) !== null );
-                  }*/
+                  }
                });
             },
             setuphook: (func_name, fstalking) => {
@@ -306,12 +296,12 @@ class FuzzerKu
                const addr = DebugSymbol.fromName(func_name).address;
 
                if (fstalking != -1) {
-                   this.logDebug("send", "Setup hook: "+func_name+" with stalking: "+fstalking, "info");
+                   this.logDebug("send", "Agent @ Setup hook: "+func_name+" with stalking: "+fstalking, "info");
 
                    this.stalkingfunc(addr, fstalking)
                }
                else {
-                   this.logDebug("send", "Setup hook: "+func_name, "info");
+                   this.logDebug("send", "Agent @ Setup hook: "+func_name, "info");
                    Interceptor.attach(addr, {
                        onEnter: function(args) {
                            subthis.logDebug("send", func_name, "hook_hit");

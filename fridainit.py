@@ -178,9 +178,8 @@ def main():
     print("==============")
     print("1. shell/reverse_shell_java (s/js)")
     print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
-    print("3. trace (tr)> (all/<symbol>/back)> (all/mnemonic(ret,jne)/<enter-none>)")
-    print("4. stalker (stl)> (back/<id>/window/intruksi/stoplivethread/startlivethread)")
-    print("           (intruksi)> <func_addr>")
+    print("3. trace (tr)> (all/<symbol>/back)> (all/mnemonic(ret,jne)/<enter=none-fast>/back)")
+    print("4. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> (intruksi)> (func_addr/back)")
     print("5. exit")
 
     loop_menu = True
@@ -223,8 +222,13 @@ def main():
                     thread.start()
 
                 elif in_id == "intruksi":
-                    in_sintr = input("\n>> Stalker> intruksi> ")
-                    script.exports_sync.setstalker("intruksi", in_sintr)
+                    while True:
+                        in_sintr = input(f"\n>> Stalker> intruksi> ")
+
+                        if in_sintr == "back":
+                            break
+                        else:
+                            script.exports_sync.setstalker("intruksi", in_sintr)
 
 
                 elif in_id == "window":
@@ -242,20 +246,27 @@ def main():
             if in_module == "back":
                 continue
 
-            dick_sym = script.exports_sync.enumsymbolstrace(in_module)
+            while True:
+                dick_sym = script.exports_sync.enumsymbolstrace(in_module)
 
-            #init total symbol
-            proxy.settofrida_func(dick_sym, True)
+                #init total symbol
+                proxy.settofrida_func(dick_sym, True)
 
-            in_symbol = input(f"\n>> {in_module}> symbol> ")
 
-            if in_symbol == "back":
-                continue
-            elif in_symbol == "all":
-                setup_hook(script, dick_sym, None, None)
-            else:
-                in_fstalking = input(f"\n>> {in_module}> {in_symbol}> Stalking filter> ")
-                setup_hook(script, dick_sym, in_symbol, in_fstalking)
+                in_symbol = input(f"\n>> {in_module}> symbol> ")
+
+                if in_symbol == "back":
+                    break
+                elif in_symbol == "all":
+                    setup_hook(script, dick_sym, None, None)
+                else:
+                    while True:
+                        in_fstalking = input(f"\n>> {in_module}> {in_symbol}> Stalking filter> ")
+
+                        if in_fstalking == "back":
+                            break
+                        else:
+                            setup_hook(script, dick_sym, in_symbol, in_fstalking)
 
 
 

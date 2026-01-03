@@ -282,3 +282,42 @@ $ frida-trace -i "Java_*" com.android.tes
 # enumerate all function by module
 $ frida-trace -I "openssl_mybank.so" com.android.tes
 ```
+example case:
+```
+	=====================
+	 Fuzzer proxy v2.0.0
+	=====================
+
+>> Select target? Linux/Android (l/a): a
+>> Chose pid? (1234): 5843
+
+[+] Inject Agent successfully
+
+==============
+ List Command:
+==============
+1. shell/reverse_shell_java (s/js)
+2. enum_module/enum_symbol/enum_thread (em/es/et)
+3. trace (tr)> (all/<symbol>/back)> (all/mnemonic(ret,jne)/<enter-none>)
+4. stalker (stl)> (back/<id>/window/intruksi/stoplivethread/startlivethread)
+           (intruksi)> <func_addr>
+5. exit
+
+>> tr
+[+] Getting modules...
+[+] Send to binja...
+[+] Done.
+
+>> Module> png_read
+[+] Getting symbols to hook...
+
+>> png_read> symbol> parse_png_file
+
+>> png_read> parse_png_file> Stalking filter> ret
+[+] hook: parse_png_file intruction filter: ret
+[+] Setup hook: parse_png_file with stalking: ret
+[+] Done.
+
+>> exit
+
+```

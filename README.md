@@ -321,3 +321,30 @@ example case:
 >> exit
 
 ```
+trace with basic block color in binaryninja
+```
+>> tr
+[+] Agent @ Getting modules...
+[+] Send to binja...
+[+] Done.
+
+# first rebase in binaryninja with:
+# 1). double click in module> base> auto copy
+# 2). file > rebase> paste
+# 3). wait function is hit
+# 4). righ click function> color block
+# NOTE: using color reset for reload block color orig
+
+>> Module> png_read
+[+] Agent @ Getting symbols to hook...
+
+>> png_read> symbol> parse_png_file
+
+>> png_read> parse_png_file> Stalking filter> block
+[+] hook: parse_png_file intruction filter: zsetup_block
+[+] Agent @ Setup hook: parse_png_file with stalking: zsetup_block
+[+] Agent @ Done.
+
+>> png_read> parse_png_file> Stalking filter> 
+
+```

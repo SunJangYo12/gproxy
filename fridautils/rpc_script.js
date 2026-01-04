@@ -1,5 +1,6 @@
 class FuzzerKu
 {
+
     constructor() {
        this.rpc_setup();
        this.typeLog = "send";
@@ -53,6 +54,10 @@ class FuzzerKu
                send({"type": "id_threads", "log": msg});
            else if (subtype == "hook_hit")
                send({"type": "hook_hit", "log": msg});
+
+           else if (subtype == "bb_hit")
+               send({"type": "bb_hit", "log": msg});
+
 
            else if (subtype == "stalker")
                send({"type": "stalker", "log": msg});
@@ -162,27 +167,54 @@ class FuzzerKu
                 const sym = DebugSymbol.fromAddress(addr)
                 subthis.logDebug("send", sym.name, "hook_hit");
 
+                /* block */
+                if (filter == "zsetup_block") {
+
+                    Stalker.follow(this.threadId, {
+                        events: {
+                            compile: true
+                        },
+                        onReceive: function (events) {
+                            var bbs = Stalker.parse(events, {
+                                stringify: false,
+                                annotate: false
+                            });
+
+                            for (var i=0; i<bbs.length; i++) {
+                                //console.log(""+i+": "+bbs[i])
+
+                                /* bbs[i][0] = first bb
+                                 * bbs[i][1] = last bb
+                                */
+                                subthis.logDebug("send", bbs[i][0], "bb_hit");
+                            }
+                        }
+                    });
+                    return
+                }
+
+                /* intruction */
                 Stalker.follow(this.threadId, {
                     transform: function(iterator) {
                         let instruction = iterator.next();
                         do {
-                            if (filter != "all") {
+                            if (filter == "all") {
+                                subthis.logDebug("send", instruction, "bnlog");
+                            }
+                            else {
                                 if (instruction.mnemonic == filter) {
                                     iterator.putCallout(printRet);
                                 }
-                            }
-                            else {
-                                subthis.logDebug("send", instruction, "bnlog");
                             }
                             iterator.keep();
                         } while ((instruction = iterator.next()) !== null);
                     },
 
                 });
-        },
-        onLeave(retval) {
-            Stalker.unfollow(this.threadId);
-        }
+            },
+            onLeave(retval) {
+               Stalker.unfollow(this.threadId);
+            }
         });
 
         function printRet(context) {
@@ -244,11 +276,18 @@ class FuzzerKu
 
                this.logDebug("send", output, "id_threads");
             },
-            setstalker: (sw, id) => {
+            setstalker: (sw, id, filter) => {
                if (sw == "intruksi") {
-                  this.logDebug("send", "Agent @ Setup Stalker inctuction: "+id, "info");
+                  if (filter == "") {
+                      this.logDebug("send", "Agent @ Setup Stalker addr: "+id, "info");
 
-                  this.stalkingfunc(ptr(id), "all")
+                      this.stalkingfunc(ptr(id), "all")
+                  }
+                  else {
+                      this.logDebug("send", "Agent @ Setup Stalker addr: "+id+" with filter: "+filter, "info");
+
+                      this.stalkingfunc(ptr(id), filter)
+                  }
 
                   return
                }

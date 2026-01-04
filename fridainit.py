@@ -44,6 +44,12 @@ def on_message(message, data):
            proxy.settofrida_enum(threads, "id_threads")
 
 
+        elif message['payload']['type'] == 'bb_hit':
+           bbs = message['payload']['log']
+
+           proxy.settofrida_enum(bbs, "bb_hit")
+
+
         elif message['payload']['type'] == 'stalker':
            sdata = message['payload']['log']
            proxy.settofrida_enum(sdata, "stalker")
@@ -51,11 +57,13 @@ def on_message(message, data):
 
         elif message['payload']['type'] == 'bnlog':
            bnlog = message['payload']['log']
-           proxy.settofrida_enum(bnlog, "bnlog")
+           #proxy.settofrida_enum(str(bnlog), "bnlog")
+           print(str(bnlog))
 
         elif message['payload']['type'] == 'info':
            info = message['payload']['log']
            print(f"[+] {info}")
+
 
 
         elif message['payload']['type'] == 'hook_hit':
@@ -178,8 +186,9 @@ def main():
     print("==============")
     print("1. shell/reverse_shell_java (s/js)")
     print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
-    print("3. trace (tr)> (all/<symbol>/back)> (all/mnemonic(ret,jne)/<enter=none-fast>/back)")
-    print("4. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> (intruksi)> (func_addr/back)")
+    print("3. trace (tr)> (all/<symbol>/back)> (all/mnemonic(ret,jne)/<enter=none-fast>/block/back)")
+    print("4. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> ")
+    print("           (intruksi)> (func_addr/back)> (filter)> (mnemonic:ret,jne,enter:all/back)")
     print("5. exit")
 
     loop_menu = True
@@ -203,14 +212,16 @@ def main():
             thread.start()
 
             tmpid = 0
+            xin_sintr = ""
+            xin_sintr_filter = ""
 
             while True:
-                in_id = input("\n>> Stalker> ")
+                in_id = input(f"\n>> Stalker({tmpid})> ")
 
                 if in_id == "back":
                     print(f"[+] Exit stalker: {tmpid}")
                     thread.stop()
-                    script.exports_sync.setstalker("exit", tmpid)
+                    script.exports_sync.setstalker("exit", tmpid, "")
                     break
 
                 elif in_id == "stoplivethread":
@@ -223,20 +234,28 @@ def main():
 
                 elif in_id == "intruksi":
                     while True:
-                        in_sintr = input(f"\n>> Stalker> intruksi> ")
+                        in_sintr = input(f"\n>> Stalker({tmpid})> intruksi({xin_sintr})> ")
+                        xin_sintr = in_sintr
 
                         if in_sintr == "back":
                             break
                         else:
-                            script.exports_sync.setstalker("intruksi", in_sintr)
+                            in_sintr_filter = input(f"\n>> Stalker({tmpid})> intruksi({xin_sintr})> filter({xin_sintr_filter})> ")
+                            xin_sintr_filter = in_sintr_filter
+
+                            if in_sintr_filter == "back":
+                                break
+                            script.exports_sync.setstalker("intruksi", in_sintr, in_sintr_filter)
 
 
                 elif in_id == "window":
                     proxy.settofrida_openwindow("stalker")
                 else:
+                    thread.stop() #bug segmentation fault: race enum di frida maka ini solusinya
+
                     tmpid = int(in_id)
                     proxy.settofrida_openwindow("stalker", in_id)
-                    script.exports_sync.setstalker("run", int(in_id))
+                    script.exports_sync.setstalker("run", int(in_id), "")
 
 
         elif pshell == "tr":
@@ -265,6 +284,9 @@ def main():
 
                         if in_fstalking == "back":
                             break
+
+                        elif in_fstalking == "block":
+                            setup_hook(script, dick_sym, in_symbol, "zsetup_block")
                         else:
                             setup_hook(script, dick_sym, in_symbol, in_fstalking)
 

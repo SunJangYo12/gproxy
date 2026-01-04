@@ -420,6 +420,8 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
             menu.addAction("Base")
             menu.addAction("Size")
             menu.addAction("Path")
+            menu.addAction("Block Coloring")
+            menu.addAction("Block Reset Color")
 
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
@@ -427,10 +429,52 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
             self.handle_tree_action(action.text(), item)
 
 
+    def block_color(self, reset=False):
+        show_message_box(
+            "G-proxy",
+            "Processing block color...",
+            MessageBoxButtonSet.OKButtonSet,
+            MessageBoxIcon.InformationIcon
+        )
+        for i in GLOBAL.frida_bb_hit:
+            addr = int(i, 0)
+            bbs = self.bv.get_basic_blocks_at(addr)
+            color = '0xaa00aa'
+
+            if (bbs):
+                color = int(color, 0)
+                R,G,B = (color >> 16)&0xff, (color >> 8)&0xff, (color&0xff)
+
+                if reset:
+                    color = highlight.HighlightColor(None)
+                else:
+                    color = highlight.HighlightColor(red=R, blue=G, green=B)
+
+                bb = bbs[0]
+                bb.highlight = color
+
+                print(bbs)
+                time.sleep(1)
+
+        show_message_box(
+            "G-proxy",
+            "Block color Done.",
+            MessageBoxButtonSet.OKButtonSet,
+            MessageBoxIcon.InformationIcon
+        )
+
+
     def handle_tree_action(self, action, item):
 
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
+
+        elif action == "Block Reset Color":
+            self.block_color(reset=True)
+            GLOBAL.frida_bb_hit = []
+
+        elif action == "Block Coloring":
+            self.block_color()
 
         elif action == "Base":
             base = item.data(0, Qt.UserRole)

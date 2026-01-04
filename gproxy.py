@@ -299,6 +299,9 @@ class Gproxy:
         elif type == "bnlog":
             log_info(data)
 
+        elif type == "bb_hit":
+            GLOBAL.frida_bb_hit.append(data)
+
         return True
 
     @expose

@@ -186,7 +186,9 @@ class FuzzerKu
                                 /* bbs[i][0] = first bb
                                  * bbs[i][1] = last bb
                                 */
-                                subthis.logDebug("send", bbs[i][0], "bb_hit");
+                                const outbb = bbs[i][0]
+                                const out = [outbb, sym.name]
+                                subthis.logDebug("send", out, "bb_hit");
                             }
                         }
                     });

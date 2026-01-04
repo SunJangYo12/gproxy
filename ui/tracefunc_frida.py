@@ -370,6 +370,8 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         self.tree_widget.clear()
         self.tree_widget.headerItem().setText(0, "Trace Function List: %d" %len(GLOBAL.frida_functions) )
 
+        ibb = 0
+
         for (func_name, data) in GLOBAL.frida_functions.items():
             parent = QTreeWidgetItem(self.tree_widget)
 
@@ -383,6 +385,22 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
                 parent.setForeground(0, QColor("orange"))
             else:
                 parent.setForeground(0, QColor("white"))
+
+            for bb, bb_func in GLOBAL.frida_bb_hit:
+                if bb_func == func_name:
+
+                    symname = ''
+                    try:
+                        symname = "("+self.bv.get_symbol_at(int(bb, 0)).name+")"
+                    except:
+                        pass
+
+                    parent.setText(0, "%d/%d  %s" % (data['count'], len(GLOBAL.frida_bb_hit), func_name) )
+                    child1 = QTreeWidgetItem(parent)
+                    child1.setText(0, "[%d/%d] %s%s" % (ibb, len(GLOBAL.frida_bb_hit), bb, symname) )
+                    child1.setFont(0, self.font)
+                    child1.setData(0, Qt.UserRole, bb )
+                    ibb += 1
 
 
 
@@ -398,8 +416,14 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
 
     def on_item_double_clicked(self, item, column):
-
         data = item.data(column, Qt.UserRole)
+
+        try:
+            addr = int(str(data), 0)
+            self.bv.offset = addr
+        except:
+            pass
+
 
         QApplication.clipboard().setText(str(data))
 
@@ -421,7 +445,8 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
             menu.addAction("Size")
             menu.addAction("Path")
             menu.addAction("Block Coloring")
-            menu.addAction("Block Reset Color")
+            menu.addAction("Block Reset")
+            menu.addAction("Block Refresh")
 
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
@@ -430,8 +455,8 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
 
     def block_color(self, reset=False):
-        for i in GLOBAL.frida_bb_hit:
-            addr = int(i, 0)
+        for bb, func in GLOBAL.frida_bb_hit:
+            addr = int(bb, 0)
             bbs = self.bv.get_basic_blocks_at(addr)
             color = '0xaa00aa'
 
@@ -456,11 +481,16 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
 
-        elif action == "Block Reset Color":
+        elif action == "Block Reset":
             self.block_color(reset=True)
             GLOBAL.frida_bb_hit = []
+            SIGNALS.frida_updatedsym_trace.emit()
+
+        elif action == "Block Refresh":
+            SIGNALS.frida_updatedsym_trace.emit()
 
         elif action == "Block Coloring":
+            SIGNALS.frida_updatedsym_trace.emit()
             self.block_color()
 
         elif action == "Base":

@@ -15,10 +15,10 @@ class GlobalState:
         self.gdb_memstruct = []
         self.gdb_rebreak = ""
 
-        self.frida_enummodules = None
-        self.frida_enumsymbols = None
-        self.frida_enumthreads = None
-        self.frida_idthreads = None
+        self.frida_enummodules = {}
+        self.frida_enumsymbols = {}
+        self.frida_enumthreads = {}
+        self.frida_idthreads = {}
         self.frida_functions = {}
         self.frida_stalkers = {}
         self.frida_bb_hit = []

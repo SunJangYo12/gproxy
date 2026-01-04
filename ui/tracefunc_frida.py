@@ -451,10 +451,11 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
                     color = highlight.HighlightColor(red=R, blue=G, green=B)
 
                 bb = bbs[0]
-                bb.highlight = color
+                #bb.highlight = color
+                bb.set_user_highlight(color)
 
                 print(bbs)
-                time.sleep(1)
+                #time.sleep(1)
 
         show_message_box(
             "G-proxy",

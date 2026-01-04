@@ -186,7 +186,7 @@ def main():
     print("==============")
     print("1. shell/reverse_shell_java (s/js)")
     print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
-    print("3. trace (tr)> (all/<symbol>/back)> (all/mnemonic(ret,jne)/<enter=none-fast>/block/back)")
+    print("3. trace (tr)> (all/<symbol>/back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
     print("4. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> ")
     print("           (intruksi)> (func_addr/back)> (filter)> (mnemonic:ret,jne,enter:all/back)")
     print("5. exit")

@@ -430,12 +430,6 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
 
     def block_color(self, reset=False):
-        show_message_box(
-            "G-proxy",
-            "Processing block color...",
-            MessageBoxButtonSet.OKButtonSet,
-            MessageBoxIcon.InformationIcon
-        )
         for i in GLOBAL.frida_bb_hit:
             addr = int(i, 0)
             bbs = self.bv.get_basic_blocks_at(addr)
@@ -451,18 +445,10 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
                     color = highlight.HighlightColor(red=R, blue=G, green=B)
 
                 bb = bbs[0]
-                #bb.highlight = color
                 bb.set_user_highlight(color)
 
                 print(bbs)
-                #time.sleep(1)
 
-        show_message_box(
-            "G-proxy",
-            "Block color Done.",
-            MessageBoxButtonSet.OKButtonSet,
-            MessageBoxIcon.InformationIcon
-        )
 
 
     def handle_tree_action(self, action, item):

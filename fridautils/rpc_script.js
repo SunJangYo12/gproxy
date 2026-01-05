@@ -149,9 +149,9 @@ class FuzzerKu
              "fileName": sym.fileName,
              "lineNumber": sym.lineNumber,
              "moduleName": sym.moduleName,
-             "modulePath": module.path,
-             "moduleBase": module.base,
-             "moduleSize": module.size,
+             "modulePath": module == null ? "" : module.path,
+             "moduleBase": module == null ? "" : module.base,
+             "moduleSize": module == null ? "" : module.size,
              "name": sym.name
           };
 

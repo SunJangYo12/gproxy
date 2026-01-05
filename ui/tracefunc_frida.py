@@ -122,8 +122,10 @@ class DialogStalker(QDialog):
 
 
     def setData(self):
-        self.history.append(GLOBAL.frida_stalkers)
-        self.label_his.setText("[%s/%s]" % (self.curr_history, len(self.history)-1) )
+        if self.search_clicked:
+            self.historytmp.append(GLOBAL.frida_stalkers)
+        else:
+            self.history.append(GLOBAL.frida_stalkers)
 
     def showData(self):
         self.tree_widget.clear()
@@ -221,6 +223,9 @@ class DialogStalker(QDialog):
         self.search_clicked = True
         self.curr_history = 0
         self.btnS.setIcon(self.style().standardIcon(QStyle.SP_ArrowBack))
+
+        if len(result_index) == 0:
+            return
 
         self.showData()
 

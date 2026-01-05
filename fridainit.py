@@ -253,6 +253,8 @@ def main():
                 else:
                     thread.stop() #bug segmentation fault: race enum di frida maka ini solusinya
 
+                    time.sleep(1)
+
                     tmpid = int(in_id)
                     proxy.settofrida_openwindow("stalker", in_id)
                     script.exports_sync.setstalker("run", int(in_id), "")

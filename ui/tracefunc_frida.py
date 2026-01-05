@@ -54,7 +54,9 @@ class DialogStalker(QDialog):
         self.bv = data
         self.sid = sid
         self.history = []
+        self.historytmp = []
         self.curr_history = 0
+        self.search_clicked = False
 
 
         self.tree_widget = QTreeWidget()
@@ -128,7 +130,11 @@ class DialogStalker(QDialog):
 
         total = len(self.history[self.curr_history])-1
 
-        self.setWindowTitle(f"Stalker({self.sid}) {total}")
+        if self.search_clicked:
+            self.setWindowTitle(f"Result Search Stalker({self.sid}) {total}")
+        else:
+            self.setWindowTitle(f"Stalker({self.sid}) {total}")
+
         self.label_his.setText("[%s/%s]" % (self.curr_history, len(self.history)-1) )
 
         for data in self.history[self.curr_history]:
@@ -178,8 +184,48 @@ class DialogStalker(QDialog):
 
         self.label_his.setText("[%s/%s]" % (self.curr_history, len(self.history)-1) )
 
+
+    def find_obj(self, fdata, data):
+        result = []
+
+        for i in data:
+            for key in i.keys():
+                #print(f"{key}: {i[key]}")
+
+                if str(i[key]).find(fdata) >= 0:
+                    result.append(i)
+            #break
+        return result
+
+
     def click_search(self):
-        print("fvvv")
+        if self.search_clicked:
+            self.history = self.historytmp
+            self.search_clicked = False
+            self.curr_history = 0
+            self.btnS.setIcon(self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
+            self.showData()
+            return
+
+        result_index = []
+        tsearch = self.lineEdit.text()
+
+        for hdata in self.history:
+            proc = self.find_obj(tsearch, hdata)
+
+            if len(proc) > 0:
+                result_index.append(proc)
+
+        self.historytmp = self.history
+        self.history = result_index
+        self.search_clicked = True
+        self.curr_history = 0
+        self.btnS.setIcon(self.style().standardIcon(QStyle.SP_ArrowBack))
+
+        self.showData()
+
+        #SIGNALS.frida_stalker.emit()
+
 
     def on_item_double_clicked(self, item, column):
         data = item.data(column, Qt.UserRole)

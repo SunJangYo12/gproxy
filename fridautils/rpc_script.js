@@ -167,9 +167,19 @@ class FuzzerKu
                 const sym = DebugSymbol.fromAddress(addr)
                 subthis.logDebug("send", sym.name, "hook_hit");
 
-                /* block */
-                if (filter == "zsetup_block") {
+                /* filter modules */
+                var whitelist = ["all"]; //["libc.so", "libs.so"...]
 
+                const filtered_maps = new ModuleMap(function (m) {
+                    if (whitelist.indexOf('all') >= 0) {
+                        return true;
+                    }
+                    return whitelist.indexOf(m.name) >= 0;
+                });
+
+                /* block */
+                if (filter == "zsetup_block")
+                {
                     Stalker.follow(this.threadId, {
                         events: {
                             compile: true
@@ -188,6 +198,10 @@ class FuzzerKu
                                 */
                                 const outbb = bbs[i][0]
                                 const out = [outbb, sym.name]
+
+                                const cek = filtered_maps.findPath(outbb);
+                                if (cek == null) { continue; }
+
                                 subthis.logDebug("send", out, "bb_hit");
                             }
                         }

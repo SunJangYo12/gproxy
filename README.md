@@ -348,3 +348,9 @@ trace with basic block color in binaryninja
 >> png_read> parse_png_file> Stalking filter> 
 
 ```
+
+# Addr tracking on striped binary in frida, generate using binaryninja
+```
+>> tr
+>> audacious> symbol> all-bn
+```

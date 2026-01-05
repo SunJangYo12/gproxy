@@ -349,10 +349,16 @@ class FuzzerKu
                   }
                });
             },
-            setuphook: (func_name, fstalking) => {
+            setuphook: (func_name, fstalking, bnaddr) => {
 
                const subthis = this;
-               const addr = DebugSymbol.fromName(func_name).address;
+               var addr;
+
+               if (bnaddr == 1) {
+                   addr = ptr(func_name);
+               } else {
+                   addr = DebugSymbol.fromName(func_name).address;
+               }
 
                if (fstalking != -1) {
                    this.logDebug("send", "Agent @ Setup hook: "+func_name+" with stalking: "+fstalking, "info");

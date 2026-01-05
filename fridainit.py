@@ -109,10 +109,10 @@ def setup_hook(script, dick_sym, func_target, fstalking):
         try:
             if fstalking != "":
                 print(f"[+] hook: {func_target} intruction filter: {fstalking}")
-                script.exports_sync.setuphook(func_target, fstalking)
+                script.exports_sync.setuphook(func_target, fstalking, 0)
             else:
                 print(f"[+] hook: {func_target}")
-                script.exports_sync.setuphook(func_target, -1)
+                script.exports_sync.setuphook(func_target, -1, 0)
         except Exception as e:
             print(f"{func_name} >>>>>>> {e}")
 
@@ -129,7 +129,7 @@ def setup_hook(script, dick_sym, func_target, fstalking):
 
             print(f"[+] hook: {func_name} is {func_addr}")
             try:
-                script.exports_sync.setuphook(func_name, -1)
+                script.exports_sync.setuphook(func_name, -1, 0)
             except Exception as e:
                 print(f"{func_name} >>>>>>> {e}")
 
@@ -186,7 +186,7 @@ def main():
     print("==============")
     print("1. shell/reverse_shell_java (s/js)")
     print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
-    print("3. trace (tr)> (all/<symbol>/back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
+    print("3. trace (tr)> (all/all-bn/<symbol>/<addr-bn>/back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
     print("4. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> ")
     print("           (intruksi)> (func_addr/back)> (filter)> (mnemonic:ret,jne,enter:all/back)")
     print("5. exit")
@@ -205,6 +205,10 @@ def main():
 
         elif pshell == "et":
             script.exports_sync.enumthreads()
+
+        elif pshell == "bn_func":
+            proxy.setgeneratesymbol()
+            print("[+] Generate done.")
 
 
         elif pshell == "stl":
@@ -280,6 +284,26 @@ def main():
                     break
                 elif in_symbol == "all":
                     setup_hook(script, dick_sym, None, None)
+
+                elif in_symbol == "all-bn":
+                    proxy.setgeneratesymbol()
+                    print("[+] Generate done.")
+
+                    with open("/tmp/funcs.txt") as f:
+                        for line in f:
+                            line = line.strip()
+                            if not line:
+                                continue
+
+                            parts = line.split()
+                            addr = parts[0]
+                            name = parts[1] if len(parts) > 1 else None
+
+                            try:
+                                script.exports_sync.setuphook(addr, -1, 1)
+                            except:
+                                print(f"[!] BUG: {name} {addr}")
+
                 else:
                     while True:
                         in_fstalking = input(f"\n>> {in_module}> {in_symbol}> Stalking filter> ")

@@ -140,6 +140,7 @@ class FuzzerKu
        {
           const cc = summary[addr]
           const sym = DebugSymbol.fromAddress(ptr(addr))
+          const module = Process.findModuleByAddress(ptr(addr))
 
           const out = {
              "addr": addr,
@@ -148,6 +149,9 @@ class FuzzerKu
              "fileName": sym.fileName,
              "lineNumber": sym.lineNumber,
              "moduleName": sym.moduleName,
+             "modulePath": module.path,
+             "moduleBase": module.base,
+             "moduleSize": module.size,
              "name": sym.name
           };
 

@@ -66,9 +66,12 @@ class DialogStalker(QDialog):
         self.tree_widget.headerItem().setText(1, "module" )
         self.tree_widget.headerItem().setText(2, "call count" )
         self.tree_widget.headerItem().setText(3, "addr" )
-        self.tree_widget.headerItem().setText(4, "fileName" )
-        self.tree_widget.headerItem().setText(5, "lineNumber" )
-        self.tree_widget.headerItem().setText(6, "column" )
+        self.tree_widget.headerItem().setText(4, "module path" )
+        self.tree_widget.headerItem().setText(5, "module base" )
+        self.tree_widget.headerItem().setText(6, "module size" )
+        self.tree_widget.headerItem().setText(7, "fileName" )
+        self.tree_widget.headerItem().setText(8, "lineNumber" )
+        self.tree_widget.headerItem().setText(9, "column" )
         self.tree_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
 
 
@@ -158,18 +161,29 @@ class DialogStalker(QDialog):
             parent.setFont(3, self.font)
             parent.setData(3, Qt.UserRole, data["addr"])
 
-            parent.setText(4, "%s" % data["fileName"] )
+            parent.setText(4, "%s" % data["modulePath"] )
             parent.setFont(4, self.font)
-            parent.setData(4, Qt.UserRole, data["fileName"])
+            parent.setData(4, Qt.UserRole, data["modulePath"])
 
-
-            parent.setText(5, "%s" % data["lineNumber"] )
+            parent.setText(5, "%s" % data["moduleBase"] )
             parent.setFont(5, self.font)
-            parent.setData(5, Qt.UserRole, data["lineNumber"])
+            parent.setData(5, Qt.UserRole, data["moduleBase"])
 
-            parent.setText(6, "%s" % data["column"] )
+            parent.setText(6, "%s" % data["moduleSize"] )
             parent.setFont(6, self.font)
-            parent.setData(6, Qt.UserRole, data["column"])
+            parent.setData(6, Qt.UserRole, data["moduleSize"])
+
+            parent.setText(7, "%s" % data["fileName"] )
+            parent.setFont(7, self.font)
+            parent.setData(7, Qt.UserRole, data["fileName"])
+
+            parent.setText(8, "%s" % data["lineNumber"] )
+            parent.setFont(8, self.font)
+            parent.setData(8, Qt.UserRole, data["lineNumber"])
+
+            parent.setText(9, "%s" % data["column"] )
+            parent.setFont(9, self.font)
+            parent.setData(9, Qt.UserRole, data["column"])
 
 
     def click_stateF(self):

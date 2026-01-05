@@ -258,7 +258,7 @@ class Gproxy:
                 if d.get("type") == "function":
                     func_name = d.get("name")
                     GLOBAL.append_fridafunc(func_name)
-                    SIGNALS.frida_updatedsym_trace.emit()
+            SIGNALS.frida_updatedsym_trace.emit()
 
         else:
             GLOBAL.append_fridafunc(data)

@@ -319,6 +319,19 @@ example case:
 [+] Done.
 
 >> exit
+#Tips hook addr dengan base dan offset dari binja (striped binary)
+```
+$ python
+>> 0x7ff2232323 + 0x510 #base_module+offset
+
+$ python fridainit.py
+>> png_read> symbol> 0x630f5d4db0
+
+>> png_read> 0x630f5d4db0> Stalking filter> 
+[+] Agent @ Setup hook: unkown 
+
+NOTE: jika addr HIT akan ada fungsi baru yaitu: unkwon
+```
 
 ```
 trace with basic block color in binaryninja

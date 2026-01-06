@@ -322,6 +322,7 @@ example case:
 
 ```
 trace with basic block color in binaryninja
+NOTE: set filter modules with edited in rpc_scrips.js: var whitelist = ["all"];
 ```
 >> tr
 [+] Agent @ Getting modules...
@@ -347,10 +348,4 @@ trace with basic block color in binaryninja
 
 >> png_read> parse_png_file> Stalking filter> 
 
-```
-
-# Addr tracking on striped binary in frida, generate using binaryninja
-```
->> tr
->> audacious> symbol> all-bn
 ```

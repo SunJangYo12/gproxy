@@ -74,6 +74,11 @@ class DialogStalker(QDialog):
         self.tree_widget.headerItem().setText(9, "column" )
         self.tree_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
 
+        self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree_widget.customContextMenuRequested.connect(self.on_tree_context_menu)
+
+
+
 
         #count history
         self.label_his = QLabel("")
@@ -184,6 +189,25 @@ class DialogStalker(QDialog):
             parent.setText(9, "%s" % data["column"] )
             parent.setFont(9, self.font)
             parent.setData(9, Qt.UserRole, data["column"])
+
+    def on_tree_context_menu(self, position: QPoint):
+        item = self.tree_widget.itemAt(position)
+        if item is None:
+            return   # klik kanan di area kosong → tidak ada menu
+        menu = QMenu()
+
+        if item.parent() is None:
+            menu.addAction("Sort By")
+
+        action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
+        if action:
+            self.handle_tree_action(action.text(), item)
+
+    def handle_tree_action(self, action, item):
+        if action == "Sort By":
+            print(item.text(0))
+
+
 
 
     def click_stateF(self):

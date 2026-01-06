@@ -184,7 +184,7 @@ def main():
     print("==============")
     print("1. shell/reverse_shell_java (s/js)")
     print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
-    print("3. trace (tr)> (all/<symbol>/0x../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
+    print("3. trace (tr)> (all/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
     print("4. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> ")
     print("           (intruksi)> (func_addr/back)> (filter)> (mnemonic:ret,jne,enter:all/back)")
     print("5. exit")
@@ -320,11 +320,19 @@ def main():
                             setup_hook(script, dick_sym, in_symbol, "zsetup_block")
 
                         elif in_symbol.startswith("0x"):
-                            addr_name = {
-                                "name": "unkown",
-                                "address": in_symbol
-                            }
-                            script.exports_sync.setuphook(addr_name, -1)
+
+                            arr_in = in_symbol.split(",")
+                            dick_sym = []
+
+                            for uaddr in arr_in:
+                                dick = {
+                                    "name": "unkown_"+uaddr,
+                                    "address": uaddr,
+                                    "type": "function"
+                                }
+                                dick_sym.append(dick)
+                            setup_hook(script, dick_sym, None, None)
+
                         else:
                             setup_hook(script, dick_sym, in_symbol, in_fstalking)
 

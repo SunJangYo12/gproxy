@@ -24,7 +24,7 @@ class GlobalState:
         self.frida_bb_hit = []
         self.window_frida_stalker_title = ""
 
-        self.refresh_view = "0"
+        self.refresh_view = "'0'"
 
 
 

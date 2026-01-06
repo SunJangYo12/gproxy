@@ -284,10 +284,10 @@ class Gproxy:
 
         elif type == "id_threads":
             # untuk melihat update
-            if GLOBAL.refresh_view == "0":
-                GLOBAL.refresh_view = "o"
+            if GLOBAL.refresh_view == "'0'":
+                GLOBAL.refresh_view = ",0,"
             else:
-                GLOBAL.refresh_view = "0"
+                GLOBAL.refresh_view = "'0'"
 
             GLOBAL.frida_idthreads = data
             SIGNALS.frida_updatedidthread.emit()

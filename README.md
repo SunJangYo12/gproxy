@@ -349,3 +349,17 @@ NOTE: set filter modules with edited in rpc_scrips.js: var whitelist = ["all"];
 >> png_read> parse_png_file> Stalking filter> 
 
 ```
+# Contoh penggunaan stalker
+```
+>> stl
+>> Stalker(0)> 19442
+[+] Agent @ Setup Stalker...
+
+>> Stalker(19442)> stoplivethread
+[+] Stop Live thread view
+
+>> Stalker(19442)> back
+
+NOTE: untuk pencarian dia menyamakan semua field, jika tidak ketemu di title tidak
+      ada string Result, untuk kembali dari tampilan result ke history tekan tombol search lagi.
+```

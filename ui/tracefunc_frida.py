@@ -232,7 +232,8 @@ class DialogStalker(QDialog):
             for key in i.keys():
                 #print(f"{key}: {i[key]}")
 
-                if key == "moduleName":
+                #if key == "moduleName":
+                if True:
                     if str(i[key]).find(fdata) >= 0:
                         result.append(i)
             #break

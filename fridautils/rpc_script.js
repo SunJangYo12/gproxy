@@ -320,6 +320,7 @@ class FuzzerKu
 
                const subthis = this
 
+               Stalker.trustThreshold = 0;
                Stalker.follow(id, {
                   events: {
                      call: true,
@@ -342,9 +343,9 @@ class FuzzerKu
                   onCallSummary: function (summary) { //only function call
                      //const data = JSON.stringify(summary, null, 4);
                      //console.log(data)
-                     const out_stalker = subthis.addrToSymb(summary)
+                     const mod_summary = subthis.addrToSymb(summary)
 
-                     subthis.logDebug("send", out_stalker, "stalker");
+                     subthis.logDebug("send", mod_summary, "stalker");
 
                   }
                });

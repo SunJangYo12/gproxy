@@ -262,7 +262,9 @@ class Gproxy:
 
         else:
             GLOBAL.append_fridafunc(data)
-            #SIGNALS.frida_updatedsym_trace.emit()
+
+            if GLOBAL.refresh_frida_symbol:
+                SIGNALS.frida_updatedsym_trace.emit()
 
 
         return True

@@ -317,7 +317,19 @@ def main():
                             break
 
                         elif in_fstalking == "block":
-                            setup_hook(script, dick_sym, in_symbol, "zsetup_block")
+
+                            if in_symbol.startswith("0x"):
+                                dick_sym = []
+                                dick = {
+                                    "name": "unkown_"+in_symbol,
+                                    "address": in_symbol,
+                                    "type": "function"
+                                }
+                                dick_sym.append(dick)
+
+                                script.exports_sync.setuphook(dick, "zsetup_block")
+                            else:
+                                setup_hook(script, dick_sym, in_symbol, "zsetup_block")
 
                         elif in_symbol.startswith("0x"):
 
@@ -331,6 +343,7 @@ def main():
                                     "type": "function"
                                 }
                                 dick_sym.append(dick)
+
                             setup_hook(script, dick_sym, None, None)
 
                         else:

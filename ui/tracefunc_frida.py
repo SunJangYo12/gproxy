@@ -538,6 +538,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
             menu.addAction("Block Coloring")
             menu.addAction("Block Reset")
             menu.addAction("Block Refresh")
+            menu.addAction("Auto Refresh")
 
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
@@ -576,6 +577,13 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
             self.block_color(reset=True)
             GLOBAL.frida_bb_hit = []
             SIGNALS.frida_updatedsym_trace.emit()
+
+        elif action == "Auto Refresh":
+            if GLOBAL.refresh_frida_symbol:
+                GLOBAL.refresh_frida_symbol = False
+            else:
+                GLOBAL.refresh_frida_symbol = True
+
 
         elif action == "Block Refresh":
             SIGNALS.frida_updatedsym_trace.emit()

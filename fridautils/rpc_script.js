@@ -349,27 +349,22 @@ class FuzzerKu
                   }
                });
             },
-            setuphook: (func_name, fstalking, bnaddr) => {
+            setuphook: (func_data, fstalking) => {
 
                const subthis = this;
-               var addr;
 
-               if (bnaddr == 1) {
-                   addr = ptr(func_name);
-               } else {
-                   addr = DebugSymbol.fromName(func_name).address;
-               }
+               const addr = ptr(func_data.address);
 
                if (fstalking != -1) {
-                   this.logDebug("send", "Agent @ Setup hook: "+func_name+" with stalking: "+fstalking, "info");
+                   this.logDebug("send", "Agent @ Setup hook: "+func_data.name+" with stalking: "+fstalking, "info");
 
                    this.stalkingfunc(addr, fstalking)
                }
                else {
-                   this.logDebug("send", "Agent @ Setup hook: "+func_name, "info");
+                   this.logDebug("send", "Agent @ Setup hook: "+func_data.name, "info");
                    Interceptor.attach(addr, {
                        onEnter: function(args) {
-                           subthis.logDebug("send", func_name, "hook_hit");
+                           subthis.logDebug("send", func_data.name, "hook_hit");
                        }
                    });
                }

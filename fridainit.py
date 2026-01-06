@@ -105,19 +105,6 @@ def inject_module(script, target):
 
 def setup_hook(script, dick_sym, func_target, fstalking):
 
-    if func_target:
-        try:
-            if fstalking != "":
-                print(f"[+] hook: {func_target} intruction filter: {fstalking}")
-                script.exports_sync.setuphook(func_target, fstalking, 0)
-            else:
-                print(f"[+] hook: {func_target}")
-                script.exports_sync.setuphook(func_target, -1, 0)
-        except Exception as e:
-            print(f"{func_name} >>>>>>> {e}")
-
-        return
-
     for data in dick_sym:
         if data.get("type") == "function":
             func_name = data.get("name")
@@ -127,9 +114,20 @@ def setup_hook(script, dick_sym, func_target, fstalking):
                 print(f"[!] warning: {func_name} is {func_addr}")
                 continue
 
-            print(f"[+] hook: {func_name} is {func_addr}")
             try:
-                script.exports_sync.setuphook(func_name, -1, 0)
+                # single
+                if func_name == func_target:
+                    if fstalking != "":
+                        print(f"[+] hook: {func_target} intruction filter: {fstalking}")
+                        script.exports_sync.setuphook(data, fstalking)
+                    else:
+                        print(f"[+] hook: {func_target}")
+                        script.exports_sync.setuphook(data, -1)
+
+                else: #all
+                    if not func_target:
+                        script.exports_sync.setuphook(data, -1)
+
             except Exception as e:
                 print(f"{func_name} >>>>>>> {e}")
 
@@ -186,7 +184,7 @@ def main():
     print("==============")
     print("1. shell/reverse_shell_java (s/js)")
     print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
-    print("3. trace (tr)> (all/all-bn/<symbol>/<addr-bn>/back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
+    print("3. trace (tr)> (all/<symbol>/<addr-bn>/back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
     print("4. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> ")
     print("           (intruksi)> (func_addr/back)> (filter)> (mnemonic:ret,jne,enter:all/back)")
     print("5. exit")
@@ -274,20 +272,16 @@ def main():
             while True:
                 dick_sym = script.exports_sync.enumsymbolstrace(in_module)
 
-                #init total symbol
-                proxy.settofrida_func(dick_sym, True)
+                isbn = 0
 
-
-                in_symbol = input(f"\n>> {in_module}> symbol> ")
-
-                if in_symbol == "back":
-                    break
-                elif in_symbol == "all":
-                    setup_hook(script, dick_sym, None, None)
-
-                elif in_symbol == "all-bn":
+                if len(dick_sym) == 0:
+                    print("[!] No symbol found. using addr from binaryninja")
                     proxy.setgeneratesymbol()
                     print("[+] Generate done.")
+                    print("[i] NOTE: Alamat harus sama dengan proses frida dengan rebase di bn")
+                    print("          Setelah rebase restart server dengan Tools> gproxy> stop/start")
+
+                    isbn = 1
 
                     with open("/tmp/funcs.txt") as f:
                         for line in f:
@@ -299,10 +293,23 @@ def main():
                             addr = parts[0]
                             name = parts[1] if len(parts) > 1 else None
 
-                            try:
-                                script.exports_sync.setuphook(addr, -1, 1)
-                            except:
-                                print(f"[!] BUG: {name} {addr}")
+                            out = {
+                                "address": addr,
+                                "name": name,
+                                "type": "function"
+                            }
+                            dick_sym.append(out)
+
+
+                #init total symbol
+                proxy.settofrida_func(dick_sym, True)
+
+                in_symbol = input(f"\n>> {in_module}> symbol> ")
+
+                if in_symbol == "back":
+                    break
+                elif in_symbol == "all":
+                    setup_hook(script, dick_sym, None, None)
 
                 else:
                     while True:

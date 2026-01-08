@@ -298,6 +298,10 @@ class Gproxy:
             GLOBAL.frida_stalkers = data
             SIGNALS.frida_stalker.emit()
 
+        elif type == "stalker-ct":
+            GLOBAL.frida_stalkers_ct.append(data)
+
+
         elif type == "bnlog":
             log_info(data)
 

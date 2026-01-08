@@ -62,6 +62,10 @@ class FuzzerKu
            else if (subtype == "stalker")
                send({"type": "stalker", "log": msg});
 
+           else if (subtype == "stalker-ct")
+               send({"type": "stalker-ct", "log": msg});
+
+
            else if (subtype == "bnlog")
                send({"type": "bnlog", "log": msg});
 
@@ -317,10 +321,38 @@ class FuzzerKu
                }
 
                this.logDebug("send", "Agent @ Setup Stalker...", "info");
-
                const subthis = this
-
                Stalker.trustThreshold = 0;
+
+
+               if (sw == "ct") {
+                  Stalker.follow(id, {
+                     events: {
+                        call: true,
+                        ret: false,
+                        exec: false,
+                        block: false,
+                        compile: false,
+                     },
+                     onReceive: function (events) {
+                        var calls = Stalker.parse(events, {
+                           annotate: true,
+                        });
+                        for (var i=0; i<calls.length; i++) {
+                           let call = calls[i][2];
+
+                           var summary = {};
+                           summary[call] = 1;
+
+                           const mod_summary = subthis.addrToSymb(summary)
+
+                           subthis.logDebug("send", mod_summary, "stalker-ct");
+                        }
+                     }
+                  });
+                  return
+               }
+
                Stalker.follow(id, {
                   events: {
                      call: true,
@@ -329,20 +361,7 @@ class FuzzerKu
                      block: false,
                      compile: false,
                   },
-                  onReceive: function (events) {
-                     var calls = Stalker.parse(events, {
-                        annotate: true,
-                     });
-                     /*for (var i=0; i<calls.length; i++) {
-                        let call = calls[i];
-                        console.log(call[2]);
-
-                        //subthis.logDebug("send", call[2], "stalker");
-                     }*/
-                  },
                   onCallSummary: function (summary) { //only function call
-                     //const data = JSON.stringify(summary, null, 4);
-                     //console.log(data)
                      const mod_summary = subthis.addrToSymb(summary)
 
                      subthis.logDebug("send", mod_summary, "stalker");

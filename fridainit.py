@@ -54,6 +54,11 @@ def on_message(message, data):
            sdata = message['payload']['log']
            proxy.settofrida_enum(sdata, "stalker")
 
+        elif message['payload']['type'] == 'stalker-ct':
+           sdata = message['payload']['log']
+           proxy.settofrida_enum(sdata[0], "stalker-ct")
+
+
 
         elif message['payload']['type'] == 'bnlog':
            bnlog = message['payload']['log']
@@ -253,11 +258,11 @@ def main():
                 elif in_id == "window":
                     proxy.settofrida_openwindow("stalker")
                 else:
-                    time.sleep(1)
+                    in_ct = input(">> call-count/call-tree (cc/ct)> ")
 
                     tmpid = int(in_id)
                     proxy.settofrida_openwindow("stalker", in_id)
-                    script.exports_sync.setstalker("run", int(in_id), "")
+                    script.exports_sync.setstalker(in_ct, int(in_id), "")
 
 
         elif pshell == "tr":

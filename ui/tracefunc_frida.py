@@ -50,6 +50,7 @@ class DialogStalker(QDialog):
         self.font = getMonospaceFont(self)
 
         SIGNALS.frida_stalker.connect(self.setData)
+        SIGNALS.frida_stalker_ct.connect(self.setDataCt)
 
         self.bv = data
         self.sid = sid
@@ -76,9 +77,6 @@ class DialogStalker(QDialog):
 
         self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree_widget.customContextMenuRequested.connect(self.on_tree_context_menu)
-
-
-
 
         #count history
         self.label_his = QLabel("")
@@ -127,6 +125,10 @@ class DialogStalker(QDialog):
         # init
         self.label_his.setText("[%s/%s]" % (self.curr_history, len(self.history)) )
 
+
+    def setDataCt(self):
+        self.history.append(GLOBAL.frida_stalkers_ct)
+        self.showData()
 
 
     def setData(self):
@@ -192,12 +194,11 @@ class DialogStalker(QDialog):
 
     def on_tree_context_menu(self, position: QPoint):
         item = self.tree_widget.itemAt(position)
-        if item is None:
-            return   # klik kanan di area kosong → tidak ada menu
         menu = QMenu()
 
-        if item.parent() is None:
-            menu.addAction("Sort By")
+        menu.addAction("Sort By")
+        menu.addAction("Refresh")
+        menu.addAction("Clean")
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
         if action:
@@ -207,6 +208,16 @@ class DialogStalker(QDialog):
         if action == "Sort By":
             print(item.text(0))
 
+        elif action == "Refresh":
+            SIGNALS.frida_stalker_ct.emit()
+            self.showData()
+
+        elif action == "Clean":
+            GLOBAL.frida_stalkers_ct = []
+            self.history = []
+            self.curr_history = 0
+            SIGNALS.frida_stalker_ct.emit()
+            self.showData()
 
 
 

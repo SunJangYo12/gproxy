@@ -376,3 +376,13 @@ NOTE: set filter modules with edited in rpc_scrips.js: var whitelist = ["all"];
 NOTE: untuk pencarian dia menyamakan semua field, jika tidak ketemu di title tidak
       ada string Result, untuk kembali dari tampilan result ke history tekan tombol search lagi.
 ```
+# Contoh penggunaan stalker call-tree
+```
+1.) saat window stalker muncul kilk kanan> Clean
+2.) jalanakan program target
+3.) di window stalker klik kanan> Refresh
+4.) ulangi
+
+NOTE: perbedaan call-count dan call-tree, call-count urutuan panggilan acak tapi dengan
+informasi call count, sedangkan call-tree urutan panggilan original dan tidak disertai call count.
+```

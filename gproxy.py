@@ -252,7 +252,7 @@ class Gproxy:
     @expose
     def settofrida_func(self, data, finit):
 
-        if finit:
+        if finit == "init":
             GLOBAL.frida_functions = {}
             for d in data:
                 if d.get("type") == "function":
@@ -260,12 +260,16 @@ class Gproxy:
                     GLOBAL.append_fridafunc(func_name)
             SIGNALS.frida_updatedsym_trace.emit()
 
+        elif finit == "refresh":
+            if GLOBAL.refresh_view == "'0'":
+                GLOBAL.refresh_view = ",0,"
+            else:
+                GLOBAL.refresh_view = "'0'"
+
+            SIGNALS.frida_updatedsym_trace.emit()
+
         else:
             GLOBAL.append_fridafunc(data)
-
-            if GLOBAL.refresh_frida_symbol:
-                SIGNALS.frida_updatedsym_trace.emit()
-
 
         return True
 

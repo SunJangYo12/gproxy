@@ -333,9 +333,13 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree_widget.customContextMenuRequested.connect(self.on_tree_context_menu)
 
+        #search
+        self.lineEdit = QLineEdit()
+        self.lineEdit.setObjectName(u"lineEdit")
 
         layout = QVBoxLayout()
         layout.addWidget(tree_widget)
+        layout.addWidget(self.lineEdit)
 
         self.setLayout(layout)
         self.bv = data
@@ -470,11 +474,19 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
     def refresh_from_global_sym_trace(self):
         self.tree_widget.clear()
-        self.tree_widget.headerItem().setText(0, "Trace Function List: %d" %len(GLOBAL.frida_functions) )
+        self.tree_widget.headerItem().setText(0, "%s Trace Function List: %d" % (GLOBAL.refresh_view, len(GLOBAL.frida_functions)) )
 
         ibb = 0
 
         for (func_name, data) in GLOBAL.frida_functions.items():
+
+            tsearch = self.lineEdit.text()
+
+            if tsearch == ">1":
+                if int(data['count']) <= 1:
+                    continue
+
+
             parent = QTreeWidgetItem(self.tree_widget)
 
             parent.setText(0, "%d  %s" % (data['count'], func_name) )
@@ -535,21 +547,15 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
     def on_tree_context_menu(self, position: QPoint):
         item = self.tree_widget.itemAt(position)
-        if item is None:
-            return   # klik kanan di area kosong → tidak ada menu
-
         menu = QMenu()
 
-
-        if item.parent() is None:
-            menu.addAction("Copy")
-            menu.addAction("Base")
-            menu.addAction("Size")
-            menu.addAction("Path")
-            menu.addAction("Block Coloring")
-            menu.addAction("Block Reset")
-            menu.addAction("Block Refresh")
-            menu.addAction("Auto Refresh")
+        menu.addAction("Copy")
+        menu.addAction("Base")
+        menu.addAction("Size")
+        menu.addAction("Path")
+        menu.addAction("Block Coloring")
+        menu.addAction("Block Reset")
+        menu.addAction("Block Refresh")
 
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
@@ -588,12 +594,6 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
             self.block_color(reset=True)
             GLOBAL.frida_bb_hit = []
             SIGNALS.frida_updatedsym_trace.emit()
-
-        elif action == "Auto Refresh":
-            if GLOBAL.refresh_frida_symbol:
-                GLOBAL.refresh_frida_symbol = False
-            else:
-                GLOBAL.refresh_frida_symbol = True
 
 
         elif action == "Block Refresh":

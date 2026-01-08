@@ -74,7 +74,7 @@ def on_message(message, data):
         elif message['payload']['type'] == 'hook_hit':
            info = message['payload']['log']
            #print(f"[+] Hit {info}")
-           proxy.settofrida_func(info, False)
+           proxy.settofrida_func(info, "")
 
 
     elif message['type'] == 'error':
@@ -147,6 +147,19 @@ class MyThread(threading.Thread):
         while not self.stop_event.is_set():
             self.script.exports_sync.idthreads()
             time.sleep(0.3)
+
+    def stop(self):
+        self.stop_event.set()
+
+class MyThreadRefresh(threading.Thread):
+    def __init__(self):
+        super().__init__()
+        self.stop_event = threading.Event()
+
+    def run(self):
+        while not self.stop_event.is_set():
+            proxy.settofrida_func("zz", "refresh")
+            time.sleep(1)
 
     def stop(self):
         self.stop_event.set()
@@ -269,7 +282,10 @@ def main():
             script.exports_sync.enummodules()
             in_module = input("\n>> Module> ")
 
+            thread_refresh = MyThreadRefresh()
+
             if in_module == "back":
+                thread_refresh.stop()
                 continue
 
             while True:
@@ -305,13 +321,16 @@ def main():
 
 
                 #init total symbol
-                proxy.settofrida_func(dick_sym, True)
+                proxy.settofrida_func(dick_sym, "init")
 
                 in_symbol = input(f"\n>> {in_module}> symbol> ")
 
                 if in_symbol == "back":
+                    thread_refresh.stop()
                     break
                 elif in_symbol == "all":
+                    thread_refresh.start()
+
                     setup_hook(script, dick_sym, None, None)
 
                 else:
@@ -352,6 +371,8 @@ def main():
                             setup_hook(script, dick_sym, None, None)
 
                         else:
+                            thread_refresh = MyThreadRefresh()
+                            thread_refresh.start()
                             setup_hook(script, dick_sym, in_symbol, in_fstalking)
 
 

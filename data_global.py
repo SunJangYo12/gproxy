@@ -26,7 +26,6 @@ class GlobalState:
         self.window_frida_stalker_title = ""
 
         self.refresh_view = "'0'"
-        self.refresh_frida_symbol = False
 
 
 

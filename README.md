@@ -272,8 +272,8 @@ $ python fridainit.py
 >> Chose pid? (1234): 9144
 >> em
 >> et
->> Module> libc++.so> #bug jika module cukup besar
 ```
+
 Cheatshet frida patch
 ```
 # enumerate JNI function (ident with "Java_")
@@ -282,6 +282,7 @@ $ frida-trace -i "Java_*" com.android.tes
 # enumerate all function by module
 $ frida-trace -I "openssl_mybank.so" com.android.tes
 ```
+
 example case:
 ```
 	=====================
@@ -319,6 +320,10 @@ example case:
 [+] Done.
 
 >> exit
+NOTE: >1 filter di pencarian hanya fungsi ter hit
+
+```
+
 #Tips hook addr dengan base dan offset dari binja (striped binary)
 ```
 $ python
@@ -333,8 +338,7 @@ $ python fridainit.py
 NOTE: jika addr HIT akan ada fungsi baru yaitu: unkwon
 ```
 
-```
-trace with basic block color in binaryninja
+#Trace with basic block color in binaryninja
 NOTE: set filter modules with edited in rpc_scrips.js: var whitelist = ["all"];
 ```
 >> tr
@@ -360,8 +364,9 @@ NOTE: set filter modules with edited in rpc_scrips.js: var whitelist = ["all"];
 [+] Agent @ Done.
 
 >> png_read> parse_png_file> Stalking filter> 
-
 ```
+
+
 # Contoh penggunaan stalker
 ```
 >> stl
@@ -376,6 +381,7 @@ NOTE: set filter modules with edited in rpc_scrips.js: var whitelist = ["all"];
 NOTE: untuk pencarian dia menyamakan semua field, jika tidak ketemu di title tidak
       ada string Result, untuk kembali dari tampilan result ke history tekan tombol search lagi.
 ```
+
 # Contoh penggunaan stalker call-tree
 ```
 1.) saat window stalker muncul kilk kanan> Clean

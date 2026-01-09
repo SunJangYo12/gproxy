@@ -10,6 +10,8 @@ from .constants import (
     HL_BP_COLOR,
     HL_NO_COLOR,
 )
+from .data_global import SIGNALS, GLOBAL
+import time
 
 def expose(f):
     "Decorator to set exposed flag on a function."
@@ -35,6 +37,31 @@ def err(x):
 def dbg(x):
     if DEBUG:
         log_debug("[*] {:s}".format(x))
+
+
+
+class RefreshUiTask(BackgroundTaskThread):
+    def __init__(self, view, sw):
+        super(RefreshUiTask, self).__init__('Update Ui...', True)
+        self.view = view
+        self.sw = sw
+
+    def run(self):
+        while True:
+            if GLOBAL.refresh_view == "'0'":
+                GLOBAL.refresh_view = ",0,"
+            else:
+                GLOBAL.refresh_view = "'0'"
+
+            if self.sw == "trace-func":
+                SIGNALS.frida_updatedsym_trace.emit()
+
+            elif self.sw == "stalker-ct":
+                SIGNALS.frida_stalker_ct.emit()
+
+            time.sleep(1)
+            if self.cancelled:
+                break
 
 
 

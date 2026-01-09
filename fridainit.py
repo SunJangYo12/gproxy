@@ -151,18 +151,6 @@ class MyThread(threading.Thread):
     def stop(self):
         self.stop_event.set()
 
-class MyThreadRefresh(threading.Thread):
-    def __init__(self):
-        super().__init__()
-        self.stop_event = threading.Event()
-
-    def run(self):
-        while not self.stop_event.is_set():
-            proxy.settofrida_func("zz", "refresh")
-            time.sleep(1)
-
-    def stop(self):
-        self.stop_event.set()
 
 
 def main():
@@ -282,8 +270,6 @@ def main():
             script.exports_sync.enummodules()
             in_module = input("\n>> Module> ")
 
-            thread_refresh = MyThreadRefresh()
-
             if in_module == "back":
                 thread_refresh.stop()
                 continue
@@ -326,12 +312,12 @@ def main():
                 in_symbol = input(f"\n>> {in_module}> symbol> ")
 
                 if in_symbol == "back":
-                    thread_refresh.stop()
                     break
-                elif in_symbol == "all":
-                    thread_refresh.start()
 
+                elif in_symbol == "all":
                     setup_hook(script, dick_sym, None, None)
+
+                    proxy.settofrida_func("task-run", "refresh")
 
                 else:
                     while True:

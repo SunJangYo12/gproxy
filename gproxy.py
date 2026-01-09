@@ -13,7 +13,7 @@ from .ui import (
 from binaryninja import (
     core_version,
     log_info,
-    highlight,
+    highlight
 )
 
 from .constants import (
@@ -31,6 +31,7 @@ from .helpers import (
     expose,
     is_exposed,
     ishex,
+    RefreshUiTask
 )
 
 from xmlrpc.server import (
@@ -41,6 +42,9 @@ from xmlrpc.server import (
 
 from .data_global import SIGNALS, GLOBAL
 import base64
+import time
+
+
 
 
 class Gproxy:
@@ -261,12 +265,8 @@ class Gproxy:
             SIGNALS.frida_updatedsym_trace.emit()
 
         elif finit == "refresh":
-            if GLOBAL.refresh_view == "'0'":
-                GLOBAL.refresh_view = ",0,"
-            else:
-                GLOBAL.refresh_view = "'0'"
-
-            SIGNALS.frida_updatedsym_trace.emit()
+            rui_task = RefreshUiTask(self.view, "trace-func")
+            rui_task.start()
 
         else:
             GLOBAL.append_fridafunc(data)

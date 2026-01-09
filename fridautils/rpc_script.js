@@ -371,6 +371,12 @@ class FuzzerKu
             },
             setuphook: (func_data, fstalking) => {
 
+               if (fstalking == "detach-all") {
+                   this.logDebug("send", "Agent @ Cleaning hook instrument...", "info");
+                   Interceptor.detachAll();
+                   return
+               }
+
                const subthis = this;
 
                const addr = ptr(func_data.address);

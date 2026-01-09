@@ -277,6 +277,9 @@ def main():
             while True:
                 dick_sym = script.exports_sync.enumsymbolstrace(in_module)
 
+                # DEBUG: force using bn address
+                dick_sym = []
+
                 isbn = 0
 
                 if len(dick_sym) == 0:
@@ -312,6 +315,7 @@ def main():
                 in_symbol = input(f"\n>> {in_module}> symbol> ")
 
                 if in_symbol == "back":
+                    script.exports_sync.setuphook("", "detach-all")
                     break
 
                 elif in_symbol == "all":
@@ -357,8 +361,6 @@ def main():
                             setup_hook(script, dick_sym, None, None)
 
                         else:
-                            thread_refresh = MyThreadRefresh()
-                            thread_refresh.start()
                             setup_hook(script, dick_sym, in_symbol, in_fstalking)
 
 

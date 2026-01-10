@@ -59,6 +59,9 @@ class RefreshUiTask(BackgroundTaskThread):
             elif self.sw == "stalker-ct":
                 SIGNALS.frida_stalker_ct.emit()
 
+            elif self.sw == "refresh-java":
+                SIGNALS.frida_updatedjava_trace.emit()
+
             time.sleep(1)
             if self.cancelled:
                 break

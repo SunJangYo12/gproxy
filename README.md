@@ -392,3 +392,11 @@ NOTE: untuk pencarian dia menyamakan semua field, jika tidak ketemu di title tid
 NOTE: perbedaan call-count dan call-tree, call-count urutuan panggilan acak tapi dengan
 informasi call count, sedangkan call-tree urutan panggilan original dan tidak disertai call count.
 ```
+
+# trace java class android
+```
+>> tr-java
+>> Class> com.facebook
+atau
+>> Class> com.
+```

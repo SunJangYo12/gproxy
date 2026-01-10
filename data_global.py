@@ -20,6 +20,7 @@ class GlobalState:
         self.frida_enumthreads = {}
         self.frida_idthreads = {}
         self.frida_functions = {}
+        self.frida_functions_java = {}
         self.frida_stalkers = {}
         self.frida_stalkers_ct = []
         self.frida_bb_hit = []
@@ -59,6 +60,21 @@ class GlobalState:
             }
 
 
+    def append_fridajavafunc(self, s, raw):
+        now = time.time()
+
+        if s in self.frida_functions_java:
+            self.frida_functions_java[s]["count"] += 1
+            self.frida_functions_java[s]["time"] = now + 3
+            self.frida_functions_java[s]["raw"] = raw
+        else:
+            self.frida_functions_java[s] = {
+                "count": 1,
+                "time": now + 3,
+                "raw": raw
+            }
+
+
 
 
 class GlobalSignals(QObject):
@@ -71,6 +87,7 @@ class GlobalSignals(QObject):
     frida_updatedthread = Signal()
     frida_updatedidthread = Signal()
     frida_updatedsym_trace = Signal()
+    frida_updatedjava_trace = Signal()
     frida_stalker = Signal()
     frida_stalker_ct = Signal()
     window_frida_stalker = Signal()

@@ -59,6 +59,10 @@ class FuzzerKu
                send({"type": "bb_hit", "log": msg});
 
 
+           else if (subtype == "java_hit")
+               send({"type": "java_hit", "log": msg});
+
+
            else if (subtype == "stalker")
                send({"type": "stalker", "log": msg});
 
@@ -162,6 +166,103 @@ class FuzzerKu
           output.push(out)
        }
        return output
+    }
+
+    stalkingjavaclass(jclass)
+    {
+        const subthis = this
+
+        console.log("[+] Agent @ Starting.."); //entah kenapa console ini penting
+
+        Java.perform(function() {
+            Java.enumerateLoadedClasses({
+                onMatch: function(aClass) {
+                    if (aClass.match(jclass)) {
+                        traceClass(aClass);
+                    }
+                },
+                onComplete: function() {}
+            });
+        });
+
+        // remove duplicates from array
+        function uniqBy(array, key) {
+            var seen = {};
+            return array.filter(function(item) {
+                var k = key(item);
+                return seen.hasOwnProperty(k) ? false : (seen[k] = true);
+            });
+        }
+
+        function traceClass(targetClass) {
+            var hook = Java.use(targetClass);
+            var methods = hook.class.getDeclaredMethods();
+
+            hook.$dispose;
+            var parsedMethods = [];
+
+            methods.forEach(function(method) {
+                parsedMethods.push(method.toString().replace(targetClass + ".", "TOKEN").match(/\sTOKEN(.*)\(/)[1]);
+            });
+
+            var targets = uniqBy(parsedMethods, JSON.stringify);
+
+            targets.forEach(function(targetMethod) {
+                traceMethod(targetClass + "." + targetMethod);
+            });
+        }
+
+        // trace a specific Java Method
+        function traceMethod(targetClassMethod) {
+            var delim = targetClassMethod.lastIndexOf(".");
+
+            if (delim === -1) return;
+
+            var targetClass = targetClassMethod.slice(0, delim)
+            var targetMethod = targetClassMethod.slice(delim + 1, targetClassMethod.length)
+            var hook = Java.use(targetClass);
+            var overloadCount;
+
+            try {
+                overloadCount = hook[targetMethod].overloads.length;
+            } catch (e){
+                console.log(e)
+            }
+
+            //subthis.logDebug("send", "Hooking: "+targetClassMethod+" >> ["+overloadCount+"]", "info");
+            console.log("Hooking: " + targetClassMethod + " [" + overloadCount + " overload(s)]");
+
+            for (var i=0; i<overloadCount; i++) {
+                hook[targetMethod].overloads[i].implementation = function() {
+                    //console.warn("\n*** entered " + targetClassMethod);
+
+                    var output = {}
+
+
+                    output["classMethod"] = targetClassMethod
+
+                    Java.perform(function() {
+                        var bt = Java.use("android.util.Log").getStackTraceString(Java.use("java.lang.Exception").$new());
+                        output["backtrace"] = bt
+                    });
+
+                    var out_arg = []
+                    for (var j=0; j<arguments.length; j++) {
+                        const myarg = arguments[j] ? arguments[j].toString() : "null";
+
+                        out_arg.push("arg[" + j + "]: " + myarg);
+                    }
+                    output["arg"] = out_arg
+
+                    var retval = this[targetMethod].apply(this, arguments); // rare crash (Frida bug?)
+                    output["retval"] = retval ? retval.toString() : "null"
+
+                    subthis.logDebug("send", output, "java_hit");
+
+                    return retval;
+                }
+            }
+        }
     }
 
     stalkingfunc(addr, filter)
@@ -275,6 +376,11 @@ class FuzzerKu
 
                return dick_sym
 
+            },
+            enumjavaclass: (jclass) => {
+               this.logDebug("send", "Agent @ Getting symbols to hook...", "info");
+
+               this.stalkingjavaclass(jclass)
             },
             idthreads: () => {
 

@@ -43,7 +43,6 @@ def on_message(message, data):
            threads = message['payload']['log']
            proxy.settofrida_enum(threads, "id_threads")
 
-
         elif message['payload']['type'] == 'bb_hit':
            bbs = message['payload']['log']
 
@@ -73,8 +72,12 @@ def on_message(message, data):
 
         elif message['payload']['type'] == 'hook_hit':
            info = message['payload']['log']
-           #print(f"[+] Hit {info}")
            proxy.settofrida_func(info, "")
+
+
+        elif message['payload']['type'] == 'java_hit':
+           java_hit = message['payload']['log']
+           proxy.settofrida_func(java_hit, "java_hit")
 
 
     elif message['type'] == 'error':
@@ -191,9 +194,10 @@ def main():
     print("1. shell/reverse_shell_java (s/js)")
     print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
     print("3. trace (tr)> (all/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
-    print("4. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> ")
+    print("4. trace-java (tr-java)> (all/package-class/full-info/back) (full-info)> (className)")
+    print("5. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> ")
     print("           (intruksi)> (func_addr/back)> (filter)> (mnemonic:ret,jne,enter:all/back)")
-    print("5. exit")
+    print("6. exit")
 
     loop_menu = True
 
@@ -266,12 +270,12 @@ def main():
                     script.exports_sync.setstalker(in_ct, int(in_id), "")
 
 
+
         elif pshell == "tr":
             script.exports_sync.enummodules()
             in_module = input("\n>> Module> ")
 
             if in_module == "back":
-                thread_refresh.stop()
                 continue
 
             while True:
@@ -321,7 +325,7 @@ def main():
                 elif in_symbol == "all":
                     setup_hook(script, dick_sym, None, None)
 
-                    proxy.settofrida_func("task-run", "refresh")
+                    proxy.settofrida_func("trace-func", "refresh")
 
                 else:
                     while True:
@@ -362,6 +366,26 @@ def main():
 
                         else:
                             setup_hook(script, dick_sym, in_symbol, in_fstalking)
+
+
+
+        elif pshell == "tr-java":
+
+            while True:
+                in_class = input("\n>> Class> ")
+
+                proxy.settofrida_func("refresh-java", "refresh")
+
+                if in_class == "back":
+                    break
+                elif in_class == "all":
+                    script.exports_sync.enumjavaclass("") #rawan crash
+
+                elif in_class == "full-info":
+                    in_info_class = input("\n>> Class> full-info>  ")
+
+                else:
+                    script.exports_sync.enumjavaclass(in_class)
 
 
 

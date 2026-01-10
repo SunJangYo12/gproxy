@@ -265,8 +265,12 @@ class Gproxy:
             SIGNALS.frida_updatedsym_trace.emit()
 
         elif finit == "refresh":
-            rui_task = RefreshUiTask(self.view, "trace-func")
+            rui_task = RefreshUiTask(self.view, data)
             rui_task.start()
+
+        elif finit == "java_hit":
+            classMethod = data["classMethod"]
+            GLOBAL.append_fridajavafunc(classMethod, data)
 
         else:
             GLOBAL.append_fridafunc(data)

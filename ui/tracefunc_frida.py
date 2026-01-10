@@ -318,6 +318,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         SIGNALS.frida_updatedthread.connect(self.refresh_from_global_thread)
         SIGNALS.frida_updatedidthread.connect(self.refresh_from_global_id_thread)
         SIGNALS.frida_updatedsym_trace.connect(self.refresh_from_global_sym_trace)
+        SIGNALS.frida_updatedjava_trace.connect(self.refresh_from_global_java_trace)
 
         SIGNALS.window_frida_stalker.connect(self.refresh_from_global_owindow)
 
@@ -325,6 +326,10 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         tree_widget = QTreeWidget()
         self.tree_widget = tree_widget
         self.tree_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
+        #self.tree_widget.itemClicked.connect(self.click_tree)
+        self.tree_widget.itemExpanded.connect(self.click_expand)
+        self.tree_widget.itemCollapsed.connect(self.click_collap)
+
 
         self.tree_widget.headerItem().setText(0, "Function List" )
         tree_widget.setColumnCount(1)
@@ -344,6 +349,8 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         self.setLayout(layout)
         self.bv = data
         self.font = getMonospaceFont(self)
+        self.expanded_items = set()
+
 
     def format_size(self, size):
         units = ['B', 'K', 'M', 'G', 'T']
@@ -472,6 +479,102 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         self.tree_widget.headerItem().setText(0, "Function List: [%d/%d]" %(func_total, len(GLOBAL.frida_enumsymbols)) )
 
 
+    def cekandset_expand(self, tree, id):
+
+        for data in self.expanded_items:
+            if data == id:
+                #print(data)
+                tree.setExpanded(True)
+
+
+    def refresh_from_global_java_trace(self):
+        self.tree_widget.clear()
+        self.tree_widget.headerItem().setText(0, "%s Trace Java List: %d" % (GLOBAL.refresh_view, len(GLOBAL.frida_functions_java)) )
+
+
+        for (func_name, data) in GLOBAL.frida_functions_java.items():
+            tsearch = self.lineEdit.text()
+
+            if tsearch == ">1":
+                if int(data['count']) <= 1:
+                    continue
+
+            parent = QTreeWidgetItem(self.tree_widget)
+
+            parent.setText(0, "%d  %s" % (data['count'], func_name) )
+            parent.setFont(0, self.font)
+            parent.setData(0, Qt.UserRole, func_name )
+
+            self.cekandset_expand(parent, func_name)
+
+
+            now = time.time()
+
+            if now < data['time']:
+                parent.setForeground(0, QColor("orange"))
+            else:
+                parent.setForeground(0, QColor("white"))
+
+
+            for key in data["raw"]:
+                if key == "arg":
+                    child1 = QTreeWidgetItem(parent)
+                    child1.setText(0, "arguments")
+                    child1.setFont(0, self.font)
+
+                    id_expand = func_name+"|||arguments"
+                    child1.setData(0, Qt.UserRole, id_expand )
+                    self.cekandset_expand(child1, id_expand)
+
+
+                    arguments = data["raw"].get(key)
+
+                    for arg in arguments:
+                        child2 = QTreeWidgetItem(child1)
+                        child2.setText(0, "%s" % arg )
+                        child2.setFont(0, self.font)
+                        child2.setData(0, Qt.UserRole, "%s" % arg)
+
+                elif key == "retval":
+                    child1 = QTreeWidgetItem(parent)
+                    child1.setText(0, "retval")
+                    child1.setFont(0, self.font)
+
+                    id_expand = func_name+"|||retval"
+                    child1.setData(0, Qt.UserRole, id_expand )
+                    self.cekandset_expand(child1, id_expand)
+
+
+                    retval = data["raw"].get(key)
+
+                    child2 = QTreeWidgetItem(child1)
+                    child2.setText(0, "%s" % retval)
+                    child2.setData(0, Qt.UserRole, "%s" % retval)
+                    child2.setFont(0, self.font)
+
+
+                elif key == "backtrace":
+                    backtrace = data["raw"].get(key)
+                    backtraces = backtrace.split("\n")
+
+                    child1 = QTreeWidgetItem(parent)
+                    child1.setText(0, "backtrace")
+                    child1.setFont(0, self.font)
+
+                    id_expand = func_name+"|||backtrace"
+                    child1.setData(0, Qt.UserRole, id_expand )
+                    self.cekandset_expand(child1, id_expand)
+
+                    for bk in backtraces:
+                        bt = "".join(bk.split("\t"))
+                        child2 = QTreeWidgetItem(child1)
+                        child2.setText(0, "%s" % bt )
+                        child2.setFont(0, self.font)
+                        child2.setData(0, Qt.UserRole, "%s" % bt )
+
+
+
+
     def refresh_from_global_sym_trace(self):
         self.tree_widget.clear()
         self.tree_widget.headerItem().setText(0, "%s Trace Function List: %d" % (GLOBAL.refresh_view, len(GLOBAL.frida_functions)) )
@@ -528,6 +631,19 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
     def contextMenuEvent(self, event):
         self.m_contextMenuManager.show(self.m_menu, self.actionHandler)
 
+
+    def click_expand(self, item):
+        data = item.data(0, Qt.UserRole)
+        self.expanded_items.add(data)
+
+    def click_collap(self, item):
+        data = item.data(0, Qt.UserRole)
+        self.expanded_items.remove(data)
+
+
+    def click_tree(self, item, column):
+        data = item.data(column, Qt.UserRole)
+        print("sd"+data)
 
     def on_item_double_clicked(self, item, column):
         data = item.data(column, Qt.UserRole)

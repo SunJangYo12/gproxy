@@ -261,7 +261,7 @@ class Gproxy:
             for d in data:
                 if d.get("type") == "function":
                     func_name = d.get("name")
-                    GLOBAL.append_fridafunc(func_name)
+                    GLOBAL.append_fridafunc(func_name, data)
             SIGNALS.frida_updatedsym_trace.emit()
 
         elif finit == "refresh":
@@ -273,7 +273,8 @@ class Gproxy:
             GLOBAL.append_fridajavafunc(classMethod, data)
 
         else:
-            GLOBAL.append_fridafunc(data)
+            funcname = data["func_name"]
+            GLOBAL.append_fridafunc(funcname, data)
 
         return True
 

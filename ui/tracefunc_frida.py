@@ -595,6 +595,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
             parent.setText(0, "%d  %s" % (data['count'], func_name) )
             parent.setFont(0, self.font)
             parent.setData(0, Qt.UserRole, func_name )
+            self.cekandset_expand(parent, func_name)
 
             now = time.time()
 
@@ -602,6 +603,62 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
                 parent.setForeground(0, QColor("orange"))
             else:
                 parent.setForeground(0, QColor("white"))
+
+
+
+            for key in data["raw"]:
+
+                if key == "argumen":
+                    child1 = QTreeWidgetItem(parent)
+                    child1.setText(0, "argumen")
+                    child1.setFont(0, self.font)
+
+                    id_expand = func_name+"|||argumen"
+                    child1.setData(0, Qt.UserRole, id_expand )
+                    self.cekandset_expand(child1, id_expand)
+
+                    arg = data["raw"].get(key)
+
+                    child2 = QTreeWidgetItem(child1)
+                    child2.setText(0, "%s" % arg)
+                    child2.setData(0, Qt.UserRole, "%s" % arg)
+                    child2.setFont(0, self.font)
+
+                elif key == "retval":
+                    child1 = QTreeWidgetItem(parent)
+                    child1.setText(0, "retval")
+                    child1.setFont(0, self.font)
+
+                    id_expand = func_name+"|||retval"
+                    child1.setData(0, Qt.UserRole, id_expand )
+                    self.cekandset_expand(child1, id_expand)
+
+                    retval = data["raw"].get(key)
+
+                    child2 = QTreeWidgetItem(child1)
+                    child2.setText(0, "%s" % retval)
+                    child2.setData(0, Qt.UserRole, "%s" % retval)
+                    child2.setFont(0, self.font)
+
+                elif key == "backtrace":
+                    backtrace = data["raw"].get(key)
+                    backtraces = backtrace.split("\n")
+
+                    child1 = QTreeWidgetItem(parent)
+                    child1.setText(0, "backtrace")
+                    child1.setFont(0, self.font)
+
+                    id_expand = func_name+"|||backtrace"
+                    child1.setData(0, Qt.UserRole, id_expand )
+                    self.cekandset_expand(child1, id_expand)
+
+                    for bk in backtraces:
+                        child2 = QTreeWidgetItem(child1)
+                        child2.setText(0, "%s" % bk )
+                        child2.setFont(0, self.font)
+                        child2.setData(0, Qt.UserRole, "%s" % bk )
+
+
 
             for bb, bb_func in GLOBAL.frida_bb_hit:
                 if bb_func == func_name:

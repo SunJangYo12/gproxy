@@ -496,7 +496,23 @@ class FuzzerKu
                    this.logDebug("send", "Agent @ Setup hook: "+func_data.name, "info");
                    Interceptor.attach(addr, {
                        onEnter: function(args) {
-                           subthis.logDebug("send", func_data.name, "hook_hit");
+                           //argument is debug mode
+                           this.output = {}
+                           this.output["argumen"] = "";
+
+                           try {
+                               this.output["argumen"] = "args[0]: "+Memory.readCString(ptr(args[0]));
+                           }catch(e){}
+
+                           this.output["backtrace"] = Thread.backtrace(this.context, Backtracer.ACCURATE).map(DebugSymbol.fromAddress).join("\n");
+
+                       },
+                       onLeave: function(retval) {
+                           this.output["retval"] = retval
+                           this.output["func_name"] = func_data.name
+                           this.output["func_addr"] = func_data.address
+
+                           subthis.logDebug("send", this.output, "hook_hit");
                        }
                    });
                }

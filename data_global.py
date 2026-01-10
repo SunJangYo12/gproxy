@@ -47,16 +47,18 @@ class GlobalState:
                 "block": []
             }
 
-    def append_fridafunc(self, s):
+    def append_fridafunc(self, s, raw):
         now = time.time()
 
         if s in self.frida_functions:
             self.frida_functions[s]["count"] += 1
             self.frida_functions[s]["time"] = now + 3
+            self.frida_functions[s]["raw"] = raw
         else:
             self.frida_functions[s] = {
                 "count": 1,
-                "time": now + 3
+                "time": now + 3,
+                "raw": raw
             }
 
 

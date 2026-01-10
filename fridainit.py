@@ -282,7 +282,7 @@ def main():
                 dick_sym = script.exports_sync.enumsymbolstrace(in_module)
 
                 # DEBUG: force using bn address
-                dick_sym = []
+                #dick_sym = []
 
                 isbn = 0
 
@@ -350,7 +350,6 @@ def main():
                                 setup_hook(script, dick_sym, in_symbol, "zsetup_block")
 
                         elif in_symbol.startswith("0x"):
-
                             arr_in = in_symbol.split(",")
                             dick_sym = []
 
@@ -363,7 +362,6 @@ def main():
                                 dick_sym.append(dick)
 
                             setup_hook(script, dick_sym, None, None)
-
                         else:
                             setup_hook(script, dick_sym, in_symbol, in_fstalking)
 

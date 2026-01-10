@@ -274,7 +274,17 @@ class FuzzerKu
         Interceptor.attach(addr, {
             onEnter(args) {
                 const sym = DebugSymbol.fromAddress(addr)
-                subthis.logDebug("send", sym.name, "hook_hit");
+
+                this.hook_output = {}
+                this.hook_output["argumen"] = "";
+                try {
+                    this.hook_output["argumen"] = "args[0]: "+Memory.readCString(ptr(args[0]));
+                }catch(e){}
+
+                this.hook_output["backtrace"] = Thread.backtrace(this.context, Backtracer.ACCURATE).map(DebugSymbol.fromAddress).join("\n");
+                this.hook_output["func_name"] = sym.name
+                this.hook_output["func_addr"] = sym.address
+
 
                 /* filter modules */
                 var whitelist = ["all"]; //["libc.so", "libs.so"...]
@@ -339,6 +349,9 @@ class FuzzerKu
             },
             onLeave(retval) {
                Stalker.unfollow(this.threadId);
+
+               this.hook_output["retval"] = retval
+               subthis.logDebug("send", this.hook_output, "hook_hit");
             }
         });
 
@@ -482,9 +495,7 @@ class FuzzerKu
                    Interceptor.detachAll();
                    return
                }
-
                const subthis = this;
-
                const addr = ptr(func_data.address);
 
                if (fstalking != -1) {

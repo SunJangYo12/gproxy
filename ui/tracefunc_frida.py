@@ -624,6 +624,14 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
                     child2.setData(0, Qt.UserRole, "%s" % arg)
                     child2.setFont(0, self.font)
 
+                elif key == "func_addr":
+                    func_addr = data["raw"].get(key)
+
+                    child1 = QTreeWidgetItem(parent)
+                    child1.setText(0, "addr: %s" % func_addr)
+                    child1.setFont(0, self.font)
+                    child1.setData(0, Qt.UserRole, func_addr )
+
                 elif key == "retval":
                     child1 = QTreeWidgetItem(parent)
                     child1.setText(0, "retval")

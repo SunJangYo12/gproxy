@@ -41,10 +41,15 @@ def dbg(x):
 
 
 class RefreshUiTask(BackgroundTaskThread):
-    def __init__(self, view, sw):
-        super(RefreshUiTask, self).__init__('Update Ui...', True)
+    def __init__(self, view, sw, delay=1):
+        super(RefreshUiTask, self).__init__('Gproxy update-ui...', True)
         self.view = view
         self.sw = sw
+        self.delay = delay
+
+        if self.sw == "id_threads":
+            self.delay = 0.3
+
 
     def run(self):
         while True:
@@ -62,7 +67,11 @@ class RefreshUiTask(BackgroundTaskThread):
             elif self.sw == "refresh-java":
                 SIGNALS.frida_updatedjava_trace.emit()
 
-            time.sleep(1)
+            elif self.sw == "id_threads":
+                SIGNALS.frida_updatedidthread.emit()
+
+            time.sleep(self.delay)
+
             if self.cancelled:
                 break
 

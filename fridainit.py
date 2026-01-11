@@ -112,24 +112,20 @@ def inject_module(script, target):
     return triggerAddr
 
 def setup_hook(script, dick_sym, func_target, fstalking):
-
     for data in dick_sym:
         if data.get("type") == "function":
             func_name = data.get("name")
             func_addr = data.get("address")
 
             if func_addr == "0x0":
-                print(f"[!] warning: {func_name} is {func_addr}")
                 continue
 
             try:
                 # single
                 if func_name == func_target:
-                    if fstalking != "":
-                        print(f"[+] hook: {func_target} intruction filter: {fstalking}")
+                    if fstalking != None:
                         script.exports_sync.setuphook(data, fstalking)
                     else:
-                        print(f"[+] hook: {func_target}")
                         script.exports_sync.setuphook(data, -1)
 
                 else: #all
@@ -220,6 +216,8 @@ def main():
 
 
         elif pshell == "stl":
+            proxy.settofrida_func("id_threads", "refresh")
+
             thread = MyThread(script)
             thread.start()
 
@@ -349,6 +347,7 @@ def main():
                             else:
                                 setup_hook(script, dick_sym, in_symbol, "zsetup_block")
 
+                        #jarang berguna, karena alamat hasil dari generate binaryninja
                         elif in_symbol.startswith("0x"):
                             arr_in = in_symbol.split(",")
                             dick_sym = []

@@ -608,7 +608,22 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
             for key in data["raw"]:
 
-                if key == "argumen":
+                if key == "func_addr":
+                    func_addr = data["raw"].get(key)
+
+                    child1 = QTreeWidgetItem(parent)
+                    child1.setText(0, "addr")
+                    child1.setFont(0, self.font)
+                    id_expand = func_name+"|||func_addr"
+                    child1.setData(0, Qt.UserRole, id_expand)
+                    self.cekandset_expand(child1, id_expand)
+
+                    child2 = QTreeWidgetItem(child1)
+                    child2.setText(0, "%s" % func_addr)
+                    child2.setData(0, Qt.UserRole, func_addr)
+                    child2.setFont(0, self.font)
+
+                elif key == "argumen":
                     child1 = QTreeWidgetItem(parent)
                     child1.setText(0, "argumen")
                     child1.setFont(0, self.font)
@@ -623,14 +638,6 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
                     child2.setText(0, "%s" % arg)
                     child2.setData(0, Qt.UserRole, "%s" % arg)
                     child2.setFont(0, self.font)
-
-                elif key == "func_addr":
-                    func_addr = data["raw"].get(key)
-
-                    child1 = QTreeWidgetItem(parent)
-                    child1.setText(0, "addr: %s" % func_addr)
-                    child1.setFont(0, self.font)
-                    child1.setData(0, Qt.UserRole, func_addr )
 
                 elif key == "retval":
                     child1 = QTreeWidgetItem(parent)

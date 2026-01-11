@@ -509,14 +509,16 @@ class FuzzerKu
                        onEnter: function(args) {
                            //argument is debug mode
                            this.output = {}
-                           this.output["argumen"] = "";
+                           this.output["argumen"] = "none";
+                           this.output["backtrace"] = "none"
 
                            try {
                                this.output["argumen"] = "args[0]: "+Memory.readCString(ptr(args[0]));
-                           }catch(e){}
-
+                           }catch(e){
+                               this.output["argumen"] = ""+e;
+                           }
+                           //jika crash comment ini
                            this.output["backtrace"] = Thread.backtrace(this.context, Backtracer.ACCURATE).map(DebugSymbol.fromAddress).join("\n");
-
                        },
                        onLeave: function(retval) {
                            this.output["retval"] = retval

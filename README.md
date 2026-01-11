@@ -357,13 +357,8 @@ NOTE: set filter modules with edited in rpc_scrips.js: var whitelist = ["all"];
 [+] Agent @ Getting symbols to hook...
 
 >> png_read> symbol> parse_png_file
-
 >> png_read> parse_png_file> Stalking filter> block
-[+] hook: parse_png_file intruction filter: zsetup_block
-[+] Agent @ Setup hook: parse_png_file with stalking: zsetup_block
-[+] Agent @ Done.
 
->> png_read> parse_png_file> Stalking filter> 
 ```
 
 

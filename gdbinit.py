@@ -271,6 +271,7 @@ class LoadTrace(gdb.Command):
 
         elif arg == "run-bn":
             print("[+] starting traces..")
+            proxy.settofrida_func("gdb_func", "refresh")
             bn = True
 
         elif arg == "run-bn-block":

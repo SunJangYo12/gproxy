@@ -70,6 +70,10 @@ class RefreshUiTask(BackgroundTaskThread):
             elif self.sw == "id_threads":
                 SIGNALS.frida_updatedidthread.emit()
 
+            elif self.sw == "gdb_func":
+                SIGNALS.gdb_updated.emit()
+
+
             time.sleep(self.delay)
 
             if self.cancelled:

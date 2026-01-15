@@ -238,7 +238,6 @@ class Gproxy:
 
 
         GLOBAL.append_gdbfunc(s[0])
-        SIGNALS.gdb_updated.emit()
 
         return True
 

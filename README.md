@@ -395,3 +395,9 @@ informasi call count, sedangkan call-tree urutan panggilan original dan tidak di
 atau
 >> Class> com.
 ```
+
+# Fuzzer in gdb snapshot
+```
+1.) python patch.py> program_target
+
+```

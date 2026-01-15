@@ -1,0 +1,9 @@
+
+
+1.) set breakpoint start
+2.) set breakpoint end
+3.) continue
+4.) wait start hit, copy regsiter
+5.) remove breakpoint start/end
+6.) set register by 4
+7.) coverage breakpoint(dynamic)

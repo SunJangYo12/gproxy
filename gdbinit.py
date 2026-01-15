@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.dirname(MYFILE) + "/gdbutils")
 import trace_memory
 import kernel_cmd
 import detect_struct
+import fuzzer_ptrace
 
 proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 
@@ -49,6 +50,17 @@ class CommandJump(gdb.Command):
     def invoke(self, arg, from_tty):
         print("jump to: %s" % arg)
         proxy.jump("%s" % arg)
+
+
+class CommandFuzzPtrace(gdb.Command):
+    """Fuzzer ptrace"""
+
+    def __init__(self):
+        super(CommandFuzzPtrace, self).__init__("cmdfuzz", gdb.COMMAND_USER)
+
+    def invoke(self, arg, from_tty):
+        fuzzer_ptrace.start_fuzz(arg)
+
 
 
 class CommandComment(gdb.Command):
@@ -355,6 +367,7 @@ class KernelProcList(gdb.Command):
 RegsCommand()
 CommandVersion()
 CommandJump()
+CommandFuzzPtrace()
 CommandComment()
 CommandColor()
 CommandColorBlock()

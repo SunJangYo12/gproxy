@@ -15,6 +15,7 @@ import trace_memory
 import kernel_cmd
 import detect_struct
 import fuzzer_ptrace
+from address_human import AddressHuman, StackHuman, ArchType
 
 proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 
@@ -155,9 +156,39 @@ class StepSync:
         if rip != self.last_rip:
 
             self.last_rip = rip
-            print("current_pc=%#x" % self.last_rip)
+            #print("current_pc=%#x" % self.last_rip)
 
-            proxy.jump("%#x" % self.last_rip)
+
+            rsp = int(gdb.parse_and_eval("$rsp"))
+
+            arch = ArchType()
+            arch.get_ptr()
+
+
+            for i in range(10):
+                memalign = arch.ptrsize
+                offset = i * memalign
+                addr = arch.align_address(rsp + offset)
+
+                cek_area = AddressHuman().process_lookup_address(addr)
+                if cek_area:
+                    StackHuman().dereference_from(addr, offset)
+                else:
+                    print("no maps area")
+
+
+            addrHuman = AddressHuman()
+            for reg in addrHuman.collect_registers():
+                val = reg.split("=")
+                addr = int(val[1], 0)
+                addrHuman.lookup_address(addr)
+                label = addrHuman.value["label"]
+                raddr = addrHuman.value["addr"]
+
+                #print(f"{val[0]} = {raddr} {label}")
+
+
+            #proxy.jump("%#x" % self.last_rip)
 
 
 class TraceBreakpoint(gdb.Breakpoint):
@@ -173,7 +204,6 @@ class TraceBreakpoint(gdb.Breakpoint):
 
         if bb:
             proxy.set_global("")
-
 
     def get_registers(self):
         out = gdb.execute("info registers", to_string=True)
@@ -244,7 +274,6 @@ class TraceBreakpoint(gdb.Breakpoint):
 
         else:
             print(f"[TRACE] Hit {self.addr}")
-
             if self.bn:
                 proxy.settogdb(self.addr)
 

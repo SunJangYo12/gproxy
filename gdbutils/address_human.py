@@ -233,7 +233,7 @@ class AddressHuman:
             elif sect["path"] == self.get_filepath() and Permission.EXECUTE:
                 self.value = {
                     "addr": address,
-                    "label": "[code file]"
+                    "label": "[code_file]"
                 }
         else:
             self.value = {
@@ -320,52 +320,76 @@ class StackHuman:
             return False
 
 
+    def get_value(self, addrHuman, arch, deref):
+        txt = ""
+        if addrHuman.section:
+            if addrHuman.section["permission"][0] == "r":
+                if self.is_ascii_string(deref):
+                    s = self.read_cstring(deref)
+
+                    if len(s) < arch.ptrsize:
+                        txt = f'("{s}"?)'
+                    elif len(s) > GEF_MAX_STRING_LENGTH:
+                        txt = f'"{s[:GEF_MAX_STRING_LENGTH]}[...]"'
+                    else:
+                        txt = s
+        return txt
+
+
+
     def dereference_from(self, address: int, offset: int):
         arch = ArchType()
         arch.get_ptr()
 
-        msg = []
+        index = 1
+        output = []
 
         addrHuman = AddressHuman()
         addrHuman.lookup_address(address)
 
         deref = addrHuman.dereference(arch)
 
+        out = {
+            "index": 0,
+            "address": f"{arch.format_address(address)}",
+            "label": addrHuman.value['label'],
+            "value": self.get_value(addrHuman, arch, address)
+        }
+        output.append(out)
+
         if deref is None:
-            print("can't read value")
-            msg.append(str(address))
             return
+
 
         addrHuman.lookup_address(deref)
 
-        dereftmp = None
+        while 1:
 
-        #doble akses value in pointer
-        if addrHuman.maps_area() and addrHuman.value['label'] == "[stack]":
-            dereftmp = deref
-            deref = addrHuman.dereference(arch)
+            out = {
+                "index": index,
+                "address": f"{arch.format_address(deref)}",
+                "label": addrHuman.value['label'],
+                "value": self.get_value(addrHuman, arch, deref)
+            }
+            output.append(out)
 
-        if addrHuman.section:
-            txt = ""
+            addrHuman.lookup_address(deref)
 
-            if addrHuman.section["permission"][0] == "r":
-                if self.is_ascii_string(deref):
-                    s = self.read_cstring(deref)
+            if addrHuman.maps_area():
+                deref = addrHuman.dereference(arch)
+            else:
+                break
+            index += 1
 
-                    if len(s) < arch.ptrsize:
-                        txt = f'("{s, string_color}"?)'
-                    elif len(s) > GEF_MAX_STRING_LENGTH:
-                        txt = f'"{s[:GEF_MAX_STRING_LENGTH]}[...]"'
-                    else:
-                        txt = s
-            xx = ""
-            if dereftmp:
-                xx = f" {arch.format_address(deref2)} → "
+        print(output)
 
-            print(f"{arch.format_address(address)}|{offset:+#07x} {xx} {arch.format_address(deref)}{addrHuman.value['label']} → {txt}")
 
-        else:
-            print(f"{arch.format_address(address)}|{offset:+#07x}  {arch.format_address(deref)}")
+
+
+#            print(f"{arch.format_address(address)}|{offset:+#07x} {arch.format_address(deref)}{addrHuman.value['label']} → {txt}  {zzz}")
+
+#        else:
+#            print(f"{arch.format_address(address)}|{offset:+#07x}  {arch.format_address(deref)}")
 
 
 

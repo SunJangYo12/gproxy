@@ -170,25 +170,12 @@ class StepSync:
                 offset = i * memalign
                 addr = arch.align_address(rsp + offset)
 
-                cek_area = AddressHuman().process_lookup_address(addr)
-                if cek_area:
-                    StackHuman().dereference_from(addr, offset)
-                else:
-                    print("no maps area")
+                StackHuman().dereference_from(addr, offset)
 
 
-            addrHuman = AddressHuman()
-            for reg in addrHuman.collect_registers():
-                val = reg.split("=")
-                addr = int(val[1], 0)
-                addrHuman.lookup_address(addr)
-                label = addrHuman.value["label"]
-                raddr = addrHuman.value["addr"]
-
-                #print(f"{val[0]} = {raddr} {label}")
 
 
-            #proxy.jump("%#x" % self.last_rip)
+            proxy.jump("%#x" % self.last_rip)
 
 
 class TraceBreakpoint(gdb.Breakpoint):
@@ -228,6 +215,21 @@ class TraceBreakpoint(gdb.Breakpoint):
         aa =  detect_struct.runn(arg, in_gdb=False)
         return aa
 
+    def read_dynamic_config(self, sw):
+        out = ""
+        try:
+            with open("/dev/shm/gproxy.config", "r") as fd:
+                for line in fd:
+                    key = line.split(":")
+
+                    if key[0] == sw:
+                        out = key[1].split("\n")[0]
+                        break
+        except:
+            pass
+        return out
+
+
 
     def stop(self):
         gdb_memregs = ""
@@ -258,6 +260,38 @@ class TraceBreakpoint(gdb.Breakpoint):
                     gdb_stop = True
             except:
                 pass
+
+
+
+        if self.read_dynamic_config("read_registers") != "":
+            func_name = self.read_dynamic_config("read_registers")
+
+            if self.func_name == func_name:
+                print(f"show regs => {func_name}")
+
+                arch = ArchType()
+                arch.get_ptr()
+
+                addrHuman = AddressHuman()
+                result = []
+
+                for reg in addrHuman.collect_registers():
+                    val = reg.split("=")
+                    addr = int(val[1], 0)
+
+                    addrHuman.lookup_address(addr)
+                    label = addrHuman.value["label"]
+                    raddr = addrHuman.value["addr"]
+
+                    val_reg = StackHuman().get_value(addrHuman, arch, addr)
+                    print(f"{val[0]} = {arch.format_address(addr)} {label}  {val_reg}")
+
+                    val_reg = val_reg.encode().hex()
+
+                    result.append(f"{val[0]}={arch.format_address(addr)}{label} {val_reg}\n")
+
+                gdb_memregs = "".join(result)
+
 
 
         if self.func_name:

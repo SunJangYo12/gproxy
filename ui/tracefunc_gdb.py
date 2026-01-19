@@ -22,6 +22,7 @@ from PySide2.QtWidgets import (
      QToolButton, QStyle
 )
 from ..data_global import SIGNALS, GLOBAL
+from ..helpers import RefreshUiTask
 import base64
 import time
 
@@ -262,6 +263,7 @@ class DialogRegisters(QDialog):
         if col == 0:
             menu.addAction("Detail", lambda: self.menu_action(item, "Detail"))
         elif col == 1:
+            menu.addAction("Detail", lambda: self.menu_action(item, "Detail"))
             menu.addAction("Copy", lambda: self.menu_action(item, "Copy"))
             menu.addAction("Dump Structure: ", lambda: self.menu_action(item, "Dump", reg_name))
 
@@ -273,7 +275,7 @@ class DialogRegisters(QDialog):
             QApplication.clipboard().setText(item.text())
 
         elif aksi == "Detail":
-            print("sd")
+            print(item.text())
 
         elif aksi == "Dump":
             hname = item.text()
@@ -288,13 +290,18 @@ class DialogRegisters(QDialog):
 
 
 
-    def _makewidget(self, val, center=False):
+    def _makewidget(self, val, center=False, rcolor=None):
         out = QTableWidgetItem(str(val))
         out.setFlags(Qt.ItemIsEnabled)
         out.setFont(getMonospaceFont(self))
+        out.setToolTip(val)
 
         if val == "<symbolic>":
             out.setForeground(QColor("red"))
+
+        if rcolor:
+            out.setForeground(rcolor)
+
 
         if center:
             out.setTextAlignment(Qt.AlignCenter)
@@ -325,8 +332,24 @@ class DialogRegisters(QDialog):
                 regname = reg[0]
                 regvalue = reg[1]
 
+                regcolor = QColor("white")
+
+                try:
+                    isi = reg[1].split(" ")
+                    regvalue = isi[0]+" "+bytes.fromhex(isi[1]).decode()
+
+                    if "[stack]" in isi[0]: regcolor = QColor("magenta")
+                    elif "[heap]" in isi[0]: regcolor = QColor("green")
+                    elif "[code]" in isi[0]: regcolor = QColor("red")
+                    elif "[code_file]" in isi[0]: regcolor = QColor("red")
+                except Exception as e:
+                    print(e)
+                    regvalue = reg[1].split(" ")[0]
+
+                print(regvalue)
+
                 self.table.setItem(i, 0, self._makewidget(regname))
-                self.table.setItem(i, 1, self._makewidget(regvalue))
+                self.table.setItem(i, 1, self._makewidget(regvalue, rcolor=regcolor))
             except:
                 pass
 
@@ -450,6 +473,8 @@ class FuncListDockWidget(QWidget, DockContextHandler):
 
         if item.parent() is None:
             menu.addAction("Copy")
+            menu.addAction("Show Registers")
+            menu.addAction("Update ui")
             menu.addAction("Hook2dump")
             menu.addAction("Generate Block")
             menu.addAction("Clear All")
@@ -460,13 +485,51 @@ class FuncListDockWidget(QWidget, DockContextHandler):
             self.handle_tree_action(action.text(), item)
 
 
+    def config_dynamic(self, sw, func_name):
+        config = "/dev/shm/gproxy.config"
+        all = []
+        try:
+            with open(config, "r") as fd:
+                for line in fd:
+                    key = line.split(":")
+
+                    if key[0] == sw:
+                        new = key[0]+":"+func_name+"\n"
+                        all.append(new)
+                    else:
+                        all.append(line)
+        except:
+            print("new")
+            all.append(f"{sw}:{func_name}\n")
+
+        with open(config, "w") as fd:
+            for i in all:
+                fd.write(i)
+
+
+
     def handle_tree_action(self, action, item):
 
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
 
-        elif action == "Generate Block":
+        elif action == "Update ui":
+            rui_task = RefreshUiTask(self.bv, "gdb_func")
+            rui_task.start()
 
+        elif action == "Show Registers":
+            func_name = item.text(0).split("  ")[1]
+            self.config_dynamic("read_registers", func_name)
+
+            self.dlg = DialogRegisters(title=func_name)
+            self.dlg.resize(250, 470) # w,h
+            self.dlg.show()
+            self.dlg.raise_()
+            self.dlg.activateWindow()
+
+
+
+        elif action == "Generate Block":
             GLOBAL.gdb_rebreak = 'pause'
 
             hname = item.text(0).split("  ")

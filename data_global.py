@@ -13,6 +13,7 @@ class GlobalState:
         self.gdb_hookstructname = ""
         self.gdb_memregs = []
         self.gdb_memstruct = []
+        self.gdb_memstack = []
         self.gdb_rebreak = ""
 
         self.frida_enummodules = {}
@@ -28,6 +29,35 @@ class GlobalState:
 
         self.refresh_view = "'0'"
 
+
+
+    def config_dynamic(self, sw, func_name):
+        config = "/dev/shm/gproxy.config"
+        print(f"set config: {sw} {func_name}")
+
+        all = []
+        try:
+            with open(config, "r") as fd:
+                for line in fd:
+                    key = line.split(":")
+
+                    if key[0] == sw:
+                        if func_name != "":
+                            new = key[0]+":"+func_name+"\n"
+                            all.append(new)
+                    else:
+                        all.append(line)
+
+                if fd.readlines() <= 1:
+                    print("new")
+                    all.append(f"{sw}:{func_name}\n")
+        except:
+            print("new")
+            all.append(f"{sw}:{func_name}\n")
+
+        with open(config, "w") as fd:
+            for i in all:
+                fd.write(i)
 
 
     def append_gdbfunc_bb(self, s, block):
@@ -84,6 +114,7 @@ class GlobalSignals(QObject):
     gdb_updated = Signal()
     gdb_updated_bb = Signal()
     gdb_updated_regs = Signal()
+    gdb_updated_stacks = Signal()
     frida_updated = Signal()
     frida_updatedsym = Signal()
     frida_updatedthread = Signal()

@@ -236,6 +236,11 @@ class Gproxy:
             memstruct = s[2].split("\n")
             GLOBAL.gdb_memstruct = memstruct
 
+        if s[3] != "":
+            memstack = s[3].split("\n")
+            GLOBAL.gdb_memstack = memstack
+            SIGNALS.gdb_updated_stacks.emit()
+
 
         GLOBAL.append_gdbfunc(s[0])
 

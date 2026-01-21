@@ -1,6 +1,7 @@
 import gdb
 import xmlrpc.client
 import base64
+import json
 import re
 
 import sys,os
@@ -154,26 +155,8 @@ class StepSync:
             return
 
         if rip != self.last_rip:
-
             self.last_rip = rip
-            #print("current_pc=%#x" % self.last_rip)
-
-
-            rsp = int(gdb.parse_and_eval("$rsp"))
-
-            arch = ArchType()
-            arch.get_ptr()
-
-
-            for i in range(10):
-                memalign = arch.ptrsize
-                offset = i * memalign
-                addr = arch.align_address(rsp + offset)
-
-                StackHuman().dereference_from(addr, offset)
-
-
-
+            print("current_pc=%#x" % self.last_rip)
 
             proxy.jump("%#x" % self.last_rip)
 
@@ -234,6 +217,7 @@ class TraceBreakpoint(gdb.Breakpoint):
     def stop(self):
         gdb_memregs = ""
         gdb_memstruct = ""
+        gdb_stack = ""
         gdb_stop = False
 
         # Comment ini jika ingin lebih cepat
@@ -262,6 +246,34 @@ class TraceBreakpoint(gdb.Breakpoint):
                 pass
 
 
+        if self.read_dynamic_config("read_stacks") != "":
+            func_name = self.read_dynamic_config("read_stacks")
+
+            if self.func_name == func_name:
+                print(f"show stack => {func_name}")
+
+                arch = ArchType()
+                arch.get_ptr()
+
+                rsp = int(gdb.parse_and_eval("$rsp"))
+                result = []
+
+                for i in range(10):
+                    memalign = arch.ptrsize
+                    offset = i * memalign
+                    addr = arch.align_address(rsp + offset)
+
+                    out = StackHuman().dereference_from(addr, offset)
+
+                    #print(out)
+
+                    js = json.dumps(out)
+                    jb = js.encode('utf-8')
+                    b64 = base64.b64encode(jb).decode() #decode is b"x" to "x"
+                    result.append(b64+"\n")
+
+                gdb_stack = "".join(result)
+
 
         if self.read_dynamic_config("read_registers") != "":
             func_name = self.read_dynamic_config("read_registers")
@@ -284,7 +296,7 @@ class TraceBreakpoint(gdb.Breakpoint):
                     raddr = addrHuman.value["addr"]
 
                     val_reg = StackHuman().get_value(addrHuman, arch, addr)
-                    print(f"{val[0]} = {arch.format_address(addr)} {label}  {val_reg}")
+                    #print(f"{val[0]} = {arch.format_address(addr)} {label}  {val_reg}")
 
                     val_reg = val_reg.encode().hex()
 
@@ -298,7 +310,7 @@ class TraceBreakpoint(gdb.Breakpoint):
             print(f"[TRACE] Hit {self.func_name}  => {self.addr}")
 
             if self.bn:
-                output = f"{self.addr}|||{self.func_name}T_T{gdb_memregs}T_T{gdb_memstruct}"
+                output = f"{self.addr}|||{self.func_name}T_T{gdb_memregs}T_T{gdb_memstruct}T_T{gdb_stack}"
                 output = base64.b64encode(output.encode()).decode()
                 proxy.settogdb(output)
 

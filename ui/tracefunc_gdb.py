@@ -31,7 +31,7 @@ from binaryninja import (
     log_info,
     highlight,
 )
-
+import json
 
 class DialogDumpStructure(QDialog):
     def __init__(self, title="", parent=None, reg_name=None):
@@ -141,6 +141,126 @@ class DialogDumpStructure(QDialog):
 
 
 
+class DialogStacks(QDialog):
+    def __init__(self, title="", parent=None, reg_name=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"Stack")
+        self.setWindowFlags(
+            Qt.Window |
+            Qt.WindowMinimizeButtonHint |
+            Qt.WindowCloseButtonHint
+        )
+        self.setWindowModality(Qt.NonModal)
+
+        SIGNALS.gdb_updated_stacks.connect(self.setStack)
+
+        layout = QVBoxLayout()
+        font = getMonospaceFont(self)
+
+        # Set up register table
+        self.table = QTableWidget()
+        self.table.setColumnCount(2)
+        self.table.setHorizontalHeaderLabels(['Address/offset', 'value'])
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.verticalHeader().setVisible(False)
+
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self.show_context_menu)
+
+        layout.addWidget(self.table)
+        self.setLayout(layout)
+
+        self.setStack()
+
+        self.reg_value = None
+        self.reg_raw = None
+
+    def closeEvent(self, event):
+        print("[+] close dialog")
+        GLOBAL.gdb_hookstructname = ""
+        GLOBAL.config_dynamic("read_stacks", "")
+
+
+    def show_context_menu(self, pos):
+        # Dapatkan posisi global
+        global_pos = self.table.viewport().mapToGlobal(pos)
+
+        # Cek row dan column
+        row = self.table.rowAt(pos.y())
+        col = self.table.columnAt(pos.x())
+        if row < 0 or col < 0:
+            return  # klik di area kosong
+
+        item = self.table.item(row, col)
+
+        # Buat menu
+        menu = QMenu()
+
+        #print(col, row, item.text())
+        if col == 0:
+            menu.addAction("Detail", lambda: self.menu_action(item, "Detail"))
+        elif col == 1:
+            menu.addAction("Copy", lambda: self.menu_action(item, "Copy"))
+
+        menu.exec_(global_pos)
+
+
+    def menu_action(self, item, aksi=None, solve_reg=None):
+        if aksi == "Copy":
+            QApplication.clipboard().setText(item.text())
+
+        elif aksi == "Detail":
+            print("sd")
+
+
+    def _makewidget(self, val, center=False, rcolor=None):
+        out = QTableWidgetItem(str(val))
+        out.setFlags(Qt.ItemIsEnabled)
+        out.setFont(getMonospaceFont(self))
+
+        if val == "<symbolic>":
+            out.setForeground(QColor("red"))
+
+        if rcolor:
+            out.setForeground(rcolor)
+
+        if center:
+            out.setTextAlignment(Qt.AlignCenter)
+        return out
+
+    def setStack(self):
+        self.table.setRowCount(len(GLOBAL.gdb_memstack))
+
+        print("stack update")
+        i = 0
+        for b64 in GLOBAL.gdb_memstack:
+            decode_json = base64.b64decode(b64).decode()
+            try:
+                arr = json.loads(decode_json)
+                addr_val = []
+
+                for out in arr:
+                    addr_off = ""
+                    regcolor = QColor("white")
+
+                    if out["index"] == 0:
+                        addr_off = out["address"]
+
+                        if "[stack]" in out["label"]: regcolor = QColor("magenta")
+                        elif "[heap]" in out["label"]: regcolor = QColor("green")
+                        elif "[code]" in out["label"]: regcolor = QColor("red")
+                        elif "[code_file]" in out["label"]: regcolor = QColor("red")
+
+                        self.table.setItem(i, 0, self._makewidget(addr_off, rcolor=regcolor))
+                    else:
+                        addr_val.append(out["address"]+out["label"]+"  "+out["value"]+"  ")
+
+                self.table.setItem(i, 1, self._makewidget("".join(addr_val), rcolor=regcolor))
+
+                i += 1
+            except Exception as e:
+                print(e)
+                pass
 
 
 class DialogRegisters(QDialog):
@@ -240,6 +360,7 @@ class DialogRegisters(QDialog):
     def closeEvent(self, event):
         print("[+] close dialog")
         GLOBAL.gdb_hookname = ""
+        GLOBAL.config_dynamic("read_registers", "")
 
 
     def show_context_menu(self, pos):
@@ -474,6 +595,7 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         if item.parent() is None:
             menu.addAction("Copy")
             menu.addAction("Show Registers")
+            menu.addAction("Show Stack")
             menu.addAction("Update ui")
             menu.addAction("Hook2dump")
             menu.addAction("Generate Block")
@@ -484,27 +606,6 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         if action:
             self.handle_tree_action(action.text(), item)
 
-
-    def config_dynamic(self, sw, func_name):
-        config = "/dev/shm/gproxy.config"
-        all = []
-        try:
-            with open(config, "r") as fd:
-                for line in fd:
-                    key = line.split(":")
-
-                    if key[0] == sw:
-                        new = key[0]+":"+func_name+"\n"
-                        all.append(new)
-                    else:
-                        all.append(line)
-        except:
-            print("new")
-            all.append(f"{sw}:{func_name}\n")
-
-        with open(config, "w") as fd:
-            for i in all:
-                fd.write(i)
 
 
 
@@ -517,9 +618,20 @@ class FuncListDockWidget(QWidget, DockContextHandler):
             rui_task = RefreshUiTask(self.bv, "gdb_func")
             rui_task.start()
 
+        elif action == "Show Stack":
+            func_name = item.text(0).split("  ")[1]
+            GLOBAL.config_dynamic("read_stacks", func_name)
+
+            self.dlg = DialogStacks()
+            self.dlg.resize(370, 430) # w,h
+            self.dlg.show()
+            self.dlg.raise_()
+            self.dlg.activateWindow()
+
+
         elif action == "Show Registers":
             func_name = item.text(0).split("  ")[1]
-            self.config_dynamic("read_registers", func_name)
+            GLOBAL.config_dynamic("read_registers", func_name)
 
             self.dlg = DialogRegisters(title=func_name)
             self.dlg.resize(250, 470) # w,h

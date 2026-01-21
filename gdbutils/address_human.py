@@ -351,7 +351,7 @@ class StackHuman:
 
         out = {
             "index": 0,
-            "address": f"{arch.format_address(address)}",
+            "address": f"{arch.format_address(address)}{offset:+#07x}",
             "label": addrHuman.value['label'],
             "value": self.get_value(addrHuman, arch, address)
         }
@@ -381,7 +381,7 @@ class StackHuman:
                 break
             index += 1
 
-        print(output)
+        return output
 
 
 

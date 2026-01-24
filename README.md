@@ -396,8 +396,31 @@ atau
 >> Class> com.
 ```
 
-# Fuzzer in gdb snapshot
+
+# Unity game trace
 ```
-1.) python patch.py> program_target
+1). view > Gproxy show frida list
+2). extrack template in fridautils/frida-zombeast-old.tar.gz to /home/ or set code in line Script type package "path"
+3). patch target with path-gadget.py or frida-server
+4). python fridainit.py
+>> Select target? Linux/Android (l/a): a
+>> Chose pid? (1234): 27362
+>> Script type package? y/n: y
+
+[+] Inject Agent successfully
+
+==============
+ List Command:
+==============
+1. trace-unity (tr-unity)> (<assembly-name>/dump-asm)>
+exit
+
+>> tr-unity
+
+>> Assembly> Assembly-CSharp
+>> Tracking with param? y/n: y #rawan crash dan lambat
+[+] Agent: start hooking... #tunggu sampai hook complete
+...
+[+] Agent: hook complete. 
 
 ```

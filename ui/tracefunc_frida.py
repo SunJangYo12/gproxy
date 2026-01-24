@@ -315,6 +315,8 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
         SIGNALS.frida_updated.connect(self.refresh_from_global)
         SIGNALS.frida_updatedsym.connect(self.refresh_from_global_sym)
+        SIGNALS.frida_updatedunity.connect(self.refresh_from_global_unity_asm)
+        SIGNALS.frida_updatedunity_method.connect(self.refresh_from_global_unity_method)
         SIGNALS.frida_updatedthread.connect(self.refresh_from_global_thread)
         SIGNALS.frida_updatedidthread.connect(self.refresh_from_global_id_thread)
         SIGNALS.frida_updatedsym_trace.connect(self.refresh_from_global_sym_trace)
@@ -369,6 +371,24 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         self.dlg.show()
         self.dlg.raise_()
         self.dlg.activateWindow()
+
+
+
+    def refresh_from_global_unity_method(self):
+        self.tree_widget.clear()
+        self.tree_widget.headerItem().setText(0, "Class method list: %d" %len(GLOBAL.frida_enumunitymethod) )
+
+
+    def refresh_from_global_unity_asm(self):
+        self.tree_widget.clear()
+        self.tree_widget.headerItem().setText(0, "Assembly list: %d" %len(GLOBAL.frida_enumunityasm) )
+
+        for data in GLOBAL.frida_enumunityasm:
+            parent = QTreeWidgetItem(self.tree_widget)
+
+            parent.setText(0, "%s" % data )
+            parent.setFont(0, self.font)
+            parent.setData(0, Qt.UserRole, data )
 
 
 

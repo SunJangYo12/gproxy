@@ -32,6 +32,20 @@ def on_message(message, data):
            proxy.settofrida_enum(sym, "symbols")
            print("[+] Done.")
 
+
+        elif message['payload']['type'] == 'enumunity_assembly':
+           asm = message['payload']['log']
+
+           proxy.settofrida_enum(asm, "unity_assembly")
+
+        elif message['payload']['type'] == 'enumunity_method':
+           method = message['payload']['log']
+           #print(method)
+
+           proxy.settofrida_enum(method, "unity_method")
+
+
+
         elif message['payload']['type'] == 'enum_threads':
            print("[+] Send to binja...")
            threads = message['payload']['log']
@@ -161,7 +175,7 @@ def main():
     if target == "a":
        #ahost = input(">> Android host: ")
        #device = frida.get_device_manager().add_remote_device(ahost)
-       device = frida.get_device_manager().add_remote_device("192.168.43.1")
+       device = frida.get_device_manager().add_remote_device("192.168.0.100")
     elif target == "l":
        device = frida.get_local_device() #local linux
     else:
@@ -169,11 +183,15 @@ def main():
        exit(1)
 
     pid_raw = input(">> Chose pid? (1234): ")
+    is_script_package = input(">> Script type package? y/n: ")
 
     pid = int(pid_raw)
     session = device.attach(pid)
 
-    fscript = "fridautils/rpc_script.js"
+    if is_script_package == "y":
+        fscript = "/media/jin/6a76baf7-5d55-4bae-ac03-6cb70d5d180d/Tools/frida-zombeast-old/dist/agent.js"
+    else:
+        fscript = "fridautils/rpc_script.js"
 
     with open(fscript, "r") as file:
         data = file.read()
@@ -187,13 +205,16 @@ def main():
     print("\n==============")
     print(" List Command:")
     print("==============")
-    print("1. shell/reverse_shell_java (s/js)")
-    print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
-    print("3. trace (tr)> (all/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
-    print("4. trace-java (tr-java)> (all/package-class/back) (full-info)> (className)")
-    print("5. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> ")
-    print("           (intruksi)> (func_addr/back)> (filter)> (mnemonic:ret,jne,enter:all/back)")
-    print("6. exit")
+    if is_script_package == "y":
+        print("1. trace-unity (tr-unity)> (<assembly-name>/dump-asm)")
+    else:
+        print("1. shell/reverse_shell_java (s/js)")
+        print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
+        print("3. trace (tr)> (all/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
+        print("4. trace-java (tr-java)> (all/package-class/back) (full-info)> (className)")
+        print("6. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> ")
+        print("           (intruksi)> (func_addr/back)> (filter)> (mnemonic:ret,jne,enter:all/back)")
+    print("exit")
 
     loop_menu = True
 
@@ -365,9 +386,21 @@ def main():
                             setup_hook(script, dick_sym, in_symbol, in_fstalking)
 
 
+        elif pshell == "tr-unity":
+            while True:
+                script.exports_sync.assemblylist();
+
+                in_asm = input("\n>> tr-unity> Assembly> ")
+                in_withparam = input(f"\n>> Tracking with param? y/n: ")
+
+                if in_asm == "dump-asm":
+                    script.exports_sync.assemblydump();
+                else:
+                    script.exports_sync.assemblytrace(in_asm, in_withparam);
+
+
 
         elif pshell == "tr-java":
-
             while True:
                 in_class = input("\n>> Class> ")
 

@@ -19,6 +19,8 @@ class GlobalState:
         self.frida_enummodules = {}
         self.frida_enumsymbols = {}
         self.frida_enumthreads = {}
+        self.frida_enumunityasm = {}
+        self.frida_enumunitymethod = {}
         self.frida_idthreads = {}
         self.frida_functions = {}
         self.frida_functions_java = {}
@@ -119,6 +121,8 @@ class GlobalSignals(QObject):
     frida_updatedsym = Signal()
     frida_updatedthread = Signal()
     frida_updatedidthread = Signal()
+    frida_updatedunity = Signal()
+    frida_updatedunity_method = Signal()
     frida_updatedsym_trace = Signal()
     frida_updatedjava_trace = Signal()
     frida_stalker = Signal()

@@ -289,6 +289,17 @@ class Gproxy:
             GLOBAL.frida_enummodules = data
             SIGNALS.frida_updated.emit()
 
+
+        elif type == "unity_assembly":
+            GLOBAL.frida_enumunityasm = data
+            SIGNALS.frida_updatedunity.emit()
+
+        elif type == "unity_method":
+            GLOBAL.frida_enumunitymethod = data
+            SIGNALS.frida_updatedunity_method.emit()
+
+
+
         elif type == "symbols":
             GLOBAL.frida_enumsymbols = data
             SIGNALS.frida_updatedsym.emit()

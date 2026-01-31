@@ -221,29 +221,29 @@ class TraceBreakpoint(gdb.Breakpoint):
         gdb_stop = False
 
         # Comment ini jika ingin lebih cepat
-        cek_global = proxy.cekgdb_global().split("T_T")
+        #cek_global = proxy.cekgdb_global().split("T_T")
 
         # update breakpoint with basicblock func
-        try:
-            if cek_global[3] == "pause":
-                gdb_stop = True
-        except:
-            pass
+#        try:
+#            if cek_global[3] == "pause":
+#                gdb_stop = True
+#        except:
+#            pass
 
         # Dynamic hook for monitoring data
-        if cek_global[0] == self.func_name or cek_global[0] == self.addr:
-            gdb_memregs = self.collect_registers()
+#        if cek_global[0] == self.func_name or cek_global[0] == self.addr:
+#            gdb_memregs = self.collect_registers()
 
-            try:
-                gdb_memstruct = self.collect_structure(cek_global[1])
-            except:
-                pass
+#            try:
+#                gdb_memstruct = self.collect_structure(cek_global[1])
+#            except:
+#                pass
 
-            try:
-                if cek_global[2] == "pause":
-                    gdb_stop = True
-            except:
-                pass
+#            try:
+#                if cek_global[2] == "pause":
+#                    gdb_stop = True
+#            except:
+#                pass
 
 
         if self.read_dynamic_config("read_stacks") != "":

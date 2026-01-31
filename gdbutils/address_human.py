@@ -173,7 +173,9 @@ class AddressHuman:
         pid = gdb.selected_inferior().pid
         maps = []
 
-        with open(f"/proc/{pid}/maps", "r") as fd:
+        gdb.execute(f"remote get /proc/{pid}/maps /tmp/rmaps", to_string=True)
+
+        with open(f"/tmp/rmaps", "r") as fd:
             for line in fd:
                 line = line.strip()
                 addr, perm, off, _, rest = line.split(" ", 4)

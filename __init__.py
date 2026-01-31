@@ -44,39 +44,6 @@ def is_service_started():
     return __service_thread is not None
 
 
-def gef_add_breakpoint(bv, addr):
-    global __gef_instance
-    if __gef_instance is None:
-        return False
-    return __gef_instance.add_breakpoint(bv, addr)
-
-
-def gef_del_breakpoint(bv, addr):
-    global __gef_instance
-    if __gef_instance is None:
-        return False
-    return __gef_instance.delete_breakpoint(bv, addr)
-
-
-def register_gef_breakpoint_menu():
-    # Binja does not really support menu in its GUI just yet
-    PluginCommand.register_for_address(
-        "GEF\\Set breakpoint",
-        "Add a breakpoint in gef at the specified location.",
-        gef_add_breakpoint,
-        is_valid = lambda view, addr: is_service_started()
-    )
-
-    PluginCommand.register_for_address(
-        "GEF\\Delete breakpoint",
-        "Remove a breakpoint in gef at the specified location.",
-        gef_del_breakpoint,
-        is_valid = lambda view, addr: is_service_started()
-    )
-    return
-
-
-
 
 
 
@@ -125,25 +92,12 @@ def gef_start(bv):
     __service_thread = threading.Thread(target=start_service, args=(HOST, PORT, bv))
     __service_thread.daemon = True
     __service_thread.start()
-    register_gef_breakpoint_menu()
-    show_message_box(
-        "G-proxy",
-        "Service successfully started, you can now have gef connect to it",
-        MessageBoxButtonSet.OKButtonSet,
-        MessageBoxIcon.InformationIcon
-    )
     return
 
 
 def gef_stop(bv):
     "Stopping background service... "
     stop_service()
-    show_message_box(
-        "G-proxy",
-        "Service successfully stopped",
-        MessageBoxButtonSet.OKButtonSet,
-        MessageBoxIcon.InformationIcon
-    )
     return
 
 

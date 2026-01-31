@@ -57,14 +57,6 @@ class Gproxy:
         self.view = bv
         self.base = bv.entry_point & ~(PAGE_SIZE-1)
         self._version = ("Binary Ninja", core_version())
-        self.__old_bps = set()
-        self.__breakpoints = set()
-        if "Breakpoints" in bv.tag_types:
-            tag_type = bv.tag_types["Breakpoints"]
-        else:
-            tag_type = bv.create_tag_type("Breakpoint", "🛑")
-        self.__bp_tag = bv.create_tag(tag_type, "GEF Breakpoint", True)
-        self.__current_instruction = 0
         return
 
 
@@ -336,48 +328,6 @@ class Gproxy:
 
 
 
-    @expose
-    def sync(self, off, added, removed):
-        """ sync(off, added, removed) => None
-        Synchronize debug info with gef. This is an internal function. It is not recommended using it from the command line.
-        Example: binaryninja sync
-        """
-        off = int(off, 0)
-        pc = self.base + off
-        dbg("current_pc=%#x , old_pc=%#x" % (pc, self.__current_instruction))
-
-        # menhapus jejak warna
-        # unhighlight the _current_instruction
-        if self.__current_instruction > 0:
-            self.highlight(self.__current_instruction, HL_NO_COLOR)
-        self.highlight(pc, HL_CUR_INSN_COLOR)
-
-        # update the _current_instruction
-        self.__current_instruction = pc
-        self.jump(self.__current_instruction)
-#        self.setcolor("%s" % (self.__current_instruction)) #jejak warna
-
-        dbg("pre-gdb-add-breakpoints: %s" % (added,))
-        dbg("pre-gdb-del-breakpoints: %s" % (removed,))
-        dbg("pre-binja-breakpoints: %s" % (self.__breakpoints))
-
-        bn_added = [ x-self.base for x in self.__breakpoints if x not in self.__old_bps ]
-        bn_removed = [ x-self.base for x in self.__old_bps if x not in self.__breakpoints ]
-
-        for bp in added:
-            self.add_breakpoint(self.view, self.base + bp)
-
-        for bp in removed:
-            self.delete_breakpoint(self.view, self.base + bp)
-
-        self.__old_bps = copy.deepcopy(self.__breakpoints)
-
-        dbg("post-gdb-add-breakpoints: %s" % (bn_added,))
-        dbg("post-gdb-del-breakpoints: %s" % (bn_removed,))
-        dbg("post-binja-breakpoints: %s" % (self.__breakpoints,))
-        return [bn_added, bn_removed]
-
-
 
     def highlight(self, addr, color):
         dbg("hl(%#x, %s)" % (addr, color))
@@ -387,29 +337,6 @@ class Gproxy:
             return
         func.set_user_instr_highlight(addr, color)
         return
-
-
-    def add_breakpoint(self, bv, addr):
-        if addr in self.__breakpoints:
-            return False
-
-        self.__breakpoints.add(addr)
-        info("Breakpoint {:#x} added".format(addr))
-        self.highlight(addr, HL_BP_COLOR)
-        self.view.add_user_data_tag(addr, self.__bp_tag)
-        return True
-
-
-    def delete_breakpoint(self, bv, addr):
-        if addr not in self.__breakpoints:
-            return False
-
-        self.__breakpoints.discard(addr)
-        info("Breakpoint {:#x} removed".format(addr))
-        self.highlight(addr, HL_NO_COLOR)
-        self.view.remove_user_data_tag(addr, self.__bp_tag)
-        return True
-
 
 
 class BinjaGefRequestHandler(SimpleXMLRPCRequestHandler):

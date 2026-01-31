@@ -36,13 +36,17 @@ def on_message(message, data):
         elif message['payload']['type'] == 'enumunity_assembly':
            asm = message['payload']['log']
 
-           proxy.settofrida_enum(asm, "unity_assembly")
+           #for i in asm:
+           #    print(f"[+] {i}")
+           #print("\n\n")
+
+           #proxy.settofrida_enum(asm, "unity_assembly")
 
         elif message['payload']['type'] == 'enumunity_method':
            method = message['payload']['log']
-           #print(method)
+           print(method)
 
-           proxy.settofrida_enum(method, "unity_method")
+           #proxy.settofrida_enum(method, "unity_method")
 
 
 
@@ -391,12 +395,14 @@ def main():
                 script.exports_sync.assemblylist();
 
                 in_asm = input("\n>> tr-unity> Assembly> ")
-                in_withparam = input(f"\n>> Tracking with param? y/n: ")
+                in_sw = input(f"\n>> build-in-trace/build-in-trace-param/custom-trace? bt/btp/ct: ")
+
+                in_asm = "Assembly-CSharp" #DEBUG
 
                 if in_asm == "dump-asm":
                     script.exports_sync.assemblydump();
                 else:
-                    script.exports_sync.assemblytrace(in_asm, in_withparam);
+                    script.exports_sync.assemblytrace(in_asm, in_sw);
 
 
 

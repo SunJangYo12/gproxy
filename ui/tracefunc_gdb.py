@@ -1,6 +1,6 @@
 from binaryninjaui import DockHandler, DockContextHandler, UIActionHandler, getMonospaceFont
 from PySide2 import QtCore
-from PySide2.QtGui import QColor, QBrush
+from PySide2.QtGui import QColor, QBrush, QFont
 from PySide2.QtCore import Qt, QPoint, QEvent, QSize, QThread, Signal, QTimer
 from PySide2.QtWidgets import (
      QApplication,
@@ -507,10 +507,14 @@ class FuncListDockWidget(QWidget, DockContextHandler):
 
         self.setLayout(layout)
         self.bv = data
-        self.font = getMonospaceFont(self)
         self.func_name = None
         self.func_addr = None
 
+        self.font = getMonospaceFont(self)
+        f = QFont("Monospace")
+        f.setStyleHint(QFont.Monospace)
+        f.setBold(True)
+        #self.font = f
 
     def refresh_from_global(self):
         self.tree_widget.clear()

@@ -241,6 +241,21 @@ def main():
 
 
         elif pshell == "stl":
+            in_sw = input(f">> by thread/module? t/m: ")
+
+            if in_sw == "m":
+                script.exports_sync.enummodules()
+                in_mod = input(f">> module name (png_read,libc.so): ")
+
+                proxy.settofrida_func("id_threads", "refresh")
+                thread = MyThread(script)
+                thread.start()
+
+                script.exports_sync.setstalker("module", in_mod, "")
+                continue
+
+
+
             proxy.settofrida_func("id_threads", "refresh")
 
             thread = MyThread(script)

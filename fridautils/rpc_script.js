@@ -264,6 +264,105 @@ class FuzzerKu
             }
         }
     }
+    stalkingfuncbymodule(module) {
+        console.log("[+] Agent @ stalking => "+module);
+
+        const TARGET_MODULES = module.split(",");
+
+        const TARGET_RANGES = TARGET_MODULES.map(name => {
+          const m = Process.getModuleByName(name);
+          return {
+            name: m.name,
+            base: m.base,
+            end:  m.base.add(m.size)
+          };
+        });
+        function inTargetRanges(addr) {
+          for (const r of TARGET_RANGES) {
+            if (addr.compare(r.base) >= 0 && addr.compare(r.end) < 0)
+              return r;
+          }
+          return null;
+        }
+
+
+        const stalked = new Set();
+
+        function stalkAllThreads(tid) {
+          if (stalked.has(tid))
+            return;
+
+          stalked.add(tid);
+          console.log("[+] Stalking thread", tid);
+
+          let depth = 0;
+
+          Stalker.follow(tid, {
+            events: { call: true, ret: true },
+
+            onReceive(events) {
+              const parsed = Stalker.parse(events);
+
+              parsed.forEach(ev => {
+                if (ev[0] === "call") {
+
+                  const to = ptr(ev[2]);
+                  const range = inTargetRanges(to);
+
+                  if (!range)
+                    return;
+
+                  const sym = DebugSymbol.fromAddress(to)
+
+                  console.log(
+                    "  ".repeat(depth) +
+                    "→ " + sym
+                  );
+                  depth++;
+                }
+                else if (ev[0] === "ret") {
+                  depth = Math.max(0, depth - 1);
+                }
+              });
+            }
+          });
+        }
+
+        //for new thread hook
+        const pthread_create = Module.findExportByName(null, "pthread_create");
+
+        if (pthread_create) {
+          Interceptor.attach(pthread_create, {
+            onEnter(args) {
+              this.threadPtr = args[0]; // pthread_t*
+            },
+
+            onLeave(retval) {
+              if (!retval.isNull() && retval.toInt32() !== 0)
+                return; // gagal create thread
+
+              console.log("\n[+] HIT pthread_create");
+
+              // delay kecil supaya thread sudah hidup
+              setTimeout(() => {
+                Process.enumerateThreads({
+                  onMatch(thread) {
+                    stalkAllThreads(thread.id);
+                  },
+                  onComplete() {}
+                });
+              }, 1);
+            }
+          });
+        }
+        // for init thread
+        Process.enumerateThreads({
+          onMatch(thread) {
+              stalkAllThreads(thread.id);
+          },
+          onComplete() {}
+        });
+    }
 
     stalkingfunc(addr, filter)
     {
@@ -401,7 +500,7 @@ class FuzzerKu
 
                var output = []
 
-               //remove context data
+               //remove context/register data
                for (const key in aa)
                {
                   const id = aa[key]["id"];
@@ -434,6 +533,12 @@ class FuzzerKu
 
                   return
                }
+               else if (sw == "module") {
+                  this.logDebug("send", "Agent @ Setup Stalker module: "+id);
+                  this.stalkingfuncbymodule(id);
+
+                  return
+               }
                else if (sw == "exit") {
                   Stalker.unfollow(id);
                   return
@@ -443,7 +548,7 @@ class FuzzerKu
                const subthis = this
                Stalker.trustThreshold = 0;
 
-
+               //call tree
                if (sw == "ct") {
                   Stalker.follow(id, {
                      events: {
@@ -472,6 +577,7 @@ class FuzzerKu
                   return
                }
 
+               // call count
                Stalker.follow(id, {
                   events: {
                      call: true,

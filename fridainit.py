@@ -67,6 +67,11 @@ def on_message(message, data):
            proxy.settofrida_enum(bbs, "bb_hit")
 
 
+        elif message['payload']['type'] == 'stalker-data':
+           sdata = message['payload']['data']
+           #print(sdata)
+
+
         elif message['payload']['type'] == 'stalker':
            sdata = message['payload']['log']
            proxy.settofrida_enum(sdata, "stalker")
@@ -163,6 +168,9 @@ class MyThread(threading.Thread):
     def run(self):
         while not self.stop_event.is_set():
             self.script.exports_sync.idthreads()
+#            xx = self.script.exports_sync.ambilstalked()
+
+#            print(xx)
             time.sleep(0.3)
 
     def stop(self):

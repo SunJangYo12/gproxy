@@ -267,8 +267,8 @@ class FuzzerKu
     stalkingfuncbymodule(module) {
         console.log("[+] Agent @ stalking => "+module);
 
+        //filter
         const TARGET_MODULES = module.split(",");
-
         const TARGET_RANGES = TARGET_MODULES.map(name => {
           const m = Process.getModuleByName(name);
           return {
@@ -286,16 +286,36 @@ class FuzzerKu
         }
 
 
+        //stalker
         const stalked = new Set();
+        Stalker.trustThreshold = 0;
+
+        function makeNode(addr) {
+           const sym = DebugSymbol.fromAddress(addr);
+           //name: sym && sym.name ? sym.name : addr.toString(),
+           return {
+              name_addrs: sym,
+              addr: addr.toString(),
+              children: []
+           };
+        }
+        const threadTrees = new Map();
+
 
         function stalkAllThreads(tid) {
           if (stalked.has(tid))
             return;
 
           stalked.add(tid);
-          console.log("[+] Stalking thread", tid);
+          console.log("[+] Stalking thread ", tid);
 
-          let depth = 0;
+          const tree = {
+             tid: tid,
+             root: [],
+             stack: []
+          };
+          threadTrees.set(tid, tree);
+
 
           Stalker.follow(tid, {
             events: { call: true, ret: true },
@@ -309,59 +329,46 @@ class FuzzerKu
                   const to = ptr(ev[2]);
                   const range = inTargetRanges(to);
 
-                  if (!range)
-                    return;
+                  const node = makeNode(to);
 
-                  const sym = DebugSymbol.fromAddress(to)
-
-                  console.log(
-                    "  ".repeat(depth) +
-                    "→ " + sym
-                  );
-                  depth++;
+                  if (range) {
+                     if (tree.stack.length === 0)
+                         tree.root.push(node);
+                     else
+                         tree.stack[tree.stack.length-1].children.push(node);
+                  }
+                  tree.stack.push(node);
                 }
                 else if (ev[0] === "ret") {
-                  depth = Math.max(0, depth - 1);
+                  if (tree.stack.length > 0)
+                     tree.stack.pop()
                 }
               });
             }
+
           });
         }
 
-        //for new thread hook
-        const pthread_create = Module.findExportByName(null, "pthread_create");
+        setInterval(() => {
+           console.log("====");
 
-        if (pthread_create) {
-          Interceptor.attach(pthread_create, {
-            onEnter(args) {
-              this.threadPtr = args[0]; // pthread_t*
-            },
+           Process.enumerateThreads({
+              onMatch(thread) {
+                 stalkAllThreads(thread.id);
+              },
+              onComplete() {}
+           });
 
-            onLeave(retval) {
-              if (!retval.isNull() && retval.toInt32() !== 0)
-                return; // gagal create thread
+           const arr = Array.from(threadTrees);
 
-              console.log("\n[+] HIT pthread_create");
+           send({"type": "stalker-data", "data": "sd" });
 
-              // delay kecil supaya thread sudah hidup
-              setTimeout(() => {
-                Process.enumerateThreads({
-                  onMatch(thread) {
-                    stalkAllThreads(thread.id);
-                  },
-                  onComplete() {}
-                });
-              }, 1);
-            }
-          });
-        }
-        // for init thread
-        Process.enumerateThreads({
-          onMatch(thread) {
-              stalkAllThreads(thread.id);
-          },
-          onComplete() {}
-        });
+
+          /*threadTrees.forEach((z) => { DEBUG
+             //console.log(JSON.stringify(z))
+             //console.log("tid: "+z.tid+" rootL:"+z.root.length);
+          });*/
+        }, 1000);
     }
 
     stalkingfunc(addr, filter)

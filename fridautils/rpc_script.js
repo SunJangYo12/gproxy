@@ -1,3 +1,5 @@
+const threadTrees = new Map();
+
 class FuzzerKu
 {
 
@@ -299,7 +301,6 @@ class FuzzerKu
               children: []
            };
         }
-        const threadTrees = new Map();
 
 
         function stalkAllThreads(tid) {
@@ -307,7 +308,7 @@ class FuzzerKu
             return;
 
           stalked.add(tid);
-          console.log("[+] Stalking thread ", tid);
+          //console.log("[+] Stalking thread ", tid);
 
           const tree = {
              tid: tid,
@@ -350,7 +351,7 @@ class FuzzerKu
         }
 
         setInterval(() => {
-           console.log("====");
+           //console.log("====");
 
            Process.enumerateThreads({
               onMatch(thread) {
@@ -358,15 +359,15 @@ class FuzzerKu
               },
               onComplete() {}
            });
+           //const arr = Array.from(threadTrees);
 
-           const arr = Array.from(threadTrees);
-
-           send({"type": "stalker-data", "data": "sd" });
+           //send({"type": "stalker-data", "data": "sd" });
 
 
-          /*threadTrees.forEach((z) => { DEBUG
+          //DEBUG
+          /*threadTrees.forEach((z) => {
              //console.log(JSON.stringify(z))
-             //console.log("tid: "+z.tid+" rootL:"+z.root.length);
+             console.log("tid: "+z.tid+" rootL:"+z.root.length);
           });*/
         }, 1000);
     }
@@ -524,6 +525,38 @@ class FuzzerKu
                }
 
                this.logDebug("send", output, "id_threads");
+            },
+            getstalkerdata: (tid_func) => {
+               if (tid_func == "req_clean") {
+                  threadTrees.clear();
+                  return
+               }
+               let out = []
+
+               threadTrees.forEach((z) => {
+
+                  if (tid_func == z.tid) {
+                     const data = {
+                        "tid": z.tid,
+                        "root": z.root,
+                        "root_len": z.root.length
+                     };
+                     out.push(data);
+                  }
+                  else {
+                     const data = {
+                        "tid": z.tid,
+                        "root": -1,
+                        "root_len": z.root.length
+                     };
+                     out.push(data);
+                  }
+
+                  //out.push("tid: "+z.tid+" root:"+z.root.length);
+               });
+
+               return out
+               //return Array.from(threadTrees);
             },
             setstalker: (sw, id, filter) => {
                if (sw == "intruksi") {

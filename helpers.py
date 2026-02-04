@@ -40,6 +40,8 @@ def dbg(x):
 
 
 
+
+
 class RefreshUiTask(BackgroundTaskThread):
     def __init__(self, view, sw, delay=1):
         super(RefreshUiTask, self).__init__('Gproxy update-ui...', True)

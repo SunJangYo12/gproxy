@@ -24,6 +24,7 @@ from PySide2.QtWidgets import (
 from ..data_global import SIGNALS, GLOBAL
 import base64
 import time
+import json
 
 from binaryninja import (
     core_version,
@@ -35,6 +36,99 @@ from binaryninja import (
 )
 
 import binaryninja as binja
+
+
+
+class DialogStalkerCallTree(QDialog):
+    def __init__(self, parent=None, sid=None, data=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"Call Tree({sid})")
+        self.setWindowFlags(
+            Qt.Window |
+            Qt.WindowMinimizeButtonHint |
+            Qt.WindowCloseButtonHint
+        )
+        self.setWindowModality(Qt.NonModal)
+        self.font = getMonospaceFont(self)
+
+        self.tree_widget = QTreeWidget()
+        self.tree_widget.setColumnCount(0)
+        self.tree_widget.expandToDepth(1)
+
+        self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree_widget.customContextMenuRequested.connect(self.on_tree_context_menu)
+
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.tree_widget)
+
+        self.setLayout(layout)
+        self.showData()
+
+    def showData(self):
+        mydata = self.getData()
+
+        for i in mydata:
+            if i["root"] == -1:
+               continue
+
+            self.tree_widget.headerItem().setText(0, "Total: %s" %len(i["root"]) )
+
+            for root in i["root"]:
+                item = self.make_tree(root)
+                self.tree_widget.addTopLevelItem(item)
+
+
+    def make_tree(self, node):
+        info = node["name_addrs"]
+
+        moduleName = info.get("moduleName")
+        name = info.get("name")
+        text = f"{moduleName}!{name}"
+
+        item = QTreeWidgetItem([text])
+
+        # simpan addr asli (berguna buat click → jump)
+        item.setData(0, 0x1000, node["addr"])
+        item.setFont(0, self.font)
+        #item.setExpanded(True)
+
+        # REKURSIF untuk subfungsi
+        for child in node.get("children", []):
+            item.addChild(self.make_tree(child))
+        return item
+
+
+    def getData(self):
+        droot = []
+        try:
+            with open("/dev/shm/gproxy.stalker-ct-module", "r") as fd:
+                droot = json.load(fd)
+        except:
+            pass
+
+        print(len(droot))
+        return droot
+
+    def on_tree_context_menu(self, position: QPoint):
+        item = self.tree_widget.itemAt(position)
+        menu = QMenu()
+
+        menu.addAction("Refresh")
+        menu.addAction("Clean FridaServer")
+
+        action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
+        if action:
+            self.handle_tree_action(action.text(), item)
+
+    def handle_tree_action(self, action, item):
+        if action == "Refresh":
+            print("refres")
+            self.showData()
+
+        elif action == "Clean FridaServer":
+            GLOBAL.config_dynamic("stalker-ct-module-clean-fridaserver", "oke")
+
 
 
 class DialogStalker(QDialog):
@@ -51,6 +145,7 @@ class DialogStalker(QDialog):
 
         SIGNALS.frida_stalker.connect(self.setData)
         SIGNALS.frida_stalker_ct.connect(self.setDataCt)
+        SIGNALS.frida_stalker_ct_module.connect(self.setDataCtModule)
 
         self.bv = data
         self.sid = sid
@@ -61,6 +156,21 @@ class DialogStalker(QDialog):
 
 
         self.tree_widget = QTreeWidget()
+
+        if sid == "by module":
+            self.tree_widget.setColumnCount(2)
+            self.tree_widget.headerItem().setText(0, "No" )
+            self.tree_widget.headerItem().setText(1, "Thread ID" )
+            self.tree_widget.headerItem().setText(2, "Function count" )
+            self.tree_widget.itemDoubleClicked.connect(self.on_item_double_clicked_module)
+
+            layout = QVBoxLayout()
+            layout.addWidget(self.tree_widget)
+
+            self.setLayout(layout)
+
+            return
+
 
         self.tree_widget.setColumnCount(7)
         self.tree_widget.headerItem().setText(0, "name/offset" )
@@ -124,6 +234,31 @@ class DialogStalker(QDialog):
 
         # init
         self.label_his.setText("[%s/%s]" % (self.curr_history, len(self.history)) )
+
+
+    def setDataCtModule(self):
+        self.tree_widget.clear()
+
+        self.setWindowTitle(f"Stalker(by module) -- {len(GLOBAL.frida_stalkers_ct_module)}")
+
+        count = 0
+
+        for i in GLOBAL.frida_stalkers_ct_module:
+            parent = QTreeWidgetItem(self.tree_widget)
+
+            parent.setText(0, "%s" %count )
+            parent.setFont(0, self.font)
+
+            parent.setText(1, "%s" % i["tid"] )
+            parent.setFont(1, self.font)
+            parent.setData(1, Qt.UserRole, "%s" % i["tid"])
+
+            parent.setText(2, "%s" % i["root_len"] )
+            parent.setFont(2, self.font)
+
+
+            count += 1
+
 
 
     def setDataCt(self):
@@ -281,6 +416,20 @@ class DialogStalker(QDialog):
         self.showData()
 
         #SIGNALS.frida_stalker.emit()
+
+
+    def on_item_double_clicked_module(self, item, column):
+        data = item.data(column, Qt.UserRole)
+
+        GLOBAL.config_dynamic("stalker-ct-module", data)
+        print("write config....")
+
+        self.dlg = DialogStalkerCallTree(sid=data, data=self.bv)
+        self.dlg.resize(440, 550) # w,h
+        self.dlg.show()
+        self.dlg.raise_()
+        self.dlg.activateWindow()
+
 
 
     def on_item_double_clicked(self, item, column):

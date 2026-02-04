@@ -424,3 +424,16 @@ exit
 [+] Agent: hook complete. 
 
 ```
+# frida stalker by module and all thread
+```
+>> stl
+>> by thread/module? t/m: m
+[+] Agent @ Getting modules...
+[+] Send to binja...
+[+] Done.
+>> module name (png_read,libc.so): thread_sim
+[+] Agent @ stalking => thread_sim
+
+NOTE: in frida window stalker double click in thread id to show function call tree
+dan jika di frida target cpu 100% click kanan dan clean fridaserver.
+```

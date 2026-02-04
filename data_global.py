@@ -26,6 +26,7 @@ class GlobalState:
         self.frida_functions_java = {}
         self.frida_stalkers = {}
         self.frida_stalkers_ct = []
+        self.frida_stalkers_ct_module = []
         self.frida_bb_hit = []
         self.window_frida_stalker_title = ""
 
@@ -127,6 +128,7 @@ class GlobalSignals(QObject):
     frida_updatedjava_trace = Signal()
     frida_stalker = Signal()
     frida_stalker_ct = Signal()
+    frida_stalker_ct_module = Signal()
     window_frida_stalker = Signal()
 
 GLOBAL = GlobalState()

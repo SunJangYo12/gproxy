@@ -8,8 +8,7 @@ import datetime
 from ctypes import *
 import xmlrpc.client
 import threading
-
-
+import json
 
 proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 
@@ -66,10 +65,6 @@ def on_message(message, data):
 
            proxy.settofrida_enum(bbs, "bb_hit")
 
-
-        elif message['payload']['type'] == 'stalker-data':
-           sdata = message['payload']['data']
-           #print(sdata)
 
 
         elif message['payload']['type'] == 'stalker':
@@ -168,13 +163,54 @@ class MyThread(threading.Thread):
     def run(self):
         while not self.stop_event.is_set():
             self.script.exports_sync.idthreads()
-#            xx = self.script.exports_sync.ambilstalked()
-
-#            print(xx)
             time.sleep(0.3)
 
     def stop(self):
         self.stop_event.set()
+
+class MyUtils:
+    def read_dynamic_config(sw):
+        out = ""
+        try:
+            with open("/dev/shm/gproxy.config", "r") as fd:
+                for line in fd:
+                    key = line.split(":")
+
+                    if key[0] == sw:
+                        out = key[1].split("\n")[0]
+                        break
+        except:
+            pass
+        return out
+
+    def config_dynamic(sw, func_name):
+        config = "/dev/shm/gproxy.config"
+        print(f"set config: {sw} {func_name}")
+
+        all = []
+        try:
+            with open(config, "r") as fd:
+                for line in fd:
+                    key = line.split(":")
+
+                    if key[0] == sw:
+                        if func_name != "":
+                            new = key[0]+":"+func_name+"\n"
+                            all.append(new)
+                    else:
+                        all.append(line)
+
+                if fd.readlines() <= 1:
+                    print("new")
+                    all.append(f"{sw}:{func_name}\n")
+        except:
+            print("new")
+            all.append(f"{sw}:{func_name}\n")
+
+        with open(config, "w") as fd:
+            for i in all:
+                fd.write(i)
+
 
 
 
@@ -187,7 +223,7 @@ def main():
     if target == "a":
        #ahost = input(">> Android host: ")
        #device = frida.get_device_manager().add_remote_device(ahost)
-       device = frida.get_device_manager().add_remote_device("192.168.0.100")
+       device = frida.get_device_manager().add_remote_device("192.168.0.101")
     elif target == "l":
        device = frida.get_local_device() #local linux
     else:
@@ -256,10 +292,55 @@ def main():
                 in_mod = input(f">> module name (png_read,libc.so): ")
 
                 proxy.settofrida_func("id_threads", "refresh")
-                thread = MyThread(script)
-                thread.start()
+                proxy.settofrida_openwindow("stalker", "by module")
 
                 script.exports_sync.setstalker("module", in_mod, "")
+
+
+                while True:
+                    script.exports_sync.idthreads()
+
+
+                    tid_func = MyUtils.read_dynamic_config("stalker-ct-module")
+                    try:
+                        tid_func = int(tid_func)
+                    except:
+                        tid_func = -1
+
+                    req_clean = MyUtils.read_dynamic_config("stalker-ct-module-clean-fridaserver")
+                    if req_clean == "oke":
+                        script.exports_sync.getstalkerdata("req_clean")
+                        MyUtils.config_dynamic("stalker-ct-module-clean-fridaserver", "")
+
+                    sdata = script.exports_sync.getstalkerdata(tid_func)
+
+                    noroot = []
+                    yesroot = []
+                    for i in sdata:
+                        nout = {
+                           "tid": i["tid"],
+                           "root": None,
+                           "root_len": i["root_len"]
+                        }
+                        out = {
+                           "tid": i["tid"],
+                           "root": i["root"],
+                           "root_len": i["root_len"]
+                        }
+                        noroot.append(nout)
+                        yesroot.append(out)
+
+                    proxy.settofrida_enum(noroot, "stalker-ct-module")
+
+                    if len(yesroot) != 0:
+                        with open("/dev/shm/gproxy.stalker-ct-module", "w") as fd:
+                            json.dump(yesroot, fd, indent=4)
+
+                    #print(sdata)
+
+                    time.sleep(1)
+
+
                 continue
 
 

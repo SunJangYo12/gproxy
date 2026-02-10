@@ -401,24 +401,31 @@ def main():
         elif pshell == "tr":
             script.exports_sync.enummodules()
             in_module = input("\n>> Module> ")
+            in_swsym = input("\n>> Dump symbol address? frida/bn/r2: > ")
+
 
             if in_module == "back":
                 continue
 
             while True:
-                dick_sym = script.exports_sync.enumsymbolstrace(in_module)
-
-                # DEBUG: force using bn address
-                #dick_sym = []
-
                 isbn = 0
 
-                if len(dick_sym) == 0:
-                    print("[!] No symbol found. using addr from binaryninja")
+                dick_sym = []
+
+                if in_swsym == "frida":
+                    print("[+] Using frida symbol.")
+                    dick_sym = script.exports_sync.enumsymbolstrace(in_module)
+
+                elif in_swsym == "r2":
+                    print("[+] Using radare2 symbol.")
+                    print('[+] run: r2 -B <baseaddr> -A -q -c "afl" <module.so> | tee /tmp/funcs.txt')
+
+                elif in_swsym == "bn":
+                    print("[+] Using binaryninja symbol.")
+                    print("[i] NOTE: In Binaryninja, file > rebase. Base address from enum modules")
+                    print("          after rebase, restart server in bn view > gproxy > stop/start")
                     proxy.setgeneratesymbol()
                     print("[+] Generate done.")
-                    print("[i] NOTE: Alamat harus sama dengan proses frida dengan rebase di bn")
-                    print("          Setelah rebase restart server dengan Tools> gproxy> stop/start")
 
                     isbn = 1
 

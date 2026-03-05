@@ -223,7 +223,7 @@ def main():
     if target == "a":
        #ahost = input(">> Android host: ")
        #device = frida.get_device_manager().add_remote_device(ahost)
-       device = frida.get_device_manager().add_remote_device("192.168.0.101")
+       device = frida.get_device_manager().add_remote_device("192.168.0.100")
     elif target == "l":
        device = frida.get_local_device() #local linux
     else:
@@ -256,7 +256,7 @@ def main():
     if is_script_package == "y":
         print("1. trace-unity (tr-unity)> (<assembly-name>/dump-asm)")
     else:
-        print("1. shell/reverse_shell_java (s/js)")
+        print("1. shell/reverse_shell_java (s/sj)")
         print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
         print("3. trace (tr)> (all/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
         print("4. trace-java (tr-java)> (all/package-class/back) (full-info)> (className)")

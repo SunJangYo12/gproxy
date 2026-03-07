@@ -1,8 +1,29 @@
 const threadTrees = new Map();
+const threadsHook = {};
+
+/* bantuan untuk hook tree */
+function hookGetThread() {
+    const tid = Process.getCurrentThreadId();
+
+    if (!threadsHook[tid]) {
+        console.log("\n\nThread " + tid);
+
+        threadsHook[tid] = {
+            stack: [],
+            printedEdges: new Set()
+        };
+    }
+
+    return threadsHook[tid];
+}
+function hookIndent(depth) {
+    return "|  ".repeat(depth) + "└─";
+}
+/***************************/
+
 
 class FuzzerKu
 {
-
     constructor() {
        this.rpc_setup();
        this.typeLog = "send";
@@ -467,6 +488,26 @@ class FuzzerKu
             subthis.logDebug("send", filter+" @ "+context.pc, "bnlog");
         }
     }
+
+    onenter_hook2tree(name) {
+        const t = hookGetThread();
+
+        const parent = t.stack.length > 0 ? t.stack[t.stack.length - 1] : "ROOT";
+        const edge = parent + "->" + name;
+
+        const depth = t.stack.length;
+
+        // hanya print jika edge baru
+        if (!t.printedEdges.has(edge))
+        {
+            console.log(hookIndent(depth) + name);
+            t.printedEdges.add(edge);
+        }
+
+        t.stack.push(name);
+    }
+
+
     rpc_setup()
     {
         rpc.exports = {
@@ -645,6 +686,25 @@ class FuzzerKu
                const addr = ptr(func_data.address);
 
                if (fstalking != -1) {
+                   if (fstalking == -2) {
+                        this.logDebug("send", "Agent @ Setup hook-tree UI: "+func_data.name+"", "info");
+
+                        try {
+                          Interceptor.attach(addr, {
+                              onEnter(args) {
+                                  subthis.onenter_hook2tree(func_data.name);
+                              },
+                              onLeave(retval) {
+                                  const t = hookGetThread();
+                                  t.stack.pop();
+                              }
+                          });
+                        }
+                        catch(e){
+                          console.log(e)
+                        }
+                        return
+                   }
                    this.logDebug("send", "Agent @ Setup hook: "+func_data.name+" with stalking: "+fstalking, "info");
 
                    this.stalkingfunc(addr, fstalking)

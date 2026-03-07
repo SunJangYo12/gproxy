@@ -86,11 +86,16 @@ def on_message(message, data):
            info = message['payload']['log']
            print(f"[+] {info}")
 
-
-
         elif message['payload']['type'] == 'hook_hit':
            info = message['payload']['log']
            proxy.settofrida_func(info, "")
+
+
+        elif message['payload']['type'] == 'hooktree_hit':
+           info = message['payload']['log']
+           #print(info)
+           proxy.settofrida_func(info, "hooktree_hit")
+
 
 
         elif message['payload']['type'] == 'java_hit':
@@ -145,6 +150,9 @@ def setup_hook(script, dick_sym, func_target, fstalking):
                         script.exports_sync.setuphook(data, fstalking)
                     else:
                         script.exports_sync.setuphook(data, -1)
+
+                elif func_target == "zzall-tree": #all-tree
+                    script.exports_sync.setuphook(data, -2)
 
                 else: #all
                     if not func_target:
@@ -218,23 +226,34 @@ def main():
     print("\n\t=====================")
     print("\t Fuzzer proxy v2.0.0")
     print("\t=====================\n")
-    target = input(">> Select target? Linux/Android (l/a): ")
+    target = input(">> Select target? Linux/HostIP/USB (l/h/u): ")
 
-    if target == "a":
+    if target == "h":
        #ahost = input(">> Android host: ")
        #device = frida.get_device_manager().add_remote_device(ahost)
        device = frida.get_device_manager().add_remote_device("192.168.0.100")
+       pid_raw = input(">> Chose pid? (1234): ")
+       pid = int(pid_raw)
+
+    elif target == "u":
+       device = frida.get_usb_device()
+       package = input(">> Chose package? (com.abc): ")
+       pid = device.spawn([package])
+
     elif target == "l":
        device = frida.get_local_device() #local linux
+       pid_raw = input(">> Chose pid? (1234): ")
+       pid = int(pid_raw)
+
     else:
        print("[!] PY target not found")
        exit(1)
 
-    pid_raw = input(">> Chose pid? (1234): ")
-    is_script_package = input(">> Script type package? y/n: ")
-
-    pid = int(pid_raw)
     session = device.attach(pid)
+    device.resume(pid)
+
+
+    is_script_package = input(">> Script type package? y/n: ")
 
     if is_script_package == "y":
         fscript = "/media/jin/6a76baf7-5d55-4bae-ac03-6cb70d5d180d/Tools/frida-zombeast-old/dist/agent.js"
@@ -258,7 +277,7 @@ def main():
     else:
         print("1. shell/reverse_shell_java (s/sj)")
         print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
-        print("3. trace (tr)> (all/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
+        print("3. trace (tr)> (all/all-tree/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
         print("4. trace-java (tr-java)> (all/package-class/back) (full-info)> (className)")
         print("6. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> ")
         print("           (intruksi)> (func_addr/back)> (filter)> (mnemonic:ret,jne,enter:all/back)")
@@ -401,11 +420,11 @@ def main():
         elif pshell == "tr":
             script.exports_sync.enummodules()
             in_module = input("\n>> Module> ")
-            in_swsym = input("\n>> Dump symbol address? frida/bn/r2: > ")
-
 
             if in_module == "back":
                 continue
+
+            in_swsym = input("\n>> Dump symbol address? frida/bn/r2: > ")
 
             while True:
                 isbn = 0
@@ -418,10 +437,35 @@ def main():
 
                 elif in_swsym == "r2":
                     print("[+] Using radare2 symbol.")
-                    print('[+] run: r2 -B <baseaddr> -A -q -c "afl" <module.so> | tee /tmp/funcs.txt')
+                    print("[+] r2 -e scr.color=0 -A -q -c 'afl' lib.so | awk '{print $1, $4}' > funcs.txt\n")
+
+                    pfuncs = input(">> Path funcs.txt default: (/tmp/funcs.txt) ")
+                    pbase = input(">> Base lib: ")
+                    pbase = int(pbase, 0)
+
+                    if pfuncs == "":
+                        pfuncs = "/tmp/funcs.txt"
+
+                    with open(pfuncs) as f:
+                        for line in f:
+                            line = line.strip()
+                            if not line:
+                                continue
+
+                            parts = line.split()
+                            addr = hex(pbase + int(parts[0], 0) )
+                            name = parts[1] if len(parts) > 1 else None
+
+                            out = {
+                                "address": addr,
+                                "name": name,
+                                "type": "function"
+                            }
+                            dick_sym.append(out)
+
 
                 elif in_swsym == "bn":
-                    print("[+] Using binaryninja symbol.")
+                    print("\n[+] Using binaryninja symbol.")
                     print("[i] NOTE: In Binaryninja, file > rebase. Base address from enum modules")
                     print("          after rebase, restart server in bn view > gproxy > stop/start")
                     proxy.setgeneratesymbol()
@@ -448,7 +492,10 @@ def main():
 
 
                 #init total symbol
-                proxy.settofrida_func(dick_sym, "init")
+                if len(dick_sym) >= 300:
+                    print("[!] big Symbol, nothing for show.")
+                else:
+                    proxy.settofrida_func(dick_sym, "init")
 
                 in_symbol = input(f"\n>> {in_module}> symbol> ")
 
@@ -460,6 +507,18 @@ def main():
                     setup_hook(script, dick_sym, None, None)
 
                     proxy.settofrida_func("trace-func", "refresh")
+                    break
+
+
+                elif in_symbol == "all-tree":
+                    setup_hook(script, dick_sym, "zzall-tree", None)
+
+                    #proxy.settofrida_func("trace-func", "refresh")
+                    print("==============")
+                    print("[+] Trace ready.")
+                    proxy.settofrida_openwindow("tracer", "by module")
+                    break
+
 
                 else:
                     while True:

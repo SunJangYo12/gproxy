@@ -38,6 +38,84 @@ from binaryninja import (
 import binaryninja as binja
 
 
+class DialogTracerCallTree(QDialog):
+    def __init__(self, parent=None, sid=None, data=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"Trace Call Tree({sid})")
+        self.setWindowFlags(
+            Qt.Window |
+            Qt.WindowMinimizeButtonHint |
+            Qt.WindowCloseButtonHint
+        )
+        self.setWindowModality(Qt.NonModal)
+        self.font = getMonospaceFont(self)
+
+        self.tree_widget = QTreeWidget()
+        self.tree_widget.setColumnCount(1)
+        self.tree_widget.setHeaderLabels(["Call tree"])
+
+        self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree_widget.customContextMenuRequested.connect(self.on_tree_context_menu)
+
+        SIGNALS.frida_updatedhook.connect(self.add_node)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.tree_widget)
+        self.setLayout(layout)
+
+        self.threads = {}
+        self.nodes = {}
+        self.thread_stacks = {}
+
+    def add_node(self):
+        tid = GLOBAL.frida_functions_hook["thread"]
+        func = GLOBAL.frida_functions_hook["child"]
+        depth = GLOBAL.frida_functions_hook["depth"]
+
+        if tid not in self.thread_stacks:
+            root = QTreeWidgetItem(self.tree_widget)
+            root.setText(0, f"Thread {tid}")
+            root.setExpanded(True)
+            root.setFont(0, self.font)
+
+            self.thread_stacks[tid] = [root]
+
+        stack = self.thread_stacks[tid]
+
+        # sesuaikan stack depth
+        while len(stack) > depth + 1:
+            stack.pop()
+
+        parent = stack[-1]
+
+        item = QTreeWidgetItem(parent)
+        item.setText(0, func)
+        item.setFont(0, self.font)
+        item.setExpanded(True)
+
+        stack.append(item)
+
+
+    def on_tree_context_menu(self, position: QPoint):
+        item = self.tree_widget.itemAt(position)
+        menu = QMenu()
+
+        menu.addAction("Refresh")
+        menu.addAction("Clean FridaServer")
+
+        action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
+        if action:
+            self.handle_tree_action(action.text(), item)
+
+    def handle_tree_action(self, action, item):
+        if action == "Refresh":
+            print("refres")
+            self.showData()
+
+        elif action == "Clean FridaServer":
+            GLOBAL.config_dynamic("stalker-ct-module-clean-fridaserver", "oke")
+
+
 
 class DialogStalkerCallTree(QDialog):
     def __init__(self, parent=None, sid=None, data=None):
@@ -472,6 +550,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         SIGNALS.frida_updatedjava_trace.connect(self.refresh_from_global_java_trace)
 
         SIGNALS.window_frida_stalker.connect(self.refresh_from_global_owindow)
+        SIGNALS.window_frida_tracer.connect(self.refresh_from_global_owindow_tracer)
 
 
         tree_widget = QTreeWidget()
@@ -510,6 +589,16 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
             size /= 1024
             index += 1
         return f'{size:.1f}{units[index]}'
+
+
+    def refresh_from_global_owindow_tracer(self):
+        title = GLOBAL.window_frida_tracer_title
+
+        self.dlg = DialogTracerCallTree(sid=title, data=self.bv)
+        self.dlg.resize(340, 550) # w,h
+        self.dlg.show()
+        self.dlg.raise_()
+        self.dlg.activateWindow()
 
 
     def refresh_from_global_owindow(self):

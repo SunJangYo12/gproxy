@@ -2,22 +2,27 @@ const threadTrees = new Map();
 const threadsHook = {};
 
 /* bantuan untuk hook tree */
+class HookNode {
+    constructor(name) {
+        this.name = name;
+        this.count = 0;
+        this.children = new Map();
+    }
+}
+
 function hookGetThread() {
     const tid = Process.getCurrentThreadId();
 
-    if (!threadsHook[tid]) {
-        console.log("\n\nThread " + tid);
-
+    if (!threadsHook[tid])
+    {
         threadsHook[tid] = {
+            root: new HookNode("ROOT"),
             stack: [],
-            printedEdges: new Set()
+            seenEdges: new Set()
         };
     }
 
     return threadsHook[tid];
-}
-function hookIndent(depth) {
-    return "|  ".repeat(depth) + "└─";
 }
 /***************************/
 
@@ -75,8 +80,12 @@ class FuzzerKu
                send({"type": "enum_threads", "log": msg});
            else if (subtype == "id_threads")
                send({"type": "id_threads", "log": msg});
+
            else if (subtype == "hook_hit")
                send({"type": "hook_hit", "log": msg});
+
+           else if (subtype == "hooktree_hit")
+               send({"type": "hooktree_hit", "log": msg});
 
            else if (subtype == "bb_hit")
                send({"type": "bb_hit", "log": msg});
@@ -489,22 +498,47 @@ class FuzzerKu
         }
     }
 
+
     onenter_hook2tree(name) {
         const t = hookGetThread();
 
-        const parent = t.stack.length > 0 ? t.stack[t.stack.length - 1] : "ROOT";
-        const edge = parent + "->" + name;
+        let parent;
 
-        const depth = t.stack.length;
+        if (t.stack.length === 0)
+           parent = t.root;
+        else
+           parent = t.stack[t.stack.length - 1];
 
-        // hanya print jika edge baru
-        if (!t.printedEdges.has(edge))
-        {
-            console.log(hookIndent(depth) + name);
-            t.printedEdges.add(edge);
+        let node;
+
+        if (!parent.children.has(name)) {
+           node = new HookNode(name);
+           parent.children.set(name, node);
+        }
+        else {
+           node = parent.children.get(name);
         }
 
-        t.stack.push(name);
+        node.count++;
+
+        const edge = parent.name + "->" + name;
+
+        // kirim hanya jika edge baru
+        if (!t.seenEdges.has(edge))
+        {
+          const data = {
+            thread: Process.getCurrentThreadId(),
+            parent: parent.name,
+            child: name,
+            depth: t.stack.length,
+            count: node.count
+          }
+          this.logDebug("send", data, "hooktree_hit");
+
+          t.seenEdges.add(edge);
+        }
+
+        t.stack.push(node);
     }
 
 

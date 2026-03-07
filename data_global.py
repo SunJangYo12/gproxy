@@ -23,12 +23,14 @@ class GlobalState:
         self.frida_enumunitymethod = {}
         self.frida_idthreads = {}
         self.frida_functions = {}
+        self.frida_functions_hook = {}
         self.frida_functions_java = {}
         self.frida_stalkers = {}
         self.frida_stalkers_ct = []
         self.frida_stalkers_ct_module = []
         self.frida_bb_hit = []
         self.window_frida_stalker_title = ""
+        self.window_frida_tracer_title = ""
 
         self.refresh_view = "'0'"
 
@@ -119,6 +121,7 @@ class GlobalSignals(QObject):
     gdb_updated_regs = Signal()
     gdb_updated_stacks = Signal()
     frida_updated = Signal()
+    frida_updatedhook = Signal()
     frida_updatedsym = Signal()
     frida_updatedthread = Signal()
     frida_updatedidthread = Signal()
@@ -130,6 +133,7 @@ class GlobalSignals(QObject):
     frida_stalker_ct = Signal()
     frida_stalker_ct_module = Signal()
     window_frida_stalker = Signal()
+    window_frida_tracer = Signal()
 
 GLOBAL = GlobalState()
 SIGNALS = GlobalSignals()

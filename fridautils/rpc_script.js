@@ -526,16 +526,16 @@ class FuzzerKu
         // kirim hanya jika edge baru
         if (!t.seenEdges.has(edge))
         {
-          const data = {
-            thread: Process.getCurrentThreadId(),
-            parent: parent.name,
-            child: name,
-            depth: t.stack.length,
-            count: node.count
-          }
-          this.logDebug("send", data, "hooktree_hit");
+            const data = {
+                thread: Process.getCurrentThreadId(),
+                parent: parent.name,
+                child: name,
+                depth: t.stack.length,
+                count: node.count
+            }
+            this.logDebug("send", data, "hooktree_hit");
 
-          t.seenEdges.add(edge);
+            t.seenEdges.add(edge);
         }
 
         t.stack.push(node);

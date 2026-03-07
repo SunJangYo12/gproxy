@@ -67,6 +67,14 @@ class DialogTracerCallTree(QDialog):
         self.nodes = {}
         self.thread_stacks = {}
 
+    def find_child(self, parent, name):
+        for i in range(parent.childCount()):
+            item = parent.child(i)
+            if item.text(0) == name:
+                return item
+        return None
+
+
     def add_node(self):
         tid = GLOBAL.frida_functions_hook["thread"]
         func = GLOBAL.frida_functions_hook["child"]
@@ -88,12 +96,15 @@ class DialogTracerCallTree(QDialog):
 
         parent = stack[-1]
 
-        item = QTreeWidgetItem(parent)
-        item.setText(0, func)
-        item.setFont(0, self.font)
-        item.setExpanded(True)
+        child = self.find_child(parent, func)
 
-        stack.append(item)
+        if child is None:
+            child = QTreeWidgetItem(parent)
+            child.setText(0, func)
+            child.setFont(0, self.font)
+            child.setExpanded(True)
+
+        stack.append(child)
 
 
     def on_tree_context_menu(self, position: QPoint):

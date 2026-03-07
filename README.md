@@ -437,3 +437,85 @@ exit
 NOTE: in frida window stalker double click in thread id to show function call tree
 dan jika di frida target cpu 100% click kanan dan clean fridaserver.
 ```
+
+#trace tree
+
+```
+
+	=====================
+	 Fuzzer proxy v2.0.0
+	=====================
+
+>> Select target? Linux/HostIP/USB (l/h/u): u
+>> Chose package? (com.abc): com.whatsapp
+>> Script type package? y/n: 
+
+[+] Inject Agent successfully
+
+==============
+ List Command:
+==============
+1. shell/reverse_shell_java (s/sj)
+2. enum_module/enum_symbol/enum_thread (em/es/et)
+3. trace (tr)> (all/all-tree/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)
+4. trace-java (tr-java)> (all/package-class/back) (full-info)> (className)
+6. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> 
+           (intruksi)> (func_addr/back)> (filter)> (mnemonic:ret,jne,enter:all/back)
+exit
+
+>> tr
+[+] Agent @ Getting modules...
+[+] Send to binja...
+[+] Done.
+
+>> Module> libcurve25519.so
+
+>> Dump symbol address? frida/bn/r2: > r2
+[+] Using radare2 symbol.
+[+] r2 -e scr.color=0 -A -q -c 'afl' lib.so | awk '{print $1, $4}' > funcs.txt
+
+>> Path funcs.txt default: (/tmp/funcs.txt) 
+>> Base lib: 0x7f5e6fa000
+
+>> libcurve25519.so> symbol> all-tree
+[+] Agent @ Setup hook-tree UI: sym.imp.memset
+Error: unable to intercept function at 0x7f5e710a30; please file a bug
+[+] Agent @ Setup hook-tree UI: entry0
+[+] Agent @ Setup hook-tree UI: sym.Java_org_whispersystems_curve25519_NativeCurve25519Provider_generatePublicKey
+[+] Agent @ Setup hook-tree UI: fcn.00007cd8
+[+] Agent @ Setup hook-tree UI: fcn.00008d68
+[+] Agent @ Setup hook-tree UI: fcn.00008f28
+[+] Agent @ Setup hook-tree UI: fcn.00008fb8
+[+] Agent @ Setup hook-tree UI: fcn.00009048
+[+] Agent @ Setup hook-tree UI: fcn.00009644
+[+] Agent @ Setup hook-tree UI: fcn.000096e4
+[+] Agent @ Setup hook-tree UI: fcn.0000986c
+[+] Agent @ Setup hook-tree UI: fcn.00008cd8
+[+] Agent @ Setup hook-tree UI: fcn.00009aa8
+
+...
+Thread 18847
+└─sym.Java_org_whispersystems_curve25519_NativeCurve25519Provider_smokeCheck
+└─sym.Java_org_whispersystems_curve25519_NativeCurve25519Provider_verifySignature
+   └─fcn.00009be4
+      └─fcn.0000d760
+      └─fcn.0000a0f8
+         └─fcn.0000ea88
+         └─fcn.0000d6f4
+         └─fcn.0000d908
+            └─fcn.0000e5cc
+            └─fcn.0000dddc
+         └─fcn.0000dddc
+      └─fcn.0000eab0
+      └─fcn.0000cf6c
+         └─fcn.0000f274
+            └─fcn.0000d760
+            └─fcn.0000e5cc
+            └─fcn.0000dddc
+            └─fcn.0000ea88
+            └─fcn.0000d6f4
+            └─fcn.0000e1e4
+               └─fcn.0000e5cc
+               └─fcn.0000dddc
+
+```

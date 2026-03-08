@@ -56,6 +56,9 @@ class DialogTracerCallTree(QDialog):
 
         self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree_widget.customContextMenuRequested.connect(self.on_tree_context_menu)
+        self.tree_widget.itemExpanded.connect(self.click_expand)
+        self.tree_widget.itemCollapsed.connect(self.click_collap)
+
 
         SIGNALS.frida_updatedhook.connect(self.load_tree)
 
@@ -66,21 +69,21 @@ class DialogTracerCallTree(QDialog):
         self.thread_stacks = {}
         self.bv = data
         self.is_update = True
+        self.expanded_items = set()
 
 
     def add_node_recursive(self, parent_item, node):
         name = node["name"]
         count = node["count"]
+        addr = node["addr"]
 
         item = QTreeWidgetItem(parent_item)
         item.setText(0, f"{name} {len(node['children'])} ({count}x)")
         item.setFont(0, self.font)
-        item.setExpanded(True)
 
-        optdata = {
-            "addr": node["addr"]
-        }
-        item.setData(0, Qt.UserRole, optdata)
+        self.cekandset_expand(item, addr)
+
+        item.setData(0, Qt.UserRole, addr)
 
         for child in node["children"].values():
             self.add_node_recursive(item, child)
@@ -102,11 +105,28 @@ class DialogTracerCallTree(QDialog):
             thread_item = QTreeWidgetItem(self.tree_widget)
             thread_item.setText(0, f"Thread {tid}")
             thread_item.setFont(0, self.font)
-            thread_item.setExpanded(True)
+            thread_item.setData(0, Qt.UserRole, tid)
+
+            self.cekandset_expand(thread_item, tid)
 
             # kalau tidak ingin menampilkan ROOT
             for child in root["children"].values():
                 self.add_node_recursive(thread_item, child)
+
+
+    def cekandset_expand(self, tree, id):
+        for data in self.expanded_items:
+            if data == id:
+                #print(data)
+                tree.setExpanded(True)
+
+    def click_expand(self, item):
+        data = item.data(0, Qt.UserRole)
+        self.expanded_items.add(data)
+
+    def click_collap(self, item):
+        data = item.data(0, Qt.UserRole)
+        self.expanded_items.remove(data)
 
 
     def on_tree_context_menu(self, position: QPoint):
@@ -126,10 +146,10 @@ class DialogTracerCallTree(QDialog):
         data = item.data(0, Qt.UserRole)
 
         if action == "Address":
-            print(data["addr"])
+            print(data)
 
         elif action == "Jump":
-            addr = data["addr"]
+            addr = data
             print(f"jump to: {addr}")
             self.bv.offset = addr
 

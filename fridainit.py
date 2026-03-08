@@ -248,7 +248,7 @@ def main():
     if target == "h":
        #ahost = input(">> Android host: ")
        #device = frida.get_device_manager().add_remote_device(ahost)
-       device = frida.get_device_manager().add_remote_device("192.168.0.100")
+       device = frida.get_device_manager().add_remote_device("192.168.0.101")
        pid_raw = input(">> Chose pid? (1234): ")
        pid = int(pid_raw)
 

@@ -6,6 +6,7 @@ class HookNode {
     constructor(name) {
         this.name = name;
         this.count = 0;
+        this.addr = null;
         this.children = new Map();
     }
 }
@@ -499,7 +500,7 @@ class FuzzerKu
     }
 
 
-    onenter_hook2tree(name) {
+    onenter_hook2tree(name, addr) {
         const t = hookGetThread();
 
         let parent;
@@ -520,20 +521,22 @@ class FuzzerKu
         }
 
         node.count++;
+        node.addr = addr;
 
         const edge = parent.name + "->" + name;
 
         // kirim hanya jika edge baru
         if (!t.seenEdges.has(edge))
-        {
+        {/*
             const data = {
                 thread: Process.getCurrentThreadId(),
                 parent: parent.name,
                 child: name,
+                addr: addr,
                 depth: t.stack.length,
                 count: node.count
             }
-            this.logDebug("send", data, "hooktree_hit");
+            this.logDebug("send", data, "hooktree_hit");*/
 
             t.seenEdges.add(edge);
         }
@@ -576,6 +579,35 @@ class FuzzerKu
                this.logDebug("send", "Agent @ Getting symbols to hook...", "info");
 
                this.stalkingjavaclass(jclass)
+            },
+            gethooknodes: () => {
+                function serializeNode(node) {
+                    const children = {};
+
+                    for (const [name, child] of node.children) {
+                        children[name] = serializeNode(child);
+                    }
+
+                    return {
+                        name: node.name,
+                        count: node.count,
+                        addr: node.addr,
+                        children: children
+                    };
+                }
+                const out = {};
+
+                for (const tid in threadsHook) {
+                    const t = threadsHook[tid];
+
+                    out[tid] = {
+                        root: serializeNode(t.root),
+                        stack_depth: t.stack.length,
+                        seen_edges: t.seenEdges.size
+                    };
+                }
+                //console.log(JSON.stringify(out))
+                return out;
             },
             idthreads: () => {
 
@@ -726,7 +758,7 @@ class FuzzerKu
                         try {
                           Interceptor.attach(addr, {
                               onEnter(args) {
-                                  subthis.onenter_hook2tree(func_data.name);
+                                  subthis.onenter_hook2tree(func_data.name, addr);
                               },
                               onLeave(retval) {
                                   const t = hookGetThread();

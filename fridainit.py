@@ -161,6 +161,23 @@ def setup_hook(script, dick_sym, func_target, fstalking):
             except Exception as e:
                 print(f"{func_name} >>>>>>> {e}")
 
+class MyThreadGetHookCount(threading.Thread):
+    def __init__(self, script):
+        super().__init__()
+        self.stop_event = threading.Event()
+        self.script = script
+
+    def run(self):
+        while not self.stop_event.is_set():
+            data = self.script.exports_sync.gethooknodes()
+
+            proxy.settofrida_func(data, "hooktree_hit_all")
+            time.sleep(4)
+
+
+    def stop(self):
+        self.stop_event.set()
+
 
 class MyThread(threading.Thread):
     def __init__(self, script):
@@ -516,6 +533,10 @@ def main():
                     #proxy.settofrida_func("trace-func", "refresh")
                     print("==============")
                     print("[+] Trace ready.")
+
+                    thnode = MyThreadGetHookCount(script)
+                    thnode.start()
+
                     proxy.settofrida_openwindow("tracer", "by module")
                     break
 

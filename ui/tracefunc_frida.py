@@ -57,75 +57,87 @@ class DialogTracerCallTree(QDialog):
         self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree_widget.customContextMenuRequested.connect(self.on_tree_context_menu)
 
-        SIGNALS.frida_updatedhook.connect(self.add_node)
+        SIGNALS.frida_updatedhook.connect(self.load_tree)
 
         layout = QVBoxLayout()
         layout.addWidget(self.tree_widget)
         self.setLayout(layout)
 
-        self.threads = {}
-        self.nodes = {}
         self.thread_stacks = {}
-
-    def find_child(self, parent, name):
-        for i in range(parent.childCount()):
-            item = parent.child(i)
-            if item.text(0) == name:
-                return item
-        return None
+        self.bv = data
+        self.is_update = True
 
 
-    def add_node(self):
-        tid = GLOBAL.frida_functions_hook["thread"]
-        func = GLOBAL.frida_functions_hook["child"]
-        depth = GLOBAL.frida_functions_hook["depth"]
+    def add_node_recursive(self, parent_item, node):
+        name = node["name"]
+        count = node["count"]
 
-        if tid not in self.thread_stacks:
-            root = QTreeWidgetItem(self.tree_widget)
-            root.setText(0, f"Thread {tid}")
-            root.setExpanded(True)
-            root.setFont(0, self.font)
+        item = QTreeWidgetItem(parent_item)
+        item.setText(0, f"{name} {len(node['children'])} ({count}x)")
+        item.setFont(0, self.font)
+        item.setExpanded(True)
 
-            self.thread_stacks[tid] = [root]
+        optdata = {
+            "addr": node["addr"]
+        }
+        item.setData(0, Qt.UserRole, optdata)
 
-        stack = self.thread_stacks[tid]
+        for child in node["children"].values():
+            self.add_node_recursive(item, child)
 
-        # sesuaikan stack depth
-        while len(stack) > depth + 1:
-            stack.pop()
 
-        parent = stack[-1]
+    def load_tree(self):
+        if not self.is_update:
+           self.tree_widget.setHeaderLabels([f"DEAD Call tree"])
+           return
 
-        child = self.find_child(parent, func)
+        data = GLOBAL.frida_functions_hook_all
 
-        if child is None:
-            child = QTreeWidgetItem(parent)
-            child.setText(0, func)
-            child.setFont(0, self.font)
-            child.setExpanded(True)
+        self.tree_widget.clear()
+        self.tree_widget.setHeaderLabels([f"Call tree: {len(data)} threads"])
 
-        stack.append(child)
+        for tid, tdata in data.items():
+            root = tdata["root"]
+
+            thread_item = QTreeWidgetItem(self.tree_widget)
+            thread_item.setText(0, f"Thread {tid}")
+            thread_item.setFont(0, self.font)
+            thread_item.setExpanded(True)
+
+            # kalau tidak ingin menampilkan ROOT
+            for child in root["children"].values():
+                self.add_node_recursive(thread_item, child)
 
 
     def on_tree_context_menu(self, position: QPoint):
         item = self.tree_widget.itemAt(position)
         menu = QMenu()
 
-        menu.addAction("Refresh")
-        menu.addAction("Clean FridaServer")
+        menu.addAction("Address")
+        menu.addAction("Jump")
+        menu.addAction("Stop update")
+        menu.addAction("Start update")
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
         if action:
             self.handle_tree_action(action.text(), item)
 
     def handle_tree_action(self, action, item):
-        if action == "Refresh":
-            print("refres")
-            self.showData()
+        data = item.data(0, Qt.UserRole)
 
-        elif action == "Clean FridaServer":
-            GLOBAL.config_dynamic("stalker-ct-module-clean-fridaserver", "oke")
+        if action == "Address":
+            print(data["addr"])
 
+        elif action == "Jump":
+            addr = data["addr"]
+            print(f"jump to: {addr}")
+            self.bv.offset = addr
+
+        elif action == "Stop update":
+            self.is_update = False
+
+        elif action == "Start update":
+            self.is_update = True
 
 
 class DialogStalkerCallTree(QDialog):

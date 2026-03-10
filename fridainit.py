@@ -73,7 +73,11 @@ def on_message(message, data):
 
         elif message['payload']['type'] == 'stalker-ct':
            sdata = message['payload']['log']
-           proxy.settofrida_enum(sdata[0], "stalker-ct")
+
+           with open("/tmp/stalker-ct.json", "a") as fd:
+               fd.write(json.dumps(sdata[0]) + "\n")
+
+           #proxy.settofrida_enum(sdata[0], "stalker-ct")
 
 
 
@@ -332,7 +336,6 @@ def main():
 
                 script.exports_sync.setstalker("module", in_mod, "")
 
-
                 while True:
                     script.exports_sync.idthreads()
 
@@ -371,15 +374,11 @@ def main():
                     if len(yesroot) != 0:
                         with open("/dev/shm/gproxy.stalker-ct-module", "w") as fd:
                             json.dump(yesroot, fd, indent=4)
-
                     #print(sdata)
-
                     time.sleep(1)
 
-
                 continue
-
-
+                #end module
 
             proxy.settofrida_func("id_threads", "refresh")
 
@@ -427,6 +426,8 @@ def main():
                     proxy.settofrida_openwindow("stalker")
                 else:
                     in_ct = input(">> call-count/call-tree (cc/ct)> ")
+
+                    #os.remove("/tmp/stalker-ct.json")
 
                     tmpid = int(in_id)
                     proxy.settofrida_openwindow("stalker", in_id)

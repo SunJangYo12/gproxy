@@ -25,6 +25,7 @@ from ..data_global import SIGNALS, GLOBAL
 import base64
 import time
 import json
+import subprocess
 
 from binaryninja import (
     core_version,
@@ -377,13 +378,35 @@ class DialogStalker(QDialog):
             parent.setText(2, "%s" % i["root_len"] )
             parent.setFont(2, self.font)
 
-
             count += 1
 
-
-
     def setDataCt(self):
-        self.history.append(GLOBAL.frida_stalkers_ct)
+        result = subprocess.check_output(["tail", "-n", "20", "/tmp/stalker-ct.json"])
+
+        lines = result.decode().splitlines()
+        data = [json.loads(x) for x in lines]
+
+        self.history.append(data)
+        self.showData()
+
+        #search
+        sresult = []
+        tsearch = self.lineEdit.text()
+
+        if tsearch == "":
+            return
+
+        self.setWindowTitle(f"Searching...")
+
+        with open("/tmp/stalker-ct.json") as f:
+            for line in f:
+                zdata = json.loads(line)
+
+                #cari field
+                if any(tsearch in str(v) for v in zdata.values()):
+                    sresult.append(zdata)
+
+        self.history.append(sresult)
         self.showData()
 
 

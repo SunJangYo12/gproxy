@@ -387,6 +387,47 @@ NOTE: untuk pencarian dia menyamakan semua field, jika tidak ketemu di title tid
 NOTE: perbedaan call-count dan call-tree, call-count urutuan panggilan acak tapi dengan
 informasi call count, sedangkan call-tree urutan panggilan original dan tidak disertai call count.
 ```
+# New fitur stalker call-tree(ct)
+Lebih ringan karena semua hasil stalker masuk ke file alih-alih memori ram sekaligus
+menampilkan hanya 20 baris terbaru dari file /tmp/stalker-ct.json.
+```
+	=====================
+	 Fuzzer proxy v2.0.0
+	=====================
+
+>> Select target? Linux/HostIP/USB (l/h/u): h
+>> Chose pid? (1234): 2803
+>> Script type package? y/n: 
+
+[+] Inject Agent successfully
+
+==============
+ List Command:
+==============
+1. shell/reverse_shell_java (s/sj)
+2. enum_module/enum_symbol/enum_thread (em/es/et)
+3. trace (tr)> (all/all-tree/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)
+4. trace-java (tr-java)> (all/package-class/back) (full-info)> (className)
+6. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> 
+           (intruksi)> (func_addr/back)> (filter)> (mnemonic:ret,jne,enter:all/back)
+exit
+
+>> stl
+>> by thread/module? t/m: t
+
+>> Stalker(0)> 2803
+>> call-count/call-tree (cc/ct)> ct
+[+] Agent @ Setup Stalker...
+
+>> Stalker(2803)>
+```
+```
+NOTE:
+1. di window stalker klik kanan > refresh dan ini akan update ui berisi data trace
+2. di window stalker > isi input text > klik kanan > refresh ini akan mencari 
+   string di semua field json /tmp/stalker-ct.json
+```
+
 
 # trace java class android
 ```

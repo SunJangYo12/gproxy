@@ -691,6 +691,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         self.bv = data
         self.font = getMonospaceFont(self)
         self.expanded_items = set()
+        self.sw_menu = ""
 
 
     def format_size(self, size):
@@ -742,6 +743,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
 
     def refresh_from_global(self):
+        self.sw_menu = "module_list"
         self.tree_widget.clear()
         self.tree_widget.headerItem().setText(0, "Module List: %d" %len(GLOBAL.frida_enummodules) )
 
@@ -1106,13 +1108,16 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         item = self.tree_widget.itemAt(position)
         menu = QMenu()
 
-        menu.addAction("Copy")
-        menu.addAction("Base")
-        menu.addAction("Size")
-        menu.addAction("Path")
-        menu.addAction("Block Coloring")
-        menu.addAction("Block Reset")
-        menu.addAction("Block Refresh")
+        if self.sw_menu == "module_list":
+            menu.addAction("Find")
+        else:
+            menu.addAction("Copy")
+            menu.addAction("Base")
+            menu.addAction("Size")
+            menu.addAction("Path")
+            menu.addAction("Block Coloring")
+            menu.addAction("Block Reset")
+            menu.addAction("Block Refresh")
 
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
@@ -1146,6 +1151,25 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
+
+        elif action == "Find":
+            sresult = []
+            tsearch = self.lineEdit.text()
+
+            if tsearch == "":
+                print("[+] Please input text")
+                return
+
+            #self.setWindowTitle(f"Searching...")
+
+            for data in GLOBAL.frida_enummodules:
+                #cari field
+                if any(tsearch in str(v) for v in data.values()):
+                    sresult.append(data)
+
+            GLOBAL.frida_enummodules = sresult
+            SIGNALS.frida_updated.emit()
+
 
         elif action == "Block Reset":
             self.block_color(reset=True)

@@ -560,3 +560,12 @@ Thread 18847
                └─fcn.0000dddc
 
 ```
+# TIPS
+update trace tree in ui binja
+```
+1. buka apk saat idle
+2. lalu trace
+3. klik kanan> Coloring All
+4. buka fitur apknya, misal di tab message
+5. amati yang tidak berwarna berarti itu fungsi yang menangani message
+```

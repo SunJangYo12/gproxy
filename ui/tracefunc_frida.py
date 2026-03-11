@@ -87,7 +87,7 @@ class DialogTracerCallTree(QDialog):
         if is_color in self.color_data:
             item.setForeground(0, QColor("orange"))
 
-        data = name+"||"+addr+"||"+str(count)
+        data = name+"||"+addr
 
         self.cekandset_expand(item, data)
 
@@ -165,7 +165,6 @@ class DialogTracerCallTree(QDialog):
         menu.addAction("Jump")
         menu.addAction("Stop update")
         menu.addAction("Start update")
-        menu.addAction("Coloring")
         menu.addAction("Coloring All")
         menu.addAction("Remove All Color")
 
@@ -180,6 +179,7 @@ class DialogTracerCallTree(QDialog):
         if action == "Address":
             print(raw[1])
 
+
         elif action == "Jump":
             addr = raw[1]
             print(f"jump to: {addr}")
@@ -190,13 +190,6 @@ class DialogTracerCallTree(QDialog):
 
         elif action == "Start update":
             self.is_update = True
-
-        elif action == "Coloring":
-            name = raw[1]
-            count = raw[2]
-
-            self.color_data.append(name+"_"+str(count)+"x")
-
 
         elif action == "Coloring All":
             data = self.open_data()

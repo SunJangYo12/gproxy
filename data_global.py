@@ -24,7 +24,6 @@ class GlobalState:
         self.frida_idthreads = {}
         self.frida_functions = {}
         self.frida_functions_hook = {}
-        self.frida_functions_hook_all = {}
         self.frida_functions_java = {}
         self.frida_stalkers = {}
         self.frida_stalkers_ct = []

@@ -70,6 +70,7 @@ class DialogTracerCallTree(QDialog):
         self.thread_stacks = {}
         self.bv = data
         self.is_update = True
+        self.color_data = []
         self.expanded_items = set()
 
 
@@ -82,20 +83,45 @@ class DialogTracerCallTree(QDialog):
         item.setText(0, f"{name} {len(node['children'])} ({count}x)")
         item.setFont(0, self.font)
 
-        self.cekandset_expand(item, addr)
+        is_color = name+"_"+str(count)+"x"
+        if is_color in self.color_data:
+            item.setForeground(0, QColor("orange"))
 
-        item.setData(0, Qt.UserRole, addr)
+        data = name+"||"+addr+"||"+str(count)
+
+        self.cekandset_expand(item, data)
+
+        item.setData(0, Qt.UserRole, data)
 
         for child in node["children"].values():
             self.add_node_recursive(item, child)
 
 
+    def add_node_recursive_color(self, node):
+        name = node["name"]
+        count = node["count"]
+        addr = node["addr"]
+
+        self.color_data.append(name+"_"+str(count)+"x")
+
+        for child in node["children"].values():
+            self.add_node_recursive_color(child)
+
+
+
+    def open_data(self):
+        with open("/tmp/hooktree_hit.json") as f:
+            data = json.load(f)
+
+        return data
+
+
     def load_tree(self):
         if not self.is_update:
-           self.tree_widget.setHeaderLabels([f"DEAD Call tree"])
-           return
+            self.tree_widget.setHeaderLabels([f"DEAD Call tree"])
+            return
 
-        data = GLOBAL.frida_functions_hook_all
+        data = self.open_data()
 
         self.tree_widget.clear()
         self.tree_widget.setHeaderLabels([f"Call tree: {len(data)} threads"])
@@ -106,8 +132,8 @@ class DialogTracerCallTree(QDialog):
             thread_item = QTreeWidgetItem(self.tree_widget)
             thread_item.setText(0, f"Thread {tid}")
             thread_item.setFont(0, self.font)
-            thread_item.setData(0, Qt.UserRole, tid)
 
+            thread_item.setData(0, Qt.UserRole, tid)
             self.cekandset_expand(thread_item, tid)
 
             # kalau tidak ingin menampilkan ROOT
@@ -127,6 +153,7 @@ class DialogTracerCallTree(QDialog):
 
     def click_collap(self, item):
         data = item.data(0, Qt.UserRole)
+
         self.expanded_items.remove(data)
 
 
@@ -138,6 +165,9 @@ class DialogTracerCallTree(QDialog):
         menu.addAction("Jump")
         menu.addAction("Stop update")
         menu.addAction("Start update")
+        menu.addAction("Coloring")
+        menu.addAction("Coloring All")
+        menu.addAction("Remove All Color")
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
         if action:
@@ -145,12 +175,13 @@ class DialogTracerCallTree(QDialog):
 
     def handle_tree_action(self, action, item):
         data = item.data(0, Qt.UserRole)
+        raw = data.split("||")
 
         if action == "Address":
-            print(data)
+            print(raw[1])
 
         elif action == "Jump":
-            addr = data
+            addr = raw[1]
             print(f"jump to: {addr}")
             self.bv.offset = addr
 
@@ -159,6 +190,27 @@ class DialogTracerCallTree(QDialog):
 
         elif action == "Start update":
             self.is_update = True
+
+        elif action == "Coloring":
+            name = raw[1]
+            count = raw[2]
+
+            self.color_data.append(name+"_"+str(count)+"x")
+
+
+        elif action == "Coloring All":
+            data = self.open_data()
+
+            for tid, tdata in data.items():
+                root = tdata["root"]
+
+                for child in root["children"].values():
+                    self.add_node_recursive_color(child)
+
+        elif action == "Remove All Color":
+            self.color_data = []
+
+
 
 
 class DialogStalkerCallTree(QDialog):

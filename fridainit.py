@@ -95,13 +95,6 @@ def on_message(message, data):
            proxy.settofrida_func(info, "")
 
 
-        elif message['payload']['type'] == 'hooktree_hit':
-           info = message['payload']['log']
-           #print(info)
-           proxy.settofrida_func(info, "hooktree_hit")
-
-
-
         elif message['payload']['type'] == 'java_hit':
            java_hit = message['payload']['log']
            proxy.settofrida_func(java_hit, "java_hit")
@@ -175,7 +168,11 @@ class MyThreadGetHookCount(threading.Thread):
         while not self.stop_event.is_set():
             data = self.script.exports_sync.gethooknodes()
 
-            proxy.settofrida_func(data, "hooktree_hit_all")
+            with open("/tmp/hooktree_hit.json", "w") as fd:
+                fd.write(json.dumps(data)+"\n")
+
+            proxy.settofrida_func("0", "hooktree_hit_all")
+
             time.sleep(4)
 
 

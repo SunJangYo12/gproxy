@@ -268,12 +268,7 @@ class Gproxy:
             classMethod = data["classMethod"]
             GLOBAL.append_fridajavafunc(classMethod, data)
 
-        elif finit == "hooktree_hit":
-            GLOBAL.frida_functions_hook = data
-            SIGNALS.frida_updatedhook.emit()
-
         elif finit == "hooktree_hit_all":
-            GLOBAL.frida_functions_hook_all = data
             SIGNALS.frida_updatedhook.emit()
 
         else:

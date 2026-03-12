@@ -365,16 +365,15 @@ NOTE: set filter modules with edited in rpc_scrips.js: var whitelist = ["all"];
 # Contoh penggunaan stalker
 ```
 >> stl
->> Stalker(0)> 19442
+>> by thread/module? t/m: t
+
+>> Stalker(0)> 30405
+>> call-count/call-tree (cc/ct)> cc
 [+] Agent @ Setup Stalker...
 
->> Stalker(19442)> stoplivethread
-[+] Stop Live thread view
+>> Stalker(30405)> 
 
->> Stalker(19442)> back
-
-NOTE: untuk pencarian dia menyamakan semua field, jika tidak ketemu di title tidak
-      ada string Result, untuk kembali dari tampilan result ke history tekan tombol search lagi.
+NOTE: isi edit text dengan field data untuk filter
 ```
 
 # Contoh penggunaan stalker call-tree

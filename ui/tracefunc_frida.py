@@ -83,6 +83,9 @@ class DialogTracerCallTree(QDialog):
         item.setText(0, f"{name} {len(node['children'])} ({count}x)")
         item.setFont(0, self.font)
 
+        if node.get("color") == 1:
+            item.setForeground(0, QColor("pink"))
+
         is_color = name+"_"+str(count)+"x"
         if is_color in self.color_data:
             item.setForeground(0, QColor("orange"))

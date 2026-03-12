@@ -9,6 +9,7 @@ from ctypes import *
 import xmlrpc.client
 import threading
 import json
+from collections import Counter
 
 proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 
@@ -158,6 +159,46 @@ def setup_hook(script, dick_sym, func_target, fstalking):
             except Exception as e:
                 print(f"{func_name} >>>>>>> {e}")
 
+
+
+class TraceColorizer:
+    def __init__(self, xdata):
+        self.xdata = xdata
+        self.data = None
+        self.names = []
+        self.dup_names = set()
+
+    def load(self):
+        self.data = self.xdata
+
+    def _collect(self, node):
+        self.names.append(node["name"])
+        for child in node.get("children", {}).values():
+            self._collect(child)
+
+    def find_duplicates(self):
+        for pid in self.data:
+            self._collect(self.data[pid]["root"])
+
+        counter = Counter(self.names)
+        self.dup_names = {k for k, v in counter.items() if v > 1}
+
+    def _mark(self, node):
+        if node["name"] in self.dup_names:
+            node["color"] = 1
+
+        for child in node.get("children", {}).values():
+            self._mark(child)
+
+    def apply_color(self):
+        for pid in self.data:
+            self._mark(self.data[pid]["root"])
+
+    def save(self, outfile):
+        with open(outfile, "w") as f:
+            json.dump(self.data, f, indent=2)
+
+
 class MyThreadGetHookCount(threading.Thread):
     def __init__(self, script):
         super().__init__()
@@ -168,8 +209,12 @@ class MyThreadGetHookCount(threading.Thread):
         while not self.stop_event.is_set():
             data = self.script.exports_sync.gethooknodes()
 
-            with open("/tmp/hooktree_hit.json", "w") as fd:
-                fd.write(json.dumps(data)+"\n")
+            trace = TraceColorizer(data)
+            trace.load()
+            trace.find_duplicates()
+            trace.apply_color()
+            trace.save("/tmp/hooktree_hit.json")
+
 
             proxy.settofrida_func("0", "hooktree_hit_all")
 

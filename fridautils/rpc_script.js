@@ -88,6 +88,10 @@ class FuzzerKu
            else if (subtype == "hooktree_hit")
                send({"type": "hooktree_hit", "log": msg});
 
+           else if (subtype == "fail_hook_tree")
+               send({"type": "fail_hook_tree", "log": msg});
+
+
            else if (subtype == "bb_hit")
                send({"type": "bb_hit", "log": msg});
 
@@ -737,7 +741,6 @@ class FuzzerKu
                      const mod_summary = subthis.addrToSymb(summary)
 
                      subthis.logDebug("send", mod_summary, "stalker");
-
                   }
                });
             },
@@ -767,7 +770,12 @@ class FuzzerKu
                           });
                         }
                         catch(e){
-                          console.log(e)
+                          const data = {
+                             "name": func_data.name,
+                             "addr": addr,
+                             "err": e
+                          }
+                          this.logDebug("send", data, "fail_hook_tree");
                         }
                         return
                    }

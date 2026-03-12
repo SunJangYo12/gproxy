@@ -462,7 +462,23 @@ class DialogStalker(QDialog):
         if self.search_clicked:
             self.historytmp.append(GLOBAL.frida_stalkers)
         else:
-            self.history.append(GLOBAL.frida_stalkers)
+            with open("/tmp/stalker-cc.json", "r") as fd:
+                data = json.load(fd)
+
+            tsearch = self.lineEdit.text()
+
+            if tsearch == "":
+                self.history.append(data)
+            else:
+                sresult = []
+                for i in data:
+                    if any(tsearch in str(v) for v in i.values()):
+                        sresult.append(i)
+
+                self.history.append(sresult)
+
+        self.showData()
+
 
     def showData(self):
         self.tree_widget.clear()

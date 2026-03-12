@@ -70,7 +70,12 @@ def on_message(message, data):
 
         elif message['payload']['type'] == 'stalker':
            sdata = message['payload']['log']
-           proxy.settofrida_enum(sdata, "stalker")
+
+           with open("/tmp/stalker-cc.json", "w") as fd:
+               fd.write(json.dumps(sdata))
+
+           proxy.settofrida_enum("zz", "stalker")
+
 
         elif message['payload']['type'] == 'stalker-ct':
            sdata = message['payload']['log']
@@ -94,6 +99,15 @@ def on_message(message, data):
         elif message['payload']['type'] == 'hook_hit':
            info = message['payload']['log']
            proxy.settofrida_func(info, "")
+
+
+        elif message['payload']['type'] == 'fail_hook_tree':
+           info = message['payload']['log']
+
+           print("[+] Write fail.")
+
+           with open("/tmp/fail-hook.json", "a") as fd:
+               fd.write(json.dumps(info) + "\n")
 
 
         elif message['payload']['type'] == 'java_hit':

@@ -511,7 +511,7 @@ def main():
 
                 elif in_swsym == "r2":
                     print("[+] Using radare2 symbol.")
-                    print("[+] r2 -e scr.color=0 -A -q -c 'afl' lib.so | awk '{print $1, $4}' > funcs.txt\n")
+                    print("[+] r2 -e scr.color=0 -A -q -c 'afl' libname.so | awk '{print $1, "libname.so!"$4}' > funcs.txt\n")
 
                     pfuncs = input(">> Path funcs.txt default: (/tmp/funcs.txt) ")
                     pbase = input(">> Base lib: ")

@@ -324,7 +324,7 @@ NOTE: >1 filter di pencarian hanya fungsi ter hit
 
 ```
 
-#Tips hook addr dengan base dan offset dari binja (striped binary)
+# Tips hook addr dengan base dan offset dari binja (striped binary)
 ```
 $ python
 >> 0x7ff2232323 + 0x510 #base_module+offset
@@ -338,7 +338,7 @@ $ python fridainit.py
 NOTE: jika addr HIT akan ada fungsi baru yaitu: unkwon
 ```
 
-#Trace with basic block color in binaryninja
+# Trace with basic block color in binaryninja
 NOTE: set filter modules with edited in rpc_scrips.js: var whitelist = ["all"];
 ```
 >> tr
@@ -478,7 +478,7 @@ NOTE: in frida window stalker double click in thread id to show function call tr
 dan jika di frida target cpu 100% click kanan dan clean fridaserver.
 ```
 
-#trace tree
+# trace tree
 
 ```
 

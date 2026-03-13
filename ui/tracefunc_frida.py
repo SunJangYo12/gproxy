@@ -711,6 +711,8 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         self.font = getMonospaceFont(self)
         self.expanded_items = set()
         self.sw_menu = ""
+        self.is_colortag = False
+        self.color_tag = []
 
 
     def format_size(self, size):
@@ -813,6 +815,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
 
     def refresh_from_global_thread(self):
+        self.sw_menu = "thread_list"
         self.tree_widget.clear()
         self.tree_widget.headerItem().setText(0, "Thread List: %d" %len(GLOBAL.frida_enumthreads) )
 
@@ -826,6 +829,13 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
             if data["state"] == "running":
                 parent.setForeground(0, QColor("orange"))
+
+            if data["id"] in self.color_tag:
+                parent.setForeground(0, QColor("orange"))
+
+            if self.is_colortag:
+               self.color_tag.append(data["id"])
+
 
             parent.setFont(0, self.font)
             parent.setData(0, Qt.UserRole, data )
@@ -841,6 +851,8 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
                 child2.setText(0, "%s: %s"% (key, data["context"][key]) )
                 child2.setFont(0, self.font)
                 child2.setData(0, Qt.UserRole, "%s: %s"% (key, data["context"][key]) )
+
+        self.is_colortag = False
 
 
 
@@ -1129,6 +1141,11 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
         if self.sw_menu == "module_list":
             menu.addAction("Find")
+
+        elif self.sw_menu == "thread_list":
+            menu.addAction("Coloring All")
+            menu.addAction("Remove Color")
+
         else:
             menu.addAction("Copy")
             menu.addAction("Base")
@@ -1170,6 +1187,12 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
+
+        elif action == "Coloring All":
+            self.is_colortag = True
+
+        elif action == "Remove Color":
+            self.color_tag = []
 
         elif action == "Find":
             sresult = []

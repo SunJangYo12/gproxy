@@ -600,3 +600,9 @@ $ cp -R /tes/lib/zout /tmp
 
 >> zzzzz> symbol> all-tree
 ```
+# monitor thread
+```
+>> et
+TIPS: untuk mengetahui thread baru yang muncul klik kanan> coloring Al, lalu (et)
+dan list yang tidak terwarnai adalah thread baru
+```

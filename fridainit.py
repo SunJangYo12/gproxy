@@ -373,7 +373,7 @@ def main():
         print("1. trace-unity (tr-unity)> (<assembly-name>/dump-asm)")
     else:
         print("1. shell/reverse_shell_java (s/sj)")
-        print("2. enum_module/enum_symbol/enum_thread (em/es/et)")
+        print("2. enum_module/enum_symbol/enum_thread/enum_thread_live (em/es/et/etl)")
         print("3. trace (tr)> (all/all-tree/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
         print("4. trace-java (tr-java)> (all/package-class/back) (full-info)> (className)")
         print("6. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> ")
@@ -394,6 +394,12 @@ def main():
 
         elif pshell == "et":
             script.exports_sync.enumthreads()
+
+        elif pshell == "etl":
+            proxy.settofrida_func("id_threads", "refresh")
+
+            thread = MyThread(script)
+            thread.start()
 
         elif pshell == "bn_func":
             proxy.setgeneratesymbol()

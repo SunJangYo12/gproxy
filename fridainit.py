@@ -173,6 +173,26 @@ def setup_hook(script, dick_sym, func_target, fstalking):
             except Exception as e:
                 print(f"{func_name} >>>>>>> {e}")
 
+def setup_hooktree_r2(pfuncs, pbase):
+    result = []
+    with open(pfuncs) as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+
+            parts = line.split()
+            addr = hex(pbase + int(parts[0], 0) )
+            name = parts[1] if len(parts) > 1 else None
+
+            out = {
+                "address": addr,
+                "name": name,
+                "type": "function"
+            }
+            result.append(out)
+
+    return result
 
 
 class TraceColorizer:
@@ -511,31 +531,35 @@ def main():
 
                 elif in_swsym == "r2":
                     print("[+] Using radare2 symbol.")
-                    print("[+] r2 -e scr.color=0 -A -q -c 'afl' libname.so | awk '{print $1, "libname.so!"$4}' > funcs.txt\n")
+                    print("[+] r2 -e scr.color=0 -A -q -c 'afl' libname.so | awk '{print $1, libname.so!$4}' > funcs.txt\n")
 
-                    pfuncs = input(">> Path funcs.txt default: (/tmp/funcs.txt) ")
-                    pbase = input(">> Base lib: ")
-                    pbase = int(pbase, 0)
+                    p_rec = input(">> Single/path-recursive? s/<path>: ")
 
-                    if pfuncs == "":
-                        pfuncs = "/tmp/funcs.txt"
+                    if p_rec != "s":
 
-                    with open(pfuncs) as f:
-                        for line in f:
-                            line = line.strip()
-                            if not line:
+                        for f in os.listdir(p_rec):
+                            pbase = script.exports_sync.getbase(f)
+
+                            print(f"[+] Processing: {pbase} ({f})")
+
+                            if pbase == -1:
+                                print(f"[+] Fail")
                                 continue
 
-                            parts = line.split()
-                            addr = hex(pbase + int(parts[0], 0) )
-                            name = parts[1] if len(parts) > 1 else None
+                            proc = setup_hooktree_r2(f"{p_rec}/{f}", int(pbase, 0))
 
-                            out = {
-                                "address": addr,
-                                "name": name,
-                                "type": "function"
-                            }
-                            dick_sym.append(out)
+                            dick_sym.extend(proc) #tidak nested list
+
+                    else:
+                        pfuncs = input(">> Path funcs.txt default: (/tmp/funcs.txt) ")
+                        pbase = input(">> Base lib: ")
+                        pbase = int(pbase, 0)
+
+                        if pfuncs == "":
+                            pfuncs = "/tmp/funcs.txt"
+
+                        dick_sym = setup_hooktree_r2(pfuncs, pbase)
+
 
 
                 elif in_swsym == "bn":

@@ -811,6 +811,15 @@ class FuzzerKu
                }
 
             },
+            getbase: (xlib) => {
+               const lib = xlib.split(".txt")
+
+               try{
+                   return Module.getBaseAddress(lib[0])
+               } catch(e) {
+                   return -1
+               }
+            },
             reshelljava: (sip, sport) => {
                this.reverseShellJava(sip, sport);
             },

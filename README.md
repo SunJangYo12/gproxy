@@ -559,7 +559,7 @@ Thread 18847
                └─fcn.0000dddc
 
 ```
-# TIPS
+**TIPS
 update trace tree in ui binja
 ```
 1. buka apk saat idle
@@ -567,4 +567,36 @@ update trace tree in ui binja
 3. klik kanan> Coloring All
 4. buka fitur apknya, misal di tab message
 5. amati yang tidak berwarna berarti itu fungsi yang menangani message
+```
+trace lebih dari satu module di dalam folder
+```
+$ ls /tes/lib
+libwhatsapp.so
+libabc.so
+...
+$ bash r2-generate.sh
+$ cp -R /tes/lib/zout /tmp
+
+>> tr
+[+] Agent @ Getting modules...
+[+] Send to binja...
+[+] Done.
+
+>> Module> zzzzz
+
+>> Dump symbol address? frida/bn/r2: > r2
+[+] Using radare2 symbol.
+[+] r2 -e scr.color=0 -A -q -c 'afl' libname.so | awk '{print $1, libname.so!$4}' > funcs.txt
+
+>> Single/path-recursive? s/<path>: /tmp/zout
+[+] Processing: 0x7f5e36b000 (libar-bundle3.so.txt)
+[+] Processing: -1 (libar-bundle4.so.txt)
+[+] Fail
+[+] Processing: 0x7f57e7e000 (libaom.so.txt)
+[+] Processing: 0x7f5dfe1000 (libar-bundle2.so.txt)
+[+] Processing: -1 (libandroidx.graphics.path.so.txt)
+[+] Fail
+[!] big Symbol, nothing for show.
+
+>> zzzzz> symbol> all-tree
 ```

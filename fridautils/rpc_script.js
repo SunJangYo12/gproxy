@@ -571,10 +571,17 @@ class FuzzerKu
 
                this.logDebug("send", output, "et");
             },
-            enumsymbolstrace: (module) => {
+            enumsymbolstrace: (module, sw) => {
                this.logDebug("send", "Agent @ Getting symbols to hook...", "info");
 
-               const dick_sym = Module.enumerateSymbols(module)
+               let dick_sym;
+
+               if (sw == "s")
+                   dick_sym = Module.enumerateSymbolsSync(module)
+               else if (sw == "i")
+                   dick_sym = Module.enumerateImportsSync(module)
+               else if (sw == "e")
+                   dick_sym = Module.enumerateExportsSync(module)
 
                return dick_sym
 

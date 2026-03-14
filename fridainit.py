@@ -10,6 +10,7 @@ import xmlrpc.client
 import threading
 import json
 from collections import Counter
+import subprocess
 
 proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 
@@ -164,7 +165,19 @@ def setup_hook(script, dick_sym, func_target, fstalking):
                         script.exports_sync.setuphook(data, -1)
 
                 elif func_target == "zzall-tree": #all-tree
-                    script.exports_sync.setuphook(data, -2)
+
+                    name = data.get("name")
+
+                    if name.startswith("_Z"):
+                        result = subprocess.check_output(["c++filt", name])
+                        name = result.decode().strip()
+
+                    zdata = {
+                       "type": data.get("type"),
+                       "name": name,
+                       "address": data.get("address")
+                    }
+                    script.exports_sync.setuphook(zdata, -2)
 
                 else: #all
                     if not func_target:
@@ -533,11 +546,13 @@ def main():
 
                 if in_swsym == "frida":
                     print("[+] Using frida symbol.")
-                    dick_sym = script.exports_sync.enumsymbolstrace(in_module)
+                    sw_frida = input(">> Symbol/Import/Export? s/i/e: ")
+
+                    dick_sym = script.exports_sync.enumsymbolstrace(in_module, sw_frida)
 
                 elif in_swsym == "r2":
                     print("[+] Using radare2 symbol.")
-                    print("[+] r2 -e scr.color=0 -A -q -c 'afl' libname.so | awk '{print $1, libname.so!$4}' > funcs.txt\n")
+                    # $ r2 -e scr.color=0 -A -q -c 'afl' libname.so | awk '{print $1, "libname.so!"$4}' > funcs.txt
 
                     p_rec = input(">> Single/path-recursive? s/<path>: ")
 

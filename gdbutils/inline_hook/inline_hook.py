@@ -1,38 +1,3 @@
-
-
-
-#1. Copy instruksi awal fungsi a sampai minimal 12 byte ke trampoline (tanpa memotong instruksi)
-#2. Patch awal fungsi a dengan jump ke hook
-#3. Saat fungsi a dipanggil:
-#   → eksekusi dialihkan ke hook
-#   → hook menjalankan shellcode (misalnya print)
-#   → lalu lompat ke trampoline
-#4. Trampoline:
-#   → menjalankan instruksi asli yang tadi dicopy
-#   → lalu lompat ke a + size
-#   → sehingga fungsi a lanjut normal
-
-
-#=============
-# USAGE:
-#(gdb) source ~/.binaryninja/plugins/gproxy/gdbutils/inline_hook/inline_hook.py
-#(gdb) scgen
-#[+] shellcode @ 0x7ffff7fc9000
-#[+] buffer @ 0x7ffff7fc9080
-#[+] ready to call
-#(gdb) set $sc = 0x7ffff7fc9000
-#(gdb) call (void(*)())$sc()
-#HELLO
-#$4 = (void (*)()) 0x7
-#(gdb) set $my_handler = $sc
-#(gdb) hooka
-#(gdb) c
-#Continuing.
-#HELLO
-#Function A
-#HELLO
-
-
 import gdb
 import struct
 import re
@@ -43,49 +8,6 @@ def parse_addr(line):
         raise Exception(f"Parse error: {line}")
     return int(m.group(1), 16)
 
-
-class ShellcodeGen(gdb.Command):
-    def __init__(self):
-        super(ShellcodeGen, self).__init__("scgen", gdb.COMMAND_USER)
-
-    def invoke(self, arg, from_tty):
-        inferior = gdb.selected_inferior()
-
-        # ====== STRING ======
-        msg = b"HELLO\n\x00"
-
-        # ====== malloc ======
-        size = 0x100
-        addr = int(gdb.parse_and_eval(f"(void*)malloc({size})"))
-
-        # RWX
-        gdb.execute(f"call (int)mprotect((void*)({addr} & ~0xfff), 0x1000, 7)")
-
-        print(f"[+] shellcode @ {hex(addr)}")
-
-        # buffer string
-        buf_addr = addr + 0x80
-        inferior.write_memory(buf_addr, msg)
-
-        # ====== SHELLCODE ======
-        sc = b""
-
-        # write(1, buf, len)
-        sc += b"\x48\xC7\xC0\x01\x00\x00\x00"          # mov rax, 1
-        sc += b"\x48\xC7\xC7\x01\x00\x00\x00"          # mov rdi, 1
-        sc += b"\x48\xBE" + struct.pack("<Q", buf_addr)  # mov rsi, buf
-        sc += b"\x48\xC7\xC2" + struct.pack("<I", len(msg))  # mov rdx, len
-        sc += b"\x0F\x05"                              # syscall
-        sc += b"\xC3"                                  # ret
-
-        # write shellcode
-        inferior.write_memory(addr, sc)
-
-        print(f"[+] buffer @ {hex(buf_addr)}")
-        print("[+] ready to call")
-
-        # expose ke gdb
-        gdb.execute(f"set $sc = (void*){addr}")
 
 
 
@@ -108,20 +30,69 @@ class InlineHook(gdb.Command):
             next_addr = parse_addr(lines[1])
 
             size = next_addr - cur_addr
-            #print(f"  {lines[0].strip()} (size={size})")
+            print(f"  {lines[0].strip()} (size={size})")
             total += size
             cur = next_addr
 
         print(f"[+] total size = {total}")
         return total
 
+    def make_handler(self):
+        inferior = gdb.selected_inferior()
+
+        # ====== malloc ======
+        size = 0x100
+        addr = int(gdb.parse_and_eval(f"(void*)malloc({size})"))
+        gdb.execute(f"call (int)mprotect((void*)({addr} & ~0xfff), 0x1000, 7)")
+        print(f"[+] shellcode @ {hex(addr)}")
+
+        # ====== SHELLCODE ======
+        sc = b""
+        # rdi = meta (dipass dari hook)
+        sc += b"\x48\x8B\x77\x10"              # mov rsi, [rdi+0x10]  ; string_ptr
+        sc += b"\x48\x8B\x57\x18"              # mov rdx, [rdi+0x18]  ; string_len
+        sc += b"\x48\xC7\xC0\x01\x00\x00\x00"  # mov rax, 1 (write)
+        sc += b"\x48\xC7\xC7\x01\x00\x00\x00"  # mov rdi, 1 (stdout)
+        sc += b"\x0F\x05"                      # syscall
+        sc += b"\xC3"                          # ret
+
+        # write shellcode
+        inferior.write_memory(addr, sc)
+
+        print("[+] ready to call")
+
+        # expose ke gdb
+        gdb.execute(f"set $my_handler = (void*){addr}")
+
+
+
+    def mydata(self, inferior, id, a, func_name):
+        meta = int(gdb.parse_and_eval("(void*)malloc(0x20)"))
+        gdb.execute(f"call (int)mprotect((void*)({meta} & ~0xfff), 0x1000, 7)")
+
+        print(f"[+] mydata @ {hex(meta)}")
+
+        # alloc string
+        str_addr = int(gdb.parse_and_eval(f"(void*)malloc({len(func_name)})"))
+        inferior.write_memory(str_addr, func_name)
+
+        print(f"[+] string @ {hex(str_addr)}")
+
+        # isi struct
+        inferior.write_memory(meta + 0x00, struct.pack("<Q", id))
+        inferior.write_memory(meta + 0x08, struct.pack("<Q", a))
+        inferior.write_memory(meta + 0x10, struct.pack("<Q", str_addr))  # pointer
+        inferior.write_memory(meta + 0x18, struct.pack("<Q", len(func_name)))  # length
+
+        return meta
+
 
     def invoke(self, arg, from_tty):
         inferior = gdb.selected_inferior()
 
-        # ambil alamat fungsi a
-        a = int(gdb.parse_and_eval("&a"))
-        print(f"[+] a @ {hex(a)}")
+        # ambil alamat fungsi
+        a = int(f"{arg}", 0)
+        print(f"[+] target @ {hex(a)}")
 
         # hitung size instruksi
         size = self.calc_size(a)
@@ -148,9 +119,13 @@ class InlineHook(gdb.Command):
         gdb.execute(f"call (int)mprotect((void*)({hook} & ~0xfff), 0x1000, 7)")
         print(f"[+] hook @ {hex(hook)}")
 
+        mydata = self.mydata(inferior, 1, a, b"HIT tesname\n")
+
+        self.make_handler()
         handler = int(gdb.parse_and_eval("$my_handler"))
 
         hook_code = (
+            b"\x48\xBF" + struct.pack("<Q", mydata) +   # mov rdi, mydata
             b"\x48\xB8" + struct.pack("<Q", handler) +  # mov rax, handler
             b"\xFF\xD0" +                               # call rax
             b"\x48\xB8" + struct.pack("<Q", tramp) +    # mov rax, tramp
@@ -178,4 +153,3 @@ class InlineHook(gdb.Command):
 
 # register
 InlineHook()
-ShellcodeGen()

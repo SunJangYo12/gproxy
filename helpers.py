@@ -75,6 +75,9 @@ class RefreshUiTask(BackgroundTaskThread):
             elif self.sw == "gdb_func":
                 SIGNALS.gdb_updated.emit()
 
+            elif self.sw == "gdb_func_dprintf":
+                SIGNALS.gdb_updated_dprintf.emit()
+
 
             time.sleep(self.delay)
 

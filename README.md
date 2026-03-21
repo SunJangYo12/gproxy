@@ -263,6 +263,13 @@ View desc:
     3 => berapa kali dipanggil   
 ```
 
+# Trace function ringan 
+```
+(gdb) cmdtracefunc generate
+(gdb) cmdtracefunc dprintf
+(gdb) c
+```
+
 
 # Frida function trace
 ```

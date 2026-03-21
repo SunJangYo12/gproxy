@@ -117,6 +117,7 @@ class GlobalState:
 class GlobalSignals(QObject):
     state_updated = Signal()
     gdb_updated = Signal()
+    gdb_updated_dprintf = Signal()
     gdb_updated_bb = Signal()
     gdb_updated_regs = Signal()
     gdb_updated_stacks = Signal()

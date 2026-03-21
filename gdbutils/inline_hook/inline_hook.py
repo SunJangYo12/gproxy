@@ -8,10 +8,6 @@ def parse_addr(line):
         raise Exception(f"Parse error: {line}")
     return int(m.group(1), 16)
 
-
-
-
-
 class InlineHook(gdb.Command):
     def __init__(self):
         super(InlineHook, self).__init__("hooka", gdb.COMMAND_USER)
@@ -25,6 +21,11 @@ class InlineHook(gdb.Command):
         while total < min_size:
             out = gdb.execute(f"x/2i {cur}", to_string=True)
             lines = out.strip().split("\n")
+
+            if "rip+" in lines[0]:
+                print("[!] ERROR: rip-relative detected, stop copy")
+                total = -1
+                break
 
             cur_addr = parse_addr(lines[0])
             next_addr = parse_addr(lines[1])
@@ -87,15 +88,17 @@ class InlineHook(gdb.Command):
         return meta
 
 
-    def invoke(self, arg, from_tty):
+    def processing(self, arg, name):
         inferior = gdb.selected_inferior()
 
         # ambil alamat fungsi
         a = int(f"{arg}", 0)
-        print(f"[+] target @ {hex(a)}")
+        print(f"\n[+] target @ {name}")
 
         # hitung size instruksi
         size = self.calc_size(a)
+        if size == -1:
+            return
 
         # malloc tramp
         tramp = int(gdb.parse_and_eval("(void*)malloc(0x100)"))
@@ -119,7 +122,8 @@ class InlineHook(gdb.Command):
         gdb.execute(f"call (int)mprotect((void*)({hook} & ~0xfff), 0x1000, 7)")
         print(f"[+] hook @ {hex(hook)}")
 
-        mydata = self.mydata(inferior, 1, a, b"HIT tesname\n")
+        name = "[+] HIT "+name+"\n"
+        mydata = self.mydata(inferior, 1, a, name.encode())
 
         self.make_handler()
         handler = int(gdb.parse_and_eval("$my_handler"))
@@ -150,6 +154,27 @@ class InlineHook(gdb.Command):
         inferior.write_memory(a, patch)
 
         print("[+] patched a → hook")
+
+
+    def invoke(self, arg, from_tty):
+        base = int(arg, 0)
+
+        with open("/tmp/funcs.txt") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+
+                parts = line.split()
+                addr = hex(base + int(parts[0], 0) )
+                #addr = parts[0]
+                name = parts[1] if len(parts) > 1 else None
+
+                #print(f"{name} : {addr}")
+                self.processing(addr, name)
+
+
+
 
 # register
 InlineHook()

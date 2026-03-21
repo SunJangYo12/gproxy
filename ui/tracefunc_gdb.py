@@ -488,6 +488,7 @@ class FuncListDockWidget(QWidget, DockContextHandler):
 
 
         SIGNALS.gdb_updated.connect(self.refresh_from_global)
+        SIGNALS.gdb_updated_dprintf.connect(self.refresh_from_global_dprintf)
 
 
         tree_widget = QTreeWidget()
@@ -515,6 +516,24 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         f.setStyleHint(QFont.Monospace)
         f.setBold(True)
         #self.font = f
+
+    def refresh_from_global_dprintf(self):
+        self.tree_widget.clear()
+
+        with open("/tmp/gdb_dprintf.json") as f:
+            data = json.load(f)
+
+        self.tree_widget.headerItem().setText(0, "Function List dprintf  %d" %len(data) )
+
+        for addr, content in data.items():
+            parent = QTreeWidgetItem(self.tree_widget)
+
+            parent.setText(0, "%s  %s" % (content["count"], content["name"]) )
+            parent.setFont(0, self.font)
+            parent.setData(0, Qt.UserRole, addr )
+
+
+
 
     def refresh_from_global(self):
         self.tree_widget.clear()

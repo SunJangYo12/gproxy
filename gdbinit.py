@@ -3,7 +3,7 @@ import xmlrpc.client
 import base64
 import json
 import re
-
+import time, threading
 import sys,os
 
 MYFILE = os.path.abspath(os.path.expanduser(__file__))
@@ -331,6 +331,43 @@ class TraceBreakpoint(gdb.Breakpoint):
         return gdb_stop
 
 
+count_stats = {}
+running = True
+
+
+class CountBP(gdb.Breakpoint):
+    def __init__(self, addr, name):
+        super().__init__(f"*{addr}")
+        self.addr = addr
+        self.name = name
+
+    def stop(self):
+        key = self.addr
+
+        if key not in count_stats:
+            count_stats[key] = {
+                "name": self.name,
+                "count": 0
+            }
+
+        count_stats[key]["count"] += 1
+        return False
+def reporter():
+    while running:
+        time.sleep(1)
+
+        with open("/tmp/gdb_dprintf.json", "w") as f:
+            json.dump(count_stats, f, indent=2)
+
+        #if count_stats:
+        #    print("=== stats ===")
+        #    for k, v in count_stats.items():
+        #        print(f"{k}: {v}")
+        #    print("=============")
+
+
+
+
 class LoadTrace(gdb.Command):
     def __init__(self):
         super(LoadTrace, self).__init__("cmdtracefunc", gdb.COMMAND_USER)
@@ -340,6 +377,7 @@ class LoadTrace(gdb.Command):
         bn = False
         hook = False
         bblock = False
+        dprintf = False
 
         if arg == "run":
             print("[+] starting traces..")
@@ -358,6 +396,15 @@ class LoadTrace(gdb.Command):
             print("[+] starting traces..")
             bn = True
             hook = True
+
+        elif arg == "dprintf":
+            print("[+] starting traces (dprintf)..")
+            dprintf = True
+            t = threading.Thread(target=reporter, daemon=True)
+            t.start()
+
+            proxy.settofrida_func("gdb_func_dprintf", "refresh")
+
 
         elif arg == "generate":
             proc = proxy.setgeneratesymbol()
@@ -404,6 +451,11 @@ class LoadTrace(gdb.Command):
                     # Pasang trace-breakpoint
                     if bblock:
                         TraceBreakpoint(addr, name, bn, hook, bb=True)
+
+                    elif dprintf:
+                        #gdb.execute(f'dprintf *{addr}, "{name}\\n"')
+                        CountBP(addr, name)
+
                     else:
                         TraceBreakpoint(addr, name, bn, hook)
 

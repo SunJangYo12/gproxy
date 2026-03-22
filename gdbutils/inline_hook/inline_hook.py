@@ -38,33 +38,6 @@ class InlineHook(gdb.Command):
         print(f"[+] total size = {total}")
         return total
 
-    def make_handler(self):
-        inferior = gdb.selected_inferior()
-
-        # ====== malloc ======
-        size = 0x100
-        addr = int(gdb.parse_and_eval(f"(void*)malloc({size})"))
-        gdb.execute(f"call (int)mprotect((void*)({addr} & ~0xfff), 0x1000, 7)")
-        print(f"[+] shellcode @ {hex(addr)}")
-
-        # ====== SHELLCODE ======
-        sc = b""
-        # rdi = meta (dipass dari hook)
-        sc += b"\x48\x8B\x77\x10"              # mov rsi, [rdi+0x10]  ; string_ptr
-        sc += b"\x48\x8B\x57\x18"              # mov rdx, [rdi+0x18]  ; string_len
-        sc += b"\x48\xC7\xC0\x01\x00\x00\x00"  # mov rax, 1 (write)
-        sc += b"\x48\xC7\xC7\x01\x00\x00\x00"  # mov rdi, 1 (stdout)
-        sc += b"\x0F\x05"                      # syscall
-        sc += b"\xC3"                          # ret
-
-        # write shellcode
-        inferior.write_memory(addr, sc)
-
-        print("[+] ready to call")
-
-        # expose ke gdb
-        gdb.execute(f"set $my_handler = (void*){addr}")
-
 
 
     def mydata(self, inferior, id, a, func_name):
@@ -86,6 +59,98 @@ class InlineHook(gdb.Command):
         inferior.write_memory(meta + 0x18, struct.pack("<Q", len(func_name)))  # length
 
         return meta
+
+
+
+    def make_handler(self, tramp, mydata):
+        inferior = gdb.selected_inferior()
+
+        # ====== malloc handler ======
+        size = 0x200
+        addr = int(gdb.parse_and_eval(f"(void*)malloc({size})"))
+        gdb.execute(f"call (int)mprotect((void*)({addr} & ~0xfff), 0x1000, 7)")
+        print(f"[+] handler @ {hex(addr)}")
+
+        # ====== malloc logic (onEnter) ======
+        logic = int(gdb.parse_and_eval("(void*)malloc(0x100)"))
+        gdb.execute(f"call (int)mprotect((void*)({logic} & ~0xfff), 0x1000, 7)")
+        print(f"[+] logic @ {hex(logic)}")
+
+        # == write HOOK HIT==
+        #sc = b""
+        #sc += b"\x48\xC7\xC0\x01\x00\x00\x00"  # mov rax, 1 (write)
+        #sc += b"\x48\xC7\xC7\x01\x00\x00\x00"  # mov rdi, 1 (stdout)
+        #sc += b"\x48\x8D\x35\x0A\x00\x00\x00"  # lea rsi, [rip+0xa]
+        #sc += b"\x48\xC7\xC2\x0E\x00\x00\x00"  # mov rdx, len
+        #sc += b"\x0F\x05"                      # syscall
+        #sc += b"\xC3"                          # ret
+        #sc += b"HOOK HIT!\n"
+
+
+        sc = b""
+        sc += b"\x48\x8B\x77\x10"  # mov rsi, [rdi+0x10]
+        sc += b"\x48\x8B\x57\x18"  # mov rdx, [rdi+0x18]
+        sc += b"\x48\xC7\xC0\x01\x00\x00\x00" # mov rax, 1 (sys_write)
+        sc += b"\x48\xC7\xC7\x01\x00\x00\x00" # mov rdi, 1 (stdout)
+        sc += b"\x0F\x05" # syscall
+        sc += b"\xC3" # ret
+        inferior.write_memory(logic, sc)
+
+
+
+
+        # ====== HANDLER ======
+        handler = b""
+
+        # --- SAVE ---
+        handler += b"\x9C"                      # pushfq
+        handler += b"\x50"                      # push rax
+        handler += b"\x53"                      # push rbx
+        handler += b"\x51"                      # push rcx
+        handler += b"\x52"                      # push rdx
+        handler += b"\x56"                      # push rsi
+        handler += b"\x57"                      # push rdi
+        handler += b"\x55"                      # push rbp
+        handler += b"\x41\x50"                  # push r8
+        handler += b"\x41\x51"                  # push r9
+        handler += b"\x41\x52"                  # push r10
+        handler += b"\x41\x53"                  # push r11
+
+        handler += b"\x48\x83\xEC\x08"          # sub rsp, 8 (align)
+
+
+
+        # --- CALL LOGIC ---
+        handler += b"\x48\xBF" + struct.pack("<Q", mydata) # mov rdi, mydata
+        handler += b"\x48\xB8" + struct.pack("<Q", logic)
+        handler += b"\xFF\xD0"                  # call rax
+
+        handler += b"\x48\x83\xC4\x08"          # add rsp, 8
+
+        # --- RESTORE ---
+        handler += b"\x41\x5B"                  # pop r11
+        handler += b"\x41\x5A"                  # pop r10
+        handler += b"\x41\x59"                  # pop r9
+        handler += b"\x41\x58"                  # pop r8
+        handler += b"\x5D"                      # pop rbp
+        handler += b"\x5F"                      # pop rdi
+        handler += b"\x5E"                      # pop rsi
+        handler += b"\x5A"                      # pop rdx
+        handler += b"\x59"                      # pop rcx
+        handler += b"\x5B"                      # pop rbx
+        handler += b"\x58"                      # pop rax
+        handler += b"\x9D"                      # popfq
+
+        # --- JMP TRAMPOLINE ---
+        handler += b"\x48\xB8" + struct.pack("<Q", tramp)
+        handler += b"\xFF\xE0"
+
+        # write handler
+        inferior.write_memory(addr, handler)
+
+        print("[+] handler ready")
+
+        return addr
 
 
     def processing(self, arg, name):
@@ -116,33 +181,24 @@ class InlineHook(gdb.Command):
         print(f"[+] trampoline ready → {hex(ret)}")
 
 
+        name = "[+] HIT "+name+"\n"
+        mydata = self.mydata(inferior, 1, a, name.encode())
+
+
+        handler = self.make_handler(tramp, mydata)
+
+        hook_code = (
+            b"\x48\xB8" + struct.pack("<Q", handler) +  # mov rax, handler
+            b"\xFF\xE0"                                 # jmp rax
+        )
 
         # malloc hook
         hook = int(gdb.parse_and_eval("(void*)malloc(0x100)"))
         gdb.execute(f"call (int)mprotect((void*)({hook} & ~0xfff), 0x1000, 7)")
         print(f"[+] hook @ {hex(hook)}")
 
-        name = "[+] HIT "+name+"\n"
-        mydata = self.mydata(inferior, 1, a, name.encode())
-
-        self.make_handler()
-        handler = int(gdb.parse_and_eval("$my_handler"))
-
-        hook_code = (
-            b"\x48\xBF" + struct.pack("<Q", mydata) +   # mov rdi, mydata
-            b"\x48\xB8" + struct.pack("<Q", handler) +  # mov rax, handler
-            b"\xFF\xD0" +                               # call rax
-            b"\x48\xB8" + struct.pack("<Q", tramp) +    # mov rax, tramp
-            b"\xFF\xE0"                                 # jmp rax
-        )
-
-
-        jmp_tramp = b"\x48\xB8" + struct.pack("<Q", tramp) + b"\xFF\xE0"
-
         # tulis shellcode + string + jmp_tramp
         inferior.write_memory(hook, hook_code)
-        inferior.write_memory(hook + len(hook_code), jmp_tramp)
-
         print(f"[+] hook ready")
 
 

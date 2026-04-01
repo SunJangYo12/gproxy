@@ -338,7 +338,6 @@ class TraceBreakpoint(gdb.Breakpoint):
 count_stats = {}
 running = True
 
-
 class CountBP(gdb.Breakpoint):
     def __init__(self, addr, name):
         super().__init__(f"*{addr}")

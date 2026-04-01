@@ -175,13 +175,21 @@ class AddressHuman:
         addrs = s.split("-")
         return map(lambda x: int(x, 16), addrs)
 
+
+    def is_remote(self):
+        out = gdb.execute("info target", to_string=True)
+        return "Remote" in out
+
     def process_lookup_address(self, address: int):
         pid = gdb.selected_inferior().pid
         maps = []
+        rmaps = f"/proc/{pid}/maps"
 
-        gdb.execute(f"remote get /proc/{pid}/maps /tmp/rmaps", to_string=True)
+        if self.is_remote():
+            gdb.execute(f"remote get /proc/{pid}/maps /tmp/rmaps", to_string=True)
+            rmaps = "/tmp/rmaps"
 
-        with open(f"/tmp/rmaps", "r") as fd:
+        with open(rmaps, "r") as fd:
             for line in fd:
                 line = line.strip()
                 addr, perm, off, _, rest = line.split(" ", 4)

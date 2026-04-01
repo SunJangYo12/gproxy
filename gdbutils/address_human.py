@@ -141,9 +141,15 @@ class AddressHuman:
                 continue
 
             blobs = [x.strip() for x in line.split(" ")]
+
             addr_start = int(blobs[0], 16)
             addr_end = int(blobs[2], 16)
-            section_name = blobs[4]
+
+            try:
+                section_name = blobs[4]
+            except:
+                section_name = "zzz"
+
 
             if len(blobs) == 7:
                 filename = blobs[6]

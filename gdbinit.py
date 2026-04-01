@@ -5,18 +5,22 @@ import json
 import re
 import time, threading
 import sys,os
+import datetime
 
 MYFILE = os.path.abspath(os.path.expanduser(__file__))
 if os.path.islink(MYFILE):
     MYFILE = os.readlink(MYFILE)
 sys.path.insert(0, os.path.dirname(MYFILE) + "/gdbutils")
+sys.path.insert(0, os.path.dirname(MYFILE))
 
+from settings import Settings
 
 import trace_memory
 import kernel_cmd
 import detect_struct
 import fuzzer_ptrace
 from address_human import AddressHuman, StackHuman, ArchType
+
 
 proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 
@@ -341,9 +345,52 @@ class CountBP(gdb.Breakpoint):
         self.addr = addr
         self.name = name
 
-    def stop(self):
-        key = self.addr
+    def gen_registers(self, func_name):
+        func_name_dec = base64.b64decode(func_name).decode()
 
+        if self.name == func_name_dec:
+
+            arch = ArchType()
+            arch.get_ptr()
+
+            addrHuman = AddressHuman()
+            result = []
+            print(f"\n{func_name} ({func_name_dec})")
+
+            for reg in addrHuman.collect_registers():
+                val = reg.split("=")
+                addr = int(val[1], 0)
+
+                addrHuman.lookup_address(addr)
+                label = addrHuman.value["label"]
+                raddr = addrHuman.value["addr"]
+
+                val_reg = StackHuman().get_value(addrHuman, arch, addr)
+                val_reg = val_reg.encode().hex()
+                print(f"{val[0]} = {arch.format_address(addr)} {label}  {val_reg}")
+
+                result.append(f"{val[0]}={arch.format_address(addr)}{label} {val_reg}\n")
+
+            folder_name = "/dev/shm/"+func_name
+
+            waktu = datetime.datetime.now()
+            waktu = waktu.strftime("%Y-%m-%d-%H:%M:%S")
+
+            if not os.path.exists(folder_name):
+                os.makedirs(folder_name)
+
+            with open(f"{folder_name}/{waktu}.txt", "w") as fd:
+                fd.write("".join(result))
+
+    def stop(self):
+
+        settings = Settings()
+
+        for name_base64 in settings.get("show_reg"):
+            self.gen_registers(name_base64)
+
+
+        key = self.addr
         if key not in count_stats:
             count_stats[key] = {
                 "name": self.name,
@@ -352,6 +399,7 @@ class CountBP(gdb.Breakpoint):
 
         count_stats[key]["count"] += 1
         return False
+
 def reporter():
     while running:
         time.sleep(1)
@@ -397,6 +445,11 @@ class LoadTrace(gdb.Command):
             bn = True
             hook = True
 
+        elif arg == "zzz":
+            s = Settings()
+            for i in s.get("show_reg"):
+                print(i)
+
         elif arg == "dprintf":
             print("[+] starting traces (dprintf)..")
             dprintf = True
@@ -417,6 +470,7 @@ class LoadTrace(gdb.Command):
         else:
             print("\nImportant: binaryninja harus di rebase mengikuti base address gdb")
             print("Usage: cmdtracefunc generate <= generate function addr from binja")
+            print("Usage: cmdtracefunc dprintf <= trace with dprintf(old) now using breakpoint")
             print("Usage: cmdtracefunc run <= setup breakpoint, continue for start")
             print("Usage: cmdtracefunc run-bn")
             print("          setup breakpoint, continue for start, with send to binaryninja")

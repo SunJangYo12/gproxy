@@ -23,6 +23,9 @@ from PySide2.QtWidgets import (
 )
 from ..data_global import SIGNALS, GLOBAL
 from ..helpers import RefreshUiTask
+from ..settings import Settings
+from .dialog_gdb_register import DialogRegistersDprintf
+
 import base64
 import time
 
@@ -511,6 +514,8 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         self.func_name = None
         self.func_addr = None
 
+        self.sw_menu = ""
+
         self.font = getMonospaceFont(self)
         f = QFont("Monospace")
         f.setStyleHint(QFont.Monospace)
@@ -519,6 +524,8 @@ class FuncListDockWidget(QWidget, DockContextHandler):
 
     def refresh_from_global_dprintf(self):
         self.tree_widget.clear()
+
+        self.sw_menu = "dprintf"
 
         with open("/tmp/gdb_dprintf.json") as f:
             data = json.load(f)
@@ -581,10 +588,6 @@ class FuncListDockWidget(QWidget, DockContextHandler):
             else:
                 parent.setForeground(0, QColor("white"))
 
-
-
-
-
     def shouldBeVisible(self, view_frame):
         if view_frame is None:
             return False
@@ -616,13 +619,19 @@ class FuncListDockWidget(QWidget, DockContextHandler):
 
 
         if item.parent() is None:
-            menu.addAction("Copy")
-            menu.addAction("Show Registers")
-            menu.addAction("Show Stack")
-            menu.addAction("Update ui")
-            menu.addAction("Hook2dump")
-            menu.addAction("Generate Block")
-            menu.addAction("Clear All")
+
+            if self.sw_menu == "dprintf":
+                menu.addAction("Copy")
+                menu.addAction("Gen Registers")
+                menu.addAction("Update ui dprintf")
+            else:
+                menu.addAction("Copy")
+                menu.addAction("Show Registers")
+                menu.addAction("Show Stack")
+                menu.addAction("Update ui")
+                menu.addAction("Hook2dump")
+                menu.addAction("Generate Block")
+                menu.addAction("Clear All")
 
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
@@ -637,8 +646,31 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
 
+        elif action == "Gen Registers":
+            func_name = item.text(0).split("  ")[1]
+            bfunc = base64.b64encode(func_name.encode()).decode()
+
+            s = Settings()
+            s.add_to_list("show_reg", bfunc)
+            item.setForeground(0, QColor("yellow"))
+
+            try:
+                self.dlg = DialogRegistersDprintf(title=bfunc)
+                self.dlg.resize(370, 430) # w,h
+                self.dlg.show()
+                self.dlg.raise_()
+                self.dlg.activateWindow()
+            except:
+                pass
+
+
+
         elif action == "Update ui":
             rui_task = RefreshUiTask(self.bv, "gdb_func")
+            rui_task.start()
+
+        elif action == "Update ui dprintf":
+            rui_task = RefreshUiTask(self.bv, "gdb_func_dprintf")
             rui_task.start()
 
         elif action == "Show Stack":

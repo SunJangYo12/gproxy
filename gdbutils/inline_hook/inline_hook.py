@@ -16,14 +16,14 @@ class InlineHook(gdb.Command):
         total = 0
         cur = a
 
-        print("[+] calculating instruction size...")
+        #print("[+] calculating instruction size...")
 
         while total < min_size:
             out = gdb.execute(f"x/2i {cur}", to_string=True)
             lines = out.strip().split("\n")
 
             if "rip+" in lines[0]:
-                print("[!] ERROR: rip-relative detected, stop copy")
+                print(f"[!] ERROR: rip-relative({lines[0]})")
                 total = -1
                 break
 
@@ -31,11 +31,11 @@ class InlineHook(gdb.Command):
             next_addr = parse_addr(lines[1])
 
             size = next_addr - cur_addr
-            print(f"  {lines[0].strip()} (size={size})")
+            #print(f"  {lines[0].strip()} (size={size})")
             total += size
             cur = next_addr
 
-        print(f"[+] total size = {total}")
+        #print(f"[+] total size = {total}")
         return total
 
 
@@ -44,13 +44,13 @@ class InlineHook(gdb.Command):
         meta = int(gdb.parse_and_eval("(void*)malloc(0x20)"))
         gdb.execute(f"call (int)mprotect((void*)({meta} & ~0xfff), 0x1000, 7)")
 
-        print(f"[+] mydata @ {hex(meta)}")
+        #print(f"[+] mydata @ {hex(meta)}")
 
         # alloc string
         str_addr = int(gdb.parse_and_eval(f"(void*)malloc({len(func_name)})"))
         inferior.write_memory(str_addr, func_name)
 
-        print(f"[+] string @ {hex(str_addr)}")
+        #print(f"[+] string @ {hex(str_addr)}")
 
         # isi struct
         inferior.write_memory(meta + 0x00, struct.pack("<Q", id))
@@ -69,12 +69,12 @@ class InlineHook(gdb.Command):
         size = 0x200
         addr = int(gdb.parse_and_eval(f"(void*)malloc({size})"))
         gdb.execute(f"call (int)mprotect((void*)({addr} & ~0xfff), 0x1000, 7)")
-        print(f"[+] handler @ {hex(addr)}")
+        #print(f"[+] handler @ {hex(addr)}")
 
         # ====== malloc logic (onEnter) ======
         logic = int(gdb.parse_and_eval("(void*)malloc(0x100)"))
         gdb.execute(f"call (int)mprotect((void*)({logic} & ~0xfff), 0x1000, 7)")
-        print(f"[+] logic @ {hex(logic)}")
+        #print(f"[+] logic @ {hex(logic)}")
 
         # == write HOOK HIT==
         #sc = b""
@@ -102,7 +102,7 @@ class InlineHook(gdb.Command):
         # ====== HANDLER ======
         handler = b""
 
-        # --- SAVE ---
+        # --- SAVE REGISTERS ---
         handler += b"\x9C"                      # pushfq
         handler += b"\x50"                      # push rax
         handler += b"\x53"                      # push rbx
@@ -127,7 +127,7 @@ class InlineHook(gdb.Command):
 
         handler += b"\x48\x83\xC4\x08"          # add rsp, 8
 
-        # --- RESTORE ---
+        # --- RESTORE REGISTERS ---
         handler += b"\x41\x5B"                  # pop r11
         handler += b"\x41\x5A"                  # pop r10
         handler += b"\x41\x59"                  # pop r9
@@ -148,7 +148,7 @@ class InlineHook(gdb.Command):
         # write handler
         inferior.write_memory(addr, handler)
 
-        print("[+] handler ready")
+        #print("[+] handler ready")
 
         return addr
 
@@ -167,8 +167,8 @@ class InlineHook(gdb.Command):
 
         # malloc tramp
         tramp = int(gdb.parse_and_eval("(void*)malloc(0x100)"))
-        gdb.execute(f"call (int)mprotect((void*)({tramp} & ~0xfff), 0x1000, 7)")
-        print(f"[+] tramp @ {hex(tramp)}")
+        gdb.execute(f"call (int)mprotect((void*)({tramp} & ~0xfff), 0x1000, 7)", to_string=False)
+        #print(f"[+] tramp @ {hex(tramp)}")
 
         # COPY INSTRUKSI ASLI
         original = inferior.read_memory(a, size)
@@ -178,7 +178,7 @@ class InlineHook(gdb.Command):
         ret = a + size
         jmp_back = b"\x48\xB8" + struct.pack("<Q", ret) + b"\xFF\xE0"
         inferior.write_memory(tramp + size, jmp_back)
-        print(f"[+] trampoline ready → {hex(ret)}")
+        #print(f"[+] trampoline ready → {hex(ret)}")
 
 
         name = "[+] HIT "+name+"\n"
@@ -195,11 +195,11 @@ class InlineHook(gdb.Command):
         # malloc hook
         hook = int(gdb.parse_and_eval("(void*)malloc(0x100)"))
         gdb.execute(f"call (int)mprotect((void*)({hook} & ~0xfff), 0x1000, 7)")
-        print(f"[+] hook @ {hex(hook)}")
+        #print(f"[+] hook @ {hex(hook)}")
 
         # tulis shellcode + string + jmp_tramp
         inferior.write_memory(hook, hook_code)
-        print(f"[+] hook ready")
+        #print(f"[+] hook ready")
 
 
 
@@ -209,7 +209,7 @@ class InlineHook(gdb.Command):
         patch = b"\x48\xB8" + struct.pack("<Q", hook) + b"\xFF\xE0"
         inferior.write_memory(a, patch)
 
-        print("[+] patched a → hook")
+        #print("[+] patched a → hook")
 
 
     def invoke(self, arg, from_tty):

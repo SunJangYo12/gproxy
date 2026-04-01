@@ -268,6 +268,10 @@ View desc:
 (gdb) cmdtracefunc generate
 (gdb) cmdtracefunc dprintf
 (gdb) c
+
+ui binja: klik kanan di function list dprintf> gen registers
+NOTE: untuk awalan window register belum muncul, solusinya klik kanan lagi
+di fungsi yang sama.
 ```
 
 

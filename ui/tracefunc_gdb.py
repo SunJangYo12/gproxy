@@ -25,6 +25,7 @@ from ..data_global import SIGNALS, GLOBAL
 from ..helpers import RefreshUiTask
 from ..settings import Settings
 from .dialog_gdb_register import DialogRegistersDprintf
+from .dialog_gdb_stack import DialogStacksDprintf
 
 import base64
 import time
@@ -514,6 +515,8 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         self.func_name = None
         self.func_addr = None
 
+        self.all_dialog = []
+
         self.sw_menu = ""
 
         self.font = getMonospaceFont(self)
@@ -623,6 +626,7 @@ class FuncListDockWidget(QWidget, DockContextHandler):
             if self.sw_menu == "dprintf":
                 menu.addAction("Copy")
                 menu.addAction("Gen Registers")
+                menu.addAction("Gen Stacks")
                 menu.addAction("Update ui dprintf")
             else:
                 menu.addAction("Copy")
@@ -655,13 +659,37 @@ class FuncListDockWidget(QWidget, DockContextHandler):
             item.setForeground(0, QColor("yellow"))
 
             try:
-                self.dlg = DialogRegistersDprintf(title=bfunc)
-                self.dlg.resize(370, 430) # w,h
-                self.dlg.show()
-                self.dlg.raise_()
-                self.dlg.activateWindow()
+                dlg = DialogRegistersDprintf(title=bfunc)
+                dlg.resize(370, 430) # w,h
+                dlg.show()
+                dlg.raise_()
+                dlg.activateWindow()
+
+                self.all_dialog.append(dlg)
             except:
                 pass
+
+        elif action == "Gen Stacks":
+            func_name = item.text(0).split("  ")[1]
+            bfunc = base64.b64encode(func_name.encode()).decode()
+
+            s = Settings()
+            s.add_to_list("show_stack", bfunc)
+            item.setForeground(0, QColor("cyan"))
+
+            try:
+                dlg = DialogStacksDprintf(title=bfunc)
+                dlg.resize(630, 420) # w,h
+                dlg.show()
+                dlg.raise_()
+                dlg.activateWindow()
+
+                self.all_dialog.append(dlg)
+            except:
+                pass
+
+
+
 
 
 

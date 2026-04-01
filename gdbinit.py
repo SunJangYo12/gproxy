@@ -345,6 +345,44 @@ class CountBP(gdb.Breakpoint):
         self.addr = addr
         self.name = name
 
+    def gen_stacks(self, func_name):
+        func_name_dec = base64.b64decode(func_name).decode()
+
+        if self.name == func_name_dec:
+            print(f"\nShow stack => {func_name} {func_name_dec}")
+
+            arch = ArchType()
+            arch.get_ptr()
+
+            rsp = int(gdb.parse_and_eval("$esp"))
+            result = []
+
+            for i in range(10):
+                memalign = arch.ptrsize
+                offset = i * memalign
+                addr = arch.align_address(rsp + offset)
+
+                out = StackHuman().dereference_from(addr, offset)
+
+                print(out)
+
+                js = json.dumps(out)
+                jb = js.encode('utf-8')
+                b64 = base64.b64encode(jb).decode() #decode is b"x" to "x"
+                result.append(b64+"\n")
+
+            folder_name = "/dev/shm/stacks/"+func_name
+
+            waktu = datetime.datetime.now()
+            waktu = waktu.strftime("%Y-%m-%d-%H:%M:%S")
+
+            if not os.path.exists(folder_name):
+                os.makedirs(folder_name)
+
+            with open(f"{folder_name}/{waktu}.txt", "w") as fd:
+                fd.write("".join(result))
+
+
     def gen_registers(self, func_name):
         func_name_dec = base64.b64decode(func_name).decode()
 
@@ -388,6 +426,10 @@ class CountBP(gdb.Breakpoint):
 
         for name_base64 in settings.get("show_reg"):
             self.gen_registers(name_base64)
+
+        for name_base64 in settings.get("show_stack"):
+            self.gen_stacks(name_base64)
+
 
 
         key = self.addr

@@ -9,7 +9,7 @@ class Settings:
         self.file_path = file_path
         self.default = {
             "show_reg": [],
-            "show_stack": "",
+            "show_stack": [],
             "theme": "light"
         }
         self._data = self._load()

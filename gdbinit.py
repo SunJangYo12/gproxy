@@ -344,6 +344,31 @@ class CountBP(gdb.Breakpoint):
         self.addr = addr
         self.name = name
 
+    def gen_heaps(self, func_name, settings):
+        func_name_dec = base64.b64decode(func_name).decode()
+
+        if self.name == func_name_dec:
+            print(f"\nShow heaps => {func_name} {func_name_dec}")
+
+            cmd = settings.get("heap_cmd")
+            output = gdb.execute(cmd, to_string=True)
+
+            if output == "": return
+
+            folder_name = "/dev/shm/heaps/"+func_name
+
+            waktu = datetime.datetime.now()
+            waktu = waktu.strftime("%Y-%m-%d-%H:%M:%S")
+
+            if not os.path.exists(folder_name):
+                os.makedirs(folder_name)
+
+            with open(f"{folder_name}/{waktu}.txt", "w") as fd:
+                fd.write(output)
+
+            print(output)
+
+
     def gen_stacks(self, func_name):
         func_name_dec = base64.b64decode(func_name).decode()
 
@@ -353,7 +378,11 @@ class CountBP(gdb.Breakpoint):
             arch = ArchType()
             arch.get_ptr()
 
-            rsp = int(gdb.parse_and_eval("$esp"))
+            if arch.is_32bit:
+                rsp = int(gdb.parse_and_eval("$esp"))
+            else:
+                rsp = int(gdb.parse_and_eval("$rsp"))
+
             result = []
 
             for i in range(10):
@@ -428,6 +457,9 @@ class CountBP(gdb.Breakpoint):
 
         for name_base64 in settings.get("show_stack"):
             self.gen_stacks(name_base64)
+
+        for name_base64 in settings.get("show_heap"):
+            self.gen_heaps(name_base64, settings)
 
 
 

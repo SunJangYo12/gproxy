@@ -186,8 +186,11 @@ class DialogStacksDprintf(QDialog):
     def setStack(self, tohistory=False):
         fullpath = "/dev/shm/stacks/"+self.title
 
-        files = os.listdir(fullpath)
-        files_urut = sorted([f for f in files if f.endswith('.txt')])
+        try:
+            files = os.listdir(fullpath)
+            files_urut = sorted([f for f in files if f.endswith('.txt')])
+        except:
+            return
 
 
         if tohistory:

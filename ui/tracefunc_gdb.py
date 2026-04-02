@@ -26,6 +26,7 @@ from ..helpers import RefreshUiTask
 from ..settings import Settings
 from .dialog_gdb_register import DialogRegistersDprintf
 from .dialog_gdb_stack import DialogStacksDprintf
+from .dialog_gdb_heap import DialogHeapsDprintf
 
 import base64
 import time
@@ -627,6 +628,7 @@ class FuncListDockWidget(QWidget, DockContextHandler):
                 menu.addAction("Copy")
                 menu.addAction("Gen Registers")
                 menu.addAction("Gen Stacks")
+                menu.addAction("Gen Heaps")
                 menu.addAction("Update ui dprintf")
             else:
                 menu.addAction("Copy")
@@ -649,6 +651,23 @@ class FuncListDockWidget(QWidget, DockContextHandler):
 
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
+
+        elif action == "Gen Heaps":
+            func_name = item.text(0).split("  ")[1]
+            bfunc = base64.b64encode(func_name.encode()).decode()
+
+            s = Settings()
+            s.add_to_list("show_heap", bfunc)
+            item.setForeground(0, QColor("yellow"))
+
+            dlg = DialogHeapsDprintf(title=bfunc)
+            dlg.resize(630, 420) # w,h
+            dlg.show()
+            dlg.raise_()
+            dlg.activateWindow()
+
+            self.all_dialog.append(dlg)
+
 
         elif action == "Gen Registers":
             func_name = item.text(0).split("  ")[1]
@@ -687,11 +706,6 @@ class FuncListDockWidget(QWidget, DockContextHandler):
                 self.all_dialog.append(dlg)
             except:
                 pass
-
-
-
-
-
 
         elif action == "Update ui":
             rui_task = RefreshUiTask(self.bv, "gdb_func")

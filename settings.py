@@ -10,6 +10,8 @@ class Settings:
         self.default = {
             "show_reg": [],
             "show_stack": [],
+            "show_heap": [],
+            "heap_cmd": "",
             "theme": "light"
         }
         self._data = self._load()

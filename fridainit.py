@@ -532,7 +532,10 @@ def main():
 
 
         elif pshell == "fuzz":
-            in_fuzz = input("\n>> Target Symbol/Address> ")
+            in_fuzz = input("\n>> Start address> ")
+            end_fuzz = input("\n>> End address> ")
+            script.exports_sync.setfuzz(in_fuzz, end_fuzz)
+            print("[+] Waiting hook...")
 
         elif pshell == "tr":
             script.exports_sync.enummodules()

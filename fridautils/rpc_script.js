@@ -27,6 +27,10 @@ function hookGetThread() {
 }
 /***************************/
 
+/********* FUZZ VAR ***************/
+var fuzz_iteration = 0;
+/**********************************/
+
 
 class FuzzerKu
 {
@@ -750,6 +754,42 @@ class FuzzerKu
                      subthis.logDebug("send", mod_summary, "stalker");
                   }
                });
+            },
+            getfuzz: () => {
+                return fuzz_iteration;
+            },
+            setfuzz: (start, end) => {
+                this.logDebug("send", "Agent @ Setup hook: "+start, "info");
+                const fuzz = Interceptor.attach(ptr(start), {
+                   onEnter: function(args) {
+                        console.log("\n[+] Hook HIT");
+                        console.log("[+] Remove hook");
+                        fuzz.detach();
+
+                        console.log("[+] Fuzzing started.");
+                        const functarget = new NativeFunction(
+                            ptr(start),     //addrfunc
+                            'pointer',      //return
+                            ['pointer']     //param
+                        );
+
+                        // Fuzz loop
+                        for(let i=0; i<10; i++) {
+                            const buf = Memory.alloc(0x100);
+                            for(let i=0; i<0x100; i++) {
+                                Memory.writeU8(buf.add(i), 0x41);
+                            }
+
+                            try {
+                                functarget(buf);
+                            } catch(e) {
+                                console.log("crash: ", e);
+                            }
+
+                            fuzz_iteration += 1;
+                        }
+                   }
+                });
             },
             setuphook: (func_data, fstalking) => {
 

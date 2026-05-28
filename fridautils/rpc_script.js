@@ -27,8 +27,16 @@ function hookGetThread() {
 }
 /***************************/
 
+
 /********* FUZZ VAR ***************/
-var fuzz_iteration = 0;
+var fuzz_cases = 0;
+var fuzz_crashes = 0;
+var cov = new Uint8Array(65536);
+var virgin = new Uint8Array(65536);
+virgin.fill(0xff);
+let prev = 0;
+let newcov = false;
+var out_cov = [];
 /**********************************/
 
 
@@ -756,7 +764,12 @@ class FuzzerKu
                });
             },
             getfuzz: () => {
-                return fuzz_iteration;
+                const outfuzz = {
+                    "fuzz_cases": fuzz_cases,
+                    "fuzz_crashes": fuzz_crashes,
+                    "coverage": out_cov,
+                };
+                return outfuzz;
             },
             setfuzz: (start, end) => {
                 this.logDebug("send", "Agent @ Setup hook: "+start, "info");
@@ -767,26 +780,77 @@ class FuzzerKu
                         fuzz.detach();
 
                         console.log("[+] Fuzzing started.");
+
+                        // Setup coverage
+
+//                        Stalker.follow(Process.getCurrentThreadId(), {
+
+
+/*                                let insn = iterator.next();
+                                if (insn === null)
+                                    return;
+
+                                const blockStart = ptr(insn.address);
+                                iterator.putCallout(function() {
+                                    const old_prev = prev;
+                                    const cur = blockStart.toUInt32();
+                                    const idx = (prev ^ cur) & 0xffff;
+
+                                    if (cov[idx] !== 255)
+                                        cov[idx]++;
+
+                                    if (virgin[idx]) {
+                                        virgin[idx] = 0;
+                                        newcov = true;
+                                        out_cov.push("new: 0x"+old_prev.toString(16) +
+                                                     " -> 0x"+cur.toString(16)
+                                        );
+                                    }
+                                    prev = cur >>> 1;
+                                });
+
+                                do {
+                                    iterator.keep();
+                                    insn = iterator.next();
+                                } while (insn !== null);*/
+//                            }
+//                        });
+
+
+                        // Setup function
                         const functarget = new NativeFunction(
                             ptr(start),     //addrfunc
                             'pointer',      //return
                             ['pointer']     //param
                         );
 
+                        // Setup corpus
+                        const buf = Memory.alloc(0x100);
+
+                        function mutate() {
+                            const off = Math.floor(Math.random() * 0x100);
+                            const val = Math.floor(Math.random() * 256);
+                            Memory.writeU8(buf.add(off), val);
+                        }
+
                         // Fuzz loop
-                        for(let i=0; i<10; i++) {
-                            const buf = Memory.alloc(0x100);
-                            for(let i=0; i<0x100; i++) {
-                                Memory.writeU8(buf.add(i), 0x41);
-                            }
+                        while(true) {
+                            prev = 0;
+                            newcov = false;
+                            mutate(buf);
 
                             try {
                                 functarget(buf);
                             } catch(e) {
-                                console.log("crash: ", e);
+                                fuzz_crashes += 1;
                             }
 
-                            fuzz_iteration += 1;
+                            if (newcov) {
+                                console.log("New coverage\n");
+                                //save input
+                            }
+
+                            fuzz_cases += 1;
                         }
                    }
                 });

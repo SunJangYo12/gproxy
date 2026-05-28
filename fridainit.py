@@ -532,10 +532,26 @@ def main():
 
 
         elif pshell == "fuzz":
+            print("==========================================")
+            print("  Harcoded in rpc_script.js in setfuzz()")
+            print("  1). set function addr NativeFunction")
+            print("  2). copy radamse binary to target device")
+            print("==========================================")
             in_fuzz = input("\n>> Start address> ")
             end_fuzz = input("\n>> End address> ")
-            script.exports_sync.setfuzz(in_fuzz, end_fuzz)
+
+            script.exports_sync.setfuzz("0x40131a", end_fuzz)
             print("[+] Waiting hook...")
+            while True:
+                data = script.exports_sync.getfuzz()
+                cases = data["fuzz_cases"]
+                crashes = data["fuzz_crashes"]
+                cov = len(data["coverage"])
+
+                print(f"[+] Fuzz_cases:{cases} | Crash: {crashes} | Coverage: {cov}")
+
+                time.sleep(1);
+
 
         elif pshell == "tr":
             script.exports_sync.enummodules()

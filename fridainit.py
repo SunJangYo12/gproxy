@@ -334,7 +334,7 @@ class MyUtils:
 
 def main():
     print("\n\t=====================")
-    print("\t Fuzzer proxy v2.0.0")
+    print("\t Fuzzer proxy v2.0.1")
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB (l/h/u): ")
 
@@ -344,11 +344,13 @@ def main():
        device = frida.get_device_manager().add_remote_device("192.168.0.101")
        pid_raw = input(">> Chose pid? (1234): ")
        pid = int(pid_raw)
+       device.resume(pid)
 
     elif target == "u":
        device = frida.get_usb_device()
        package = input(">> Chose package? (com.abc): ")
        pid = device.spawn([package])
+       device.resume(pid)
 
     elif target == "l":
        device = frida.get_local_device() #local linux
@@ -360,8 +362,6 @@ def main():
        exit(1)
 
     session = device.attach(pid)
-    device.resume(pid)
-
 
     is_script_package = input(">> Script type package? y/n: ")
 
@@ -391,6 +391,7 @@ def main():
         print("4. trace-java (tr-java)> (all/package-class/back) (full-info)> (className)")
         print("6. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> ")
         print("           (intruksi)> (func_addr/back)> (filter)> (mnemonic:ret,jne,enter:all/back)")
+        print("7. fuzzing (fuzz)> (sym/addr)")
     print("exit")
 
     loop_menu = True
@@ -529,6 +530,9 @@ def main():
                     script.exports_sync.setstalker(in_ct, int(in_id), "")
 
 
+
+        elif pshell == "fuzz":
+            in_fuzz = input("\n>> Target Symbol/Address> ")
 
         elif pshell == "tr":
             script.exports_sync.enummodules()

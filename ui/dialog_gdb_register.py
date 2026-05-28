@@ -53,7 +53,7 @@ class DialogRegistersDprintf(QDialog):
         self.reg_value = None
         self.reg_raw = None
         self.history = []
-        self.history_curr = 1
+        self.history_curr = 0
         self.regs = []
 
 

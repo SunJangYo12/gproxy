@@ -53,7 +53,7 @@ class DialogHeapsDprintf(QDialog):
 
         self.title = title
         self.history = []
-        self.history_curr = 1
+        self.history_curr = 0
         self.heap = []
 
         layout = QVBoxLayout()

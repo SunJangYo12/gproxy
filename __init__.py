@@ -92,12 +92,24 @@ def gef_start(bv):
     __service_thread = threading.Thread(target=start_service, args=(HOST, PORT, bv))
     __service_thread.daemon = True
     __service_thread.start()
+    show_message_box(
+        "G-proxy",
+        "Service successfully started, you can now have gef connect to it",
+        MessageBoxButtonSet.OKButtonSet,
+        MessageBoxIcon.InformationIcon
+    )
     return
 
 
 def gef_stop(bv):
     "Stopping background service... "
     stop_service()
+    show_message_box(
+        "G-proxy",
+        "Service successfully stopped",
+        MessageBoxButtonSet.OKButtonSet,
+        MessageBoxIcon.InformationIcon
+    )
     return
 
 

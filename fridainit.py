@@ -354,7 +354,9 @@ def main():
 
     elif target == "l":
        device = frida.get_local_device() #local linux
-       pid_raw = input(">> Chose pid? (1234): ")
+       #pid_raw = input(">> Chose pid? (1234): ")
+       pid_raw = subprocess.run(["pidof", "test"], capture_output=True, text=True)
+       pid_raw = pid_raw.stdout.split("\n")[0]
        pid = int(pid_raw)
 
     else:
@@ -542,15 +544,19 @@ def main():
 
             script.exports_sync.setfuzz("0x40131a", end_fuzz)
             print("[+] Waiting hook...")
+
+            i = 0
             while True:
-                data = script.exports_sync.getfuzz()
-                cases = data["fuzz_cases"]
-                crashes = data["fuzz_crashes"]
-                cov = len(data["coverage"])
+                i += 1
+                if i % 100 == 0:
+                    data = script.exports_sync.getfuzz()
+                    cases = data["fuzz_cases"]
+                    crashes = data["fuzz_crashes"]
+                    cov = data["coverage"]
 
-                print(f"[+] Fuzz_cases:{cases} | Crash: {crashes} | Coverage: {cov}")
+                    print(f"[+] Fuzz_cases:{cases} | Crash: {crashes} | Coverage: {cov}")
 
-                time.sleep(1);
+                script.exports_sync.setfuzzloop("0x40131a")
 
 
         elif pshell == "tr":

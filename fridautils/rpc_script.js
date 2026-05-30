@@ -37,6 +37,12 @@ virgin.fill(0xff);
 let prev = 0;
 let newcov = false;
 var out_cov = [];
+
+Stalker.trustThreshold = 0;
+var stalker_events = new Set(); // hanya data baru
+var gc_cnt = 0;
+var zbuf = Memory.alloc(0x100);
+var func_handle = new NativeFunction(ptr(0x40131a), 'void', ['pointer']);
 /**********************************/
 
 
@@ -767,12 +773,108 @@ class FuzzerKu
                 const outfuzz = {
                     "fuzz_cases": fuzz_cases,
                     "fuzz_crashes": fuzz_crashes,
-                    "coverage": out_cov,
+                    "coverage": stalker_events.size,
                 };
+                console.log(JSON.stringify(stalker_events));
                 return outfuzz;
             },
+            setfuzzloop: (start) => {
+                //const target_function = ptr(start)
+
+                // Setup corpus
+                const off = Math.floor(Math.random() * 0x100);
+                const val = Math.floor(Math.random() * 256);
+                Memory.writeU8(zbuf.add(off), val);
+
+                try {
+                    func_handle(zbuf);
+                }
+                catch(e){
+                    fuzz_crashes += 1;
+                }
+
+                fuzz_cases += 1;
+            },
             setfuzz: (start, end) => {
+                const target_function = ptr(start)
+
+                const hook = Interceptor.attach(target_function, {
+                    onEnter: function (args) {
+                        console.log("enter");
+                        hook.detach();
+//                        Stalker.queueCapacity = 100000000
+//                        Stalker.queueDrainInterval = 1000*1000
+                        Stalker.follow(Process.getCurrentThreadId(), {
+                            events: {
+                                call: false,
+                                ret: false,
+                                exec: false,
+                                block: false,
+                                compile: true
+                            },
+                            onReceive: function (events) {
+                                const parsed = Stalker.parse(events, {
+                                    stringify: false,
+                                    annotate: false
+                                });
+
+
+                                parsed.forEach(ev => {
+                                    const block_start = ev[1];
+                                    stalker_events.add(block_start);
+                                });
+                            }
+                        });
+                    },
+                    onLeave: function (retval) {
+                        /*Stalker.unfollow(Process.getCurrentThreadId())
+                        Stalker.flush();
+                        if(gc_cnt % 100 == 0){
+                            Stalker.garbageCollect();
+                        }
+                        gc_cnt++;*/
+                    }
+                });
+            },
+            zzsetfuzz: (start, end) => {
+                //const openImpl = Module.getExportByName(null, 'open');
+
+                const myint = Memory.alloc(4);
+                Memory.writeInt(myint, 1);
+
+                Interceptor.attach(ptr(start), new CModule(`
+                    #include <gum/guminterceptor.h>
+                    #include <stdio.h>
+
+                    extern int myint;
+
+                    void onEnter(GumInvocationContext *ic) {
+                        const char *path;
+                        path = gum_invocation_context_get_nth_argument (ic, 0);
+                        printf("open() path=\\"%s\\"\\n", path);
+                    }
+
+                    void onLeave(GumInvocationContext *ic) {
+                        printf("ret: %d\n", myint + 9);
+                    }
+                    void printCurrentValue() {
+                        printf("current: %d\n", myint);
+                    }
+                `, {myint}));
+            },
+            ddsetfuzz: (start, end) => {
                 this.logDebug("send", "Agent @ Setup hook: "+start, "info");
+                /*
+                Stalker.follow(Process.getCurrentThreadId(), {
+                    transform: function(iterator) {
+                        let instruction = iterator.next();
+                        do {
+                            console.log(instruction);
+                            iterator.keep();
+                        } while ((instruction = iterator.next()) !== null);
+                    },
+                });*/
+
                 const fuzz = Interceptor.attach(ptr(start), {
                    onEnter: function(args) {
                         console.log("\n[+] Hook HIT");
@@ -781,78 +883,92 @@ class FuzzerKu
 
                         console.log("[+] Fuzzing started.");
 
-                        // Setup coverage
+                        const stalkerCM = new CModule(`
+                        #include <gum/gumstalker.h>
 
-//                        Stalker.follow(Process.getCurrentThreadId(), {
-
-
-/*                                let insn = iterator.next();
-                                if (insn === null)
-                                    return;
-
-                                const blockStart = ptr(insn.address);
-                                iterator.putCallout(function() {
-                                    const old_prev = prev;
-                                    const cur = blockStart.toUInt32();
-                                    const idx = (prev ^ cur) & 0xffff;
-
-                                    if (cov[idx] !== 255)
-                                        cov[idx]++;
-
-                                    if (virgin[idx]) {
-                                        virgin[idx] = 0;
-                                        newcov = true;
-                                        out_cov.push("new: 0x"+old_prev.toString(16) +
-                                                     " -> 0x"+cur.toString(16)
-                                        );
-                                    }
-                                    prev = cur >>> 1;
-                                });
-
-                                do {
-                                    iterator.keep();
-                                    insn = iterator.next();
-                                } while (insn !== null);*/
-//                            }
-//                        });
+                        void transform(GumStalkerIterator *iterator, GumStalkerOutput * output, gpointer user_data) {
+                            //cs_insn *insn;
+                            /*while (gum_stalker_iterator_next (iterator, &insn)) {
+                                gum_stalker_iterator_keep (iterator);
+                            }*/
+                        }
+                        `);
+                        const stalker_event_config = {
+                            call: false,
+                            ret: false,
+                            exec: false,
+                            block: false,
+                            compile: true,
+                        };
+                        Stalker.follow(this.threadId, {
+                            events: stalker_event_config,
+                            transform: stalkerCM.transform
+                        });
 
 
-                        // Setup function
+/*
                         const functarget = new NativeFunction(
                             ptr(start),     //addrfunc
                             'pointer',      //return
                             ['pointer']     //param
-                        );
+                        );*/
+
+
+                        /*const targetPtr = ptr(start);
+                        const cm = new CModule(`
+                            #include <stdio.h>
+                            #include <stdint.h>
+
+                            typedef void (*target_func_t)(char * buf);
+
+                            extern uintptr_t target_ptr;
+
+                            void run(char * data) {
+                                printf("hello: %p\n", target_ptr);
+                                target_func_t f = (target_func_t) 0x40131a; //target_ptr;
+
+                                while(1) {
+                                    f(data);
+                                }
+                            }
+                        `, {
+                            target_ptr: targetPtr
+                        });
+
+                        const buf = Memory.allocUtf8String("AAAA");
+                        const run = new NativeFunction(cm.run, 'pointer', ['pointer']);
+                        run(buf); */
+/*
+                        const myint = Memory.alloc(4);
+                        Memory.writeInt(myint, 1);
+
+                        // cmodule
+                        const cm = new CModule(`
+                            #include <stdio.h>
+                            extern int myint;
+
+                            void printCurrent() {
+                                printf("current: %d\\n", myint);
+
+                            }
+                         `, {myint});
+
+                        const printCurrent = new NativeFunction(cm.printCurrent, 'int', []);
+                        printCurrent();*/
 
                         // Setup corpus
-                        const buf = Memory.alloc(0x100);
+                        /*const buf = Memory.alloc(0x100);
 
                         function mutate() {
                             const off = Math.floor(Math.random() * 0x100);
                             const val = Math.floor(Math.random() * 256);
                             Memory.writeU8(buf.add(off), val);
-                        }
-
-                        // Fuzz loop
-                        while(true) {
-                            prev = 0;
-                            newcov = false;
-                            mutate(buf);
-
-                            try {
-                                functarget(buf);
-                            } catch(e) {
-                                fuzz_crashes += 1;
-                            }
-
-                            if (newcov) {
-                                console.log("New coverage\n");
-                                //save input
-                            }
-
-                            fuzz_cases += 1;
-                        }
-                   }
+                        }*/
+                    },
+                    onLeave: function() {
+                        Stalker.unfollow();
+                        Stalker.flush();
+                    }
                 });
             },
             setuphook: (func_data, fstalking) => {
@@ -966,7 +1082,3 @@ class FuzzerKu
 
 const f = new FuzzerKu();
 rpc.exports.fuzzer = f;
-
-
-
-

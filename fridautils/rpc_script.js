@@ -934,8 +934,6 @@ class FuzzerKu
                         this.logDebug("send", "Agent @ Setup hook-malloc: "+func_data.name+"", "info");
                         Interceptor.attach(addr, {
                             onEnter(args) {
-                                console.log("[+] cek: "+func_data.name);
-
                                 // jumlah paramater target
                                 for (let i=0; i<6; i++) {
                                     try {

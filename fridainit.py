@@ -574,14 +574,12 @@ def main():
 
         elif pshell == "tr":
             script.exports_sync.enummodules()
-            #in_module = input("\n>> Module> ")
-            in_module = "heap_sim"
+            in_module = input("\n>> Module> ")
 
             if in_module == "back":
                 continue
 
-            #in_swsym = input("\n>> Dump symbol address? frida/bn/r2: > ")
-            in_swsym = "frida"
+            in_swsym = input("\n>> Dump symbol address? frida/bn/r2: > ")
 
             while True:
                 isbn = 0
@@ -590,8 +588,7 @@ def main():
 
                 if in_swsym == "frida":
                     print("[+] Using frida symbol.")
-                    #sw_frida = input(">> Symbol/Import/Export? s/i/e: ")
-                    sw_frida = "s"
+                    sw_frida = input(">> Symbol/Import/Export? s/i/e: ")
 
                     dick_sym = script.exports_sync.enumsymbolstrace(in_module, sw_frida)
 
@@ -661,8 +658,7 @@ def main():
                 else:
                     proxy.settofrida_func(dick_sym, "init")
 
-                #in_symbol = input(f"\n>> {in_module}> symbol> ")
-                in_symbol = "all-malloc"
+                in_symbol = input(f"\n>> {in_module}> symbol> ")
 
                 if in_symbol == "back":
                     script.exports_sync.setuphook("", "detach-all")
@@ -680,7 +676,7 @@ def main():
 
                     setup_hook(script, dick_sym, "all-malloc", None)
 
-                    #proxy.settofrida_func("trace-func", "refresh")
+                    proxy.settofrida_func("trace-func", "refresh")
                     break
 
 

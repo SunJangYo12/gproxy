@@ -48,7 +48,7 @@ var func_handle = new NativeFunction(ptr(0x40131a), 'void', ['pointer']);
 
 /*********** Heap Trace *******************/
 const alloc_hook = new Map();
-
+var is_alloctrace = false;
 function findAllocation(addr) {
     for (const [key, alloc] of alloc_hook) {
         const start = ptr(alloc.ptr);
@@ -870,6 +870,7 @@ class FuzzerKu
             setuphook: (func_data, fstalking) => {
 
                if (fstalking == "detach-all") {
+                   is_alloctrace = false;
                    this.logDebug("send", "Agent @ Cleaning hook instrument...", "info");
                    Interceptor.detachAll();
                    return
@@ -877,6 +878,7 @@ class FuzzerKu
 
                // Setup allocator hook
                if (fstalking == "allocator") {
+                    is_alloctrace = true;
                     Interceptor.attach(Module.findExportByName(null, "malloc"), {
                         onEnter(args) {
                             this.size = args[0].toInt32();
@@ -930,6 +932,7 @@ class FuzzerKu
                         }
                         return
                    }
+                    /*
                    if (fstalking == -3) {
                         this.logDebug("send", "Agent @ Setup hook-malloc: "+func_data.name+"", "info");
                         Interceptor.attach(addr, {
@@ -940,17 +943,24 @@ class FuzzerKu
                                         const alloc = findAllocation(args[i]);
 
                                         if (alloc) {
-                                            console.log(`${func_data.name} arg${i} -> ${alloc.ptr}`);
+                                            //console.log(`${func_data.name} arg${i} -> ${alloc.ptr}`);
+                                            const data = {
+                                                argcount: "args["+i+"]",
+                                                namefunc: func_data.name,
+                                                alloc: alloc
+                                            };
+                                            send({
+                                                "type": "hookmalloc_hit",
+                                                "log": data
+                                            });
                                         }
                                     } catch (_) {}
                                 }
                             }
                         });
-                   }
-                   else {
-                       this.logDebug("send", "Agent @ Setup hook: "+func_data.name+" with stalking: "+fstalking, "info");
-                       this.stalkingfunc(addr, fstalking)
-                   }
+                   }*/
+                   this.logDebug("send", "Agent @ Setup hook: "+func_data.name+" with stalking: "+fstalking, "info");
+                   this.stalkingfunc(addr, fstalking)
                }
                else {
                    this.logDebug("send", "Agent @ Setup hook: "+func_data.name, "info");
@@ -962,12 +972,30 @@ class FuzzerKu
                            this.output["backtrace"] = "none"
 
                            try {
-                               this.output["argumen"] = "args[0]: "+Memory.readCString(ptr(args[0]));
+                               this.output["argumen"] = "args[0]: "+
+                                    Memory.readCString(ptr(args[0]));
                            }catch(e){
                                this.output["argumen"] = ""+e;
                            }
                            //jika crash comment ini
-                           this.output["backtrace"] = Thread.backtrace(this.context, Backtracer.ACCURATE).map(DebugSymbol.fromAddress).join("\n");
+                           this.output["backtrace"] = Thread.backtrace(
+                                this.context,
+                                Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                                .join("\n");
+
+                           if (is_alloctrace) {
+                                // jumlah paramater target
+                                for (let i=0; i<6; i++) {
+                                    try {
+                                        const alloc = findAllocation(args[i]);
+
+                                        if (alloc) {
+                                            this.output["heap_area"] = "args["+i+"]"+ " -> "+alloc.ptr;
+                                            console.log(`${func_data.name} arg${i} -> ${alloc.ptr}`);
+                                        }
+                                    } catch (_) {}
+                                }
+                           }
                        },
                        onLeave: function(retval) {
                            this.output["retval"] = retval

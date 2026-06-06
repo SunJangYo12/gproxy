@@ -103,6 +103,11 @@ def on_message(message, data):
            proxy.settofrida_func(info, "")
 
 
+        elif message['payload']['type'] == 'hookmalloc_hit':
+           info = message['payload']['log']
+           proxy.settofrida_func(info, "malloc")
+
+
         elif message['payload']['type'] == 'fail_hook_tree':
            info = message['payload']['log']
 
@@ -177,19 +182,6 @@ def setup_hook(script, dick_sym, func_target, fstalking):
                        "address": data.get("address")
                     }
                     script.exports_sync.setuphook(zdata, -2)
-
-                elif func_target == "all-malloc": #all-malloc
-                    name = data.get("name")
-
-                    if name.startswith("_Z"):
-                        result = subprocess.check_output(["c++filt", name])
-                        name = result.decode().strip()
-                    zdata = {
-                       "type": data.get("type"),
-                       "name": name,
-                       "address": data.get("address")
-                    }
-                    script.exports_sync.setuphook(zdata, -3)
 
                 else: #all
                     if not func_target:
@@ -674,7 +666,7 @@ def main():
                     script.exports_sync.setuphook("", "allocator")
                     time.sleep(1)
 
-                    setup_hook(script, dick_sym, "all-malloc", None)
+                    setup_hook(script, dick_sym, None, None)
 
                     proxy.settofrida_func("trace-func", "refresh")
                     break

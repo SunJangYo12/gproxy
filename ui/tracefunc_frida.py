@@ -954,7 +954,6 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
                     child2.setData(0, Qt.UserRole, "%s" % retval)
                     child2.setFont(0, self.font)
 
-
                 elif key == "backtrace":
                     backtrace = data["raw"].get(key)
                     backtraces = backtrace.split("\n")
@@ -1056,6 +1055,24 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
                     child2.setText(0, "%s" % retval)
                     child2.setData(0, Qt.UserRole, "%s" % retval)
                     child2.setFont(0, self.font)
+
+
+                elif key == "heap_area":
+                    child1 = QTreeWidgetItem(parent)
+                    child1.setText(0, "heap_area")
+                    child1.setFont(0, self.font)
+
+                    id_expand = func_name+"|||heap_area"
+                    child1.setData(0, Qt.UserRole, id_expand )
+                    self.cekandset_expand(child1, id_expand)
+
+                    heapdata = data["raw"].get(key)
+
+                    child2 = QTreeWidgetItem(child1)
+                    child2.setText(0, "%s" % heapdata)
+                    child2.setData(0, Qt.UserRole, "%s" % heapdata)
+                    child2.setFont(0, self.font)
+
 
                 elif key == "backtrace":
                     backtrace = data["raw"].get(key)

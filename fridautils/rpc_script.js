@@ -38,12 +38,29 @@ let prev = 0;
 let newcov = false;
 var out_cov = [];
 
-Stalker.trustThreshold = 0;
 var stalker_events = new Set(); // hanya data baru
 var gc_cnt = 0;
+var is_enter = false;
 var zbuf = Memory.alloc(0x100);
 var func_handle = new NativeFunction(ptr(0x40131a), 'void', ['pointer']);
 /**********************************/
+
+
+/*********** Heap Trace *******************/
+const alloc_hook = new Map();
+
+function findAllocation(addr) {
+    for (const [key, alloc] of alloc_hook) {
+        const start = ptr(alloc.ptr);
+        const end = start.add(alloc.size);
+
+        //console.log("       "+addr+": "+start+" - "+end);
+        if (addr.compare(start) >= 0 && addr.compare(end) < 0) {
+            return alloc;
+        }
+    }
+    return null;
+}
 
 
 class FuzzerKu
@@ -774,202 +791,81 @@ class FuzzerKu
                     "fuzz_cases": fuzz_cases,
                     "fuzz_crashes": fuzz_crashes,
                     "coverage": stalker_events.size,
+                    "is_enter": is_enter
                 };
-                console.log(JSON.stringify(stalker_events));
                 return outfuzz;
             },
-            setfuzzloop: (start) => {
-                //const target_function = ptr(start)
-
-                // Setup corpus
-                const off = Math.floor(Math.random() * 0x100);
-                const val = Math.floor(Math.random() * 256);
-                Memory.writeU8(zbuf.add(off), val);
-
-                try {
-                    func_handle(zbuf);
-                }
-                catch(e){
-                    fuzz_crashes += 1;
-                }
-
-                fuzz_cases += 1;
-            },
             setfuzz: (start, end) => {
-                const target_function = ptr(start)
+                const target_module = "test";
+                const MAP_SIZE = 65536;
+                const thread_id = Process.getCurrentThreadId();
+                var prev_loc_map = {};
+                var prev_loc_ptr = prev_loc_map[thread_id];
+                var trace_bits  = Memory.alloc(MAP_SIZE);
+                var virgin_bits = Memory.alloc(MAP_SIZE);
+                var start_addr = ptr(0);
+                var end_addr = ptr("-1");
 
-                const hook = Interceptor.attach(target_function, {
-                    onEnter: function (args) {
-                        console.log("enter");
-                        hook.detach();
-//                        Stalker.queueCapacity = 100000000
-//                        Stalker.queueDrainInterval = 1000*1000
-                        Stalker.follow(Process.getCurrentThreadId(), {
-                            events: {
-                                call: false,
-                                ret: false,
-                                exec: false,
-                                block: false,
-                                compile: true
-                            },
-                            onReceive: function (events) {
-                                const parsed = Stalker.parse(events, {
-                                    stringify: false,
-                                    annotate: false
-                                });
+                for (var i=0; i<MAP_SIZE; i+=4)
+                    virgin_bits.add(i).writeU32(0xffffffff);
 
+                prev_loc_ptr = Memory.alloc(32);
 
-                                parsed.forEach(ev => {
-                                    const block_start = ev[1];
-                                    stalker_events.add(block_start);
-                                });
-                            }
-                        });
-                    },
-                    onLeave: function (retval) {
-                        /*Stalker.unfollow(Process.getCurrentThreadId())
-                        Stalker.flush();
-                        if(gc_cnt % 100 == 0){
-                            Stalker.garbageCollect();
+                var maps = function() {
+                    var maps = Process.enumerateModules();
+                    var i = 0;
+                    maps.map(function(o) { o.id = i++; });
+                    maps.map(function(o) { o.end = o.base.add(o.size); });
+                    return maps;
+                }();
+
+                if (target_module !== null) {
+                    maps.forEach(function(m) {
+                      if (m.name == target_module || m == target_module) {
+                        start_addr = m.base;
+                        end_addr = m.end;
+                      } else {
+                        Stalker.exclude(m);
+                      }
+                    });
+                } else {
+                    maps.forEach(function(m) {
+                        if (m.name.startsWith("libc.") || m.name.startsWith("libSystem.") || m.name.startsWith("frida")) {
+                            Stalker.exclude(m);
                         }
-                        gc_cnt++;*/
-                    }
-                });
-            },
-            zzsetfuzz: (start, end) => {
-                //const openImpl = Module.getExportByName(null, 'open');
+                    });
+                }
 
-                const myint = Memory.alloc(4);
-                Memory.writeInt(myint, 1);
-
-                Interceptor.attach(ptr(start), new CModule(`
-                    #include <gum/guminterceptor.h>
-                    #include <stdio.h>
-
-                    extern int myint;
-
-                    void onEnter(GumInvocationContext *ic) {
-                        const char *path;
-                        path = gum_invocation_context_get_nth_argument (ic, 0);
-                        printf("open() path=\\"%s\\"\\n", path);
-                    }
-
-                    void onLeave(GumInvocationContext *ic) {
-                        printf("ret: %d\n", myint + 9);
-                    }
-                    void printCurrentValue() {
-                        printf("current: %d\n", myint);
-                    }
-                `, {myint}));
-            },
-            ddsetfuzz: (start, end) => {
-                this.logDebug("send", "Agent @ Setup hook: "+start, "info");
-                /*
-                Stalker.follow(Process.getCurrentThreadId(), {
-                    transform: function(iterator) {
-                        let instruction = iterator.next();
-                        do {
-                            console.log(instruction);
-                            iterator.keep();
-                        } while ((instruction = iterator.next()) !== null);
-                    },
+                Stalker.trustThreshold = 0;
+                /*Stalker.follow(thread_id, {
+                  events: {
+                      call: false,
+                      ret: false,
+                      exec: false,
+                      block: false,
+                      compile: true
+                  },
+                  transform: __cm.transform,
                 });*/
 
-                const fuzz = Interceptor.attach(ptr(start), {
-                   onEnter: function(args) {
-                        console.log("\n[+] Hook HIT");
-                        console.log("[+] Remove hook");
-                        fuzz.detach();
+                const stalker_event_config = {
+                    call: false,
+                    ret: false,
+                    exec: false,
+                    block: false,
+                    compile: true,
+                };
 
-                        console.log("[+] Fuzzing started.");
+                Module.load("/media/jin/4abb279b-6d65-4663-97c2-26987f64673a/home/yuna/LabTes/frida-template/build/frida-template.so");
+                const xtransform = DebugSymbol.fromName("xtransform");
 
-                        const stalkerCM = new CModule(`
-                        #include <gum/gumstalker.h>
-
-                        void transform(GumStalkerIterator *iterator, GumStalkerOutput * output, gpointer user_data) {
-                            //cs_insn *insn;
-                            /*while (gum_stalker_iterator_next (iterator, &insn)) {
-                                gum_stalker_iterator_keep (iterator);
-                            }*/
-                        }
-                        `);
-                        const stalker_event_config = {
-                            call: false,
-                            ret: false,
-                            exec: false,
-                            block: false,
-                            compile: true,
-                        };
-                        Stalker.follow(this.threadId, {
-                            events: stalker_event_config,
-                            transform: stalkerCM.transform
-                        });
-
-
-/*
-                        const functarget = new NativeFunction(
-                            ptr(start),     //addrfunc
-                            'pointer',      //return
-                            ['pointer']     //param
-                        );*/
-
-
-                        /*const targetPtr = ptr(start);
-                        const cm = new CModule(`
-                            #include <stdio.h>
-                            #include <stdint.h>
-
-                            typedef void (*target_func_t)(char * buf);
-
-                            extern uintptr_t target_ptr;
-
-                            void run(char * data) {
-                                printf("hello: %p\n", target_ptr);
-                                target_func_t f = (target_func_t) 0x40131a; //target_ptr;
-
-                                while(1) {
-                                    f(data);
-                                }
-                            }
-                        `, {
-                            target_ptr: targetPtr
-                        });
-
-                        const buf = Memory.allocUtf8String("AAAA");
-                        const run = new NativeFunction(cm.run, 'pointer', ['pointer']);
-                        run(buf); */
-/*
-                        const myint = Memory.alloc(4);
-                        Memory.writeInt(myint, 1);
-
-                        // cmodule
-                        const cm = new CModule(`
-                            #include <stdio.h>
-                            extern int myint;
-
-                            void printCurrent() {
-                                printf("current: %d\\n", myint);
-
-                            }
-                         `, {myint});
-
-                        const printCurrent = new NativeFunction(cm.printCurrent, 'int', []);
-                        printCurrent();*/
-
-                        // Setup corpus
-                        /*const buf = Memory.alloc(0x100);
-
-                        function mutate() {
-                            const off = Math.floor(Math.random() * 0x100);
-                            const val = Math.floor(Math.random() * 256);
-                            Memory.writeU8(buf.add(off), val);
-                        }*/
-                    },
-                    onLeave: function() {
-                        Stalker.unfollow();
-                        Stalker.flush();
-                    }
+                console.log("sdszzzzzzzzzzzzz: "+xtransform.address);
+                Stalker.follow(thread_id, {
+                    events: stalker_event_config,
+                    transform: xtransform.address,
                 });
+
+                const target_function = ptr(start)
             },
             setuphook: (func_data, fstalking) => {
 
@@ -978,6 +874,34 @@ class FuzzerKu
                    Interceptor.detachAll();
                    return
                }
+
+               // Setup allocator hook
+               if (fstalking == "allocator") {
+                    Interceptor.attach(Module.findExportByName(null, "malloc"), {
+                        onEnter(args) {
+                            this.size = args[0].toInt32();
+                        },
+                        onLeave(retval) {
+                            alloc_hook.set(retval.toString(), {
+                                ptr: retval.toString(),
+                                size: this.size
+                            });
+                            console.log(
+                                `[malloc] ${retval} size=${this.size}`
+                            );
+                        }
+                    });
+                    Interceptor.attach(Module.findExportByName(null, "free"), {
+                        onEnter(args) {
+                            alloc_hook.delete(args[0].toString());
+                            console.log(
+                                `[free] ${args[0]}`
+                            );
+                        }
+                    });
+                    return;
+               }
+
                const subthis = this;
                const addr = ptr(func_data.address);
 
@@ -1006,9 +930,29 @@ class FuzzerKu
                         }
                         return
                    }
-                   this.logDebug("send", "Agent @ Setup hook: "+func_data.name+" with stalking: "+fstalking, "info");
+                   if (fstalking == -3) {
+                        this.logDebug("send", "Agent @ Setup hook-malloc: "+func_data.name+"", "info");
+                        Interceptor.attach(addr, {
+                            onEnter(args) {
+                                console.log("[+] cek: "+func_data.name);
 
-                   this.stalkingfunc(addr, fstalking)
+                                // jumlah paramater target
+                                for (let i=0; i<6; i++) {
+                                    try {
+                                        const alloc = findAllocation(args[i]);
+
+                                        if (alloc) {
+                                            console.log(`${func_data.name} arg${i} -> ${alloc.ptr}`);
+                                        }
+                                    } catch (_) {}
+                                }
+                            }
+                        });
+                   }
+                   else {
+                       this.logDebug("send", "Agent @ Setup hook: "+func_data.name+" with stalking: "+fstalking, "info");
+                       this.stalkingfunc(addr, fstalking)
+                   }
                }
                else {
                    this.logDebug("send", "Agent @ Setup hook: "+func_data.name, "info");

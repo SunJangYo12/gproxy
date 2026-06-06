@@ -12,6 +12,7 @@ import json
 from collections import Counter
 import subprocess
 
+
 proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 
 pwd = None
@@ -165,19 +166,30 @@ def setup_hook(script, dick_sym, func_target, fstalking):
                         script.exports_sync.setuphook(data, -1)
 
                 elif func_target == "zzall-tree": #all-tree
-
                     name = data.get("name")
 
                     if name.startswith("_Z"):
                         result = subprocess.check_output(["c++filt", name])
                         name = result.decode().strip()
-
                     zdata = {
                        "type": data.get("type"),
                        "name": name,
                        "address": data.get("address")
                     }
                     script.exports_sync.setuphook(zdata, -2)
+
+                elif func_target == "all-malloc": #all-malloc
+                    name = data.get("name")
+
+                    if name.startswith("_Z"):
+                        result = subprocess.check_output(["c++filt", name])
+                        name = result.decode().strip()
+                    zdata = {
+                       "type": data.get("type"),
+                       "name": name,
+                       "address": data.get("address")
+                    }
+                    script.exports_sync.setuphook(zdata, -3)
 
                 else: #all
                     if not func_target:
@@ -355,7 +367,7 @@ def main():
     elif target == "l":
        device = frida.get_local_device() #local linux
        #pid_raw = input(">> Chose pid? (1234): ")
-       pid_raw = subprocess.run(["pidof", "test"], capture_output=True, text=True)
+       pid_raw = subprocess.run(["pidof", "heap_sim"], capture_output=True, text=True)
        pid_raw = pid_raw.stdout.split("\n")[0]
        pid = int(pid_raw)
 
@@ -389,7 +401,13 @@ def main():
     else:
         print("1. shell/reverse_shell_java (s/sj)")
         print("2. enum_module/enum_symbol/enum_thread/enum_thread_live (em/es/et/etl)")
-        print("3. trace (tr)> (all/all-tree/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
+        print("3. trace (tr)> (all/all-tree/all-malloc/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
+        print("      all = hook all symbol, symbol generate by frida,r2 and binja you chose this")
+        print("      all-tree = hook all symbol with tree")
+        print("      all-malloc = hook all symbol when all function allocation buffer and access")
+        print("      <symbol> = single hook with symbol name")
+        print("      0x11,0x22.. = custom count hook with address")
+        print("")
         print("4. trace-java (tr-java)> (all/package-class/back) (full-info)> (className)")
         print("6. stalker (stl)> (back/<id-thread>/window/intruksi/stoplivethread/startlivethread)> ")
         print("           (intruksi)> (func_addr/back)> (filter)> (mnemonic:ret,jne,enter:all/back)")
@@ -545,28 +563,25 @@ def main():
             script.exports_sync.setfuzz("0x40131a", end_fuzz)
             print("[+] Waiting hook...")
 
-            i = 0
             while True:
-                i += 1
-                if i % 100 == 0:
-                    data = script.exports_sync.getfuzz()
-                    cases = data["fuzz_cases"]
-                    crashes = data["fuzz_crashes"]
-                    cov = data["coverage"]
+                data = script.exports_sync.getfuzz()
+                cases = data["fuzz_cases"]
+                crashes = data["fuzz_crashes"]
+                cov = data["coverage"]
 
-                    print(f"[+] Fuzz_cases:{cases} | Crash: {crashes} | Coverage: {cov}")
-
-                script.exports_sync.setfuzzloop("0x40131a")
-
+                print(f"[+] Fuzz_cases:{cases} | Crash: {crashes} | Coverage: {cov}")
+                time.sleep(1)
 
         elif pshell == "tr":
             script.exports_sync.enummodules()
-            in_module = input("\n>> Module> ")
+            #in_module = input("\n>> Module> ")
+            in_module = "heap_sim"
 
             if in_module == "back":
                 continue
 
-            in_swsym = input("\n>> Dump symbol address? frida/bn/r2: > ")
+            #in_swsym = input("\n>> Dump symbol address? frida/bn/r2: > ")
+            in_swsym = "frida"
 
             while True:
                 isbn = 0
@@ -575,7 +590,8 @@ def main():
 
                 if in_swsym == "frida":
                     print("[+] Using frida symbol.")
-                    sw_frida = input(">> Symbol/Import/Export? s/i/e: ")
+                    #sw_frida = input(">> Symbol/Import/Export? s/i/e: ")
+                    sw_frida = "s"
 
                     dick_sym = script.exports_sync.enumsymbolstrace(in_module, sw_frida)
 
@@ -639,13 +655,14 @@ def main():
                             dick_sym.append(out)
 
 
-                #init total symbol
+                #init for total symbol
                 if len(dick_sym) >= 300:
                     print("[!] big Symbol, nothing for show.")
                 else:
                     proxy.settofrida_func(dick_sym, "init")
 
-                in_symbol = input(f"\n>> {in_module}> symbol> ")
+                #in_symbol = input(f"\n>> {in_module}> symbol> ")
+                in_symbol = "all-malloc"
 
                 if in_symbol == "back":
                     script.exports_sync.setuphook("", "detach-all")
@@ -655,6 +672,15 @@ def main():
                     setup_hook(script, dick_sym, None, None)
 
                     proxy.settofrida_func("trace-func", "refresh")
+                    break
+
+                elif in_symbol == "all-malloc":
+                    script.exports_sync.setuphook("", "allocator")
+                    time.sleep(1)
+
+                    setup_hook(script, dick_sym, "all-malloc", None)
+
+                    #proxy.settofrida_func("trace-func", "refresh")
                     break
 
 

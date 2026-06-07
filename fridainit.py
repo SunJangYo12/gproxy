@@ -12,10 +12,10 @@ import json
 from collections import Counter
 import subprocess
 
-
 proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 
 pwd = None
+ALL_ALLOC = {}
 
 def on_message(message, data):
     if message['type'] == 'send':
@@ -98,9 +98,24 @@ def on_message(message, data):
            info = message['payload']['log']
            print(f"[+] {info}")
 
+        elif message['payload']['type'] == 'allochook_hit':
+           info = message['payload']['log']
+           mykey = info["key"]
+
+           if mykey not in ALL_ALLOC:
+               ALL_ALLOC[mykey] = info
+
         elif message['payload']['type'] == 'hook_hit':
            info = message['payload']['log']
            proxy.settofrida_func(info, "")
+
+           if info["heap_area"]:
+               heap_area = info["heap_area"].split("-> ")
+               ptr  = heap_area[1]
+               func = heap_area[0].split("] ")
+
+               if func[1] not in ALL_ALLOC[ptr]["member"]:
+                   ALL_ALLOC[ptr]["member"].append(func[1])
 
 
         elif message['payload']['type'] == 'hookmalloc_hit':
@@ -338,9 +353,11 @@ class MyUtils:
 
 def main():
     print("\n\t=====================")
-    print("\t Fuzzer proxy v2.0.1")
+    print("\t Fuzzer proxy v3.0.1")
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB (l/h/u): ")
+
+    DEBUG = True
 
     if target == "h":
        #ahost = input(">> Android host: ")
@@ -358,9 +375,13 @@ def main():
 
     elif target == "l":
        device = frida.get_local_device() #local linux
-       #pid_raw = input(">> Chose pid? (1234): ")
-       pid_raw = subprocess.run(["pidof", "heap_sim"], capture_output=True, text=True)
-       pid_raw = pid_raw.stdout.split("\n")[0]
+
+       if DEBUG:
+           pid_raw = subprocess.run(["pidof", "heap_sim"], capture_output=True, text=True)
+           pid_raw = pid_raw.stdout.split("\n")[0]
+       else:
+           pid_raw = input(">> Chose pid? (1234): ")
+
        pid = int(pid_raw)
 
     else:
@@ -409,7 +430,10 @@ def main():
     loop_menu = True
 
     while loop_menu:
-        pshell = input("\n>> ")
+        if DEBUG:
+            pshell = "tr"
+        else:
+            pshell = input("\n>> ")
 
         if pshell == "em":
             script.exports_sync.enummodules()
@@ -566,12 +590,18 @@ def main():
 
         elif pshell == "tr":
             script.exports_sync.enummodules()
-            in_module = input("\n>> Module> ")
+            if DEBUG:
+                in_module = "heap_sim"
+            else:
+                in_module = input("\n>> Module> ")
 
             if in_module == "back":
                 continue
 
-            in_swsym = input("\n>> Dump symbol address? frida/bn/r2: > ")
+            if DEBUG:
+                in_swsym = "frida"
+            else:
+                in_swsym = input("\n>> Dump symbol address? frida/bn/r2: > ")
 
             while True:
                 isbn = 0
@@ -580,7 +610,10 @@ def main():
 
                 if in_swsym == "frida":
                     print("[+] Using frida symbol.")
-                    sw_frida = input(">> Symbol/Import/Export? s/i/e: ")
+                    if DEBUG:
+                        sw_frida = "s"
+                    else:
+                        sw_frida = input(">> Symbol/Import/Export? s/i/e: ")
 
                     dick_sym = script.exports_sync.enumsymbolstrace(in_module, sw_frida)
 
@@ -650,7 +683,10 @@ def main():
                 else:
                     proxy.settofrida_func(dick_sym, "init")
 
-                in_symbol = input(f"\n>> {in_module}> symbol> ")
+                if DEBUG:
+                    in_symbol = "all-malloc"
+                else:
+                    in_symbol = input(f"\n>> {in_module}> symbol> ")
 
                 if in_symbol == "back":
                     script.exports_sync.setuphook("", "detach-all")
@@ -668,8 +704,15 @@ def main():
 
                     setup_hook(script, dick_sym, None, None)
 
-                    proxy.settofrida_func("trace-func", "refresh")
-                    break
+                    #proxy.settofrida_func("trace-func", "refresh")
+                    while True:
+                        go = input("\nENTER for update..\n")
+
+                        for key in ALL_ALLOC:
+                            print(ALL_ALLOC[key])
+
+                        #    proxy.settofrida_func(i, "")
+                        #    time.sleep(1);
 
 
                 elif in_symbol == "all-tree":

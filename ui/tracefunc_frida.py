@@ -1061,6 +1061,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
                     child1 = QTreeWidgetItem(parent)
                     child1.setText(0, "heap_area")
                     child1.setFont(0, self.font)
+                    child1.setForeground(0, QColor("pink"))
 
                     id_expand = func_name+"|||heap_area"
                     child1.setData(0, Qt.UserRole, id_expand )

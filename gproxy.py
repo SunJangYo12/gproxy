@@ -333,10 +333,12 @@ class Gproxy:
         if type == "stalker":
             GLOBAL.window_frida_stalker_title = data
             SIGNALS.window_frida_stalker.emit()
-
         elif type == "tracer":
             GLOBAL.window_frida_tracer_title = data
             SIGNALS.window_frida_tracer.emit()
+        elif type == "tracer_allocator":
+            GLOBAL.window_frida_tracer_title = data
+            SIGNALS.window_frida_tracer_allocator.emit()
 
 
 

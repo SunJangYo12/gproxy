@@ -135,6 +135,7 @@ class GlobalSignals(QObject):
     frida_stalker_ct_module = Signal()
     window_frida_stalker = Signal()
     window_frida_tracer = Signal()
+    window_frida_tracer_allocator = Signal()
 
 GLOBAL = GlobalState()
 SIGNALS = GlobalSignals()

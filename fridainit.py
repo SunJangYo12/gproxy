@@ -357,7 +357,7 @@ def main():
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB (l/h/u): ")
 
-    DEBUG = True
+    DEBUG = False
 
     if target == "h":
        #ahost = input(">> Android host: ")
@@ -376,7 +376,7 @@ def main():
     elif target == "l":
        device = frida.get_local_device() #local linux
 
-       if DEBUG:
+       if True:
            pid_raw = subprocess.run(["pidof", "heap_sim"], capture_output=True, text=True)
            pid_raw = pid_raw.stdout.split("\n")[0]
        else:
@@ -704,21 +704,23 @@ def main():
 
                     setup_hook(script, dick_sym, None, None)
 
+                    proxy.settofrida_openwindow("tracer_allocator", "Trace Allocator")
                     #proxy.settofrida_func("trace-func", "refresh")
                     while True:
                         go = input("\nENTER for update..\n")
 
-                        for key in ALL_ALLOC:
-                            print(ALL_ALLOC[key])
+                        with open("/tmp/trace-allocator.json", "w") as fd:
+                            fd.write(json.dumps(ALL_ALLOC))
 
-                        #    proxy.settofrida_func(i, "")
-                        #    time.sleep(1);
+                        proxy.settofrida_func("0", "hooktree_hit_all")
 
+                        #for key in ALL_ALLOC:
+                        #    print(ALL_ALLOC[key])
 
                 elif in_symbol == "all-tree":
                     setup_hook(script, dick_sym, "zzall-tree", None)
 
-                    #proxy.settofrida_func("trace-func", "refresh")
+                    proxy.settofrida_func("trace-func", "refresh")
                     print("==============")
                     print("[+] Trace ready.")
 

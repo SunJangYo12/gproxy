@@ -60,8 +60,10 @@ class DialogTracerCallTree(QDialog):
         self.tree_widget.itemExpanded.connect(self.click_expand)
         self.tree_widget.itemCollapsed.connect(self.click_collap)
 
-
-        SIGNALS.frida_updatedhook.connect(self.load_tree)
+        if sid == "Trace Allocator":
+            SIGNALS.frida_updatedhook.connect(self.load_tree_allocator)
+        else:
+            SIGNALS.frida_updatedhook.connect(self.load_tree)
 
         layout = QVBoxLayout()
         layout.addWidget(self.tree_widget)
@@ -112,19 +114,18 @@ class DialogTracerCallTree(QDialog):
 
 
 
-    def open_data(self):
-        with open("/tmp/hooktree_hit.json") as f:
+    def open_data(self, filename):
+        with open(filename) as f:
             data = json.load(f)
 
         return data
-
 
     def load_tree(self):
         if not self.is_update:
             self.tree_widget.setHeaderLabels([f"DEAD Call tree"])
             return
 
-        data = self.open_data()
+        data = self.open_data("/tmp/hooktree_hit.json")
 
         self.tree_widget.clear()
         self.tree_widget.setHeaderLabels([f"Call tree: {len(data)} threads"])
@@ -142,6 +143,28 @@ class DialogTracerCallTree(QDialog):
             # kalau tidak ingin menampilkan ROOT
             for child in root["children"].values():
                 self.add_node_recursive(thread_item, child)
+
+    def load_tree_allocator(self):
+        data = self.open_data("/tmp/trace-allocator.json")
+
+        self.tree_widget.clear()
+        self.tree_widget.setHeaderLabels([f"Member tree: {len(data)} total"])
+
+        for key, value in data.items():
+            func_item = QTreeWidgetItem(self.tree_widget)
+            func_item.setText(0, f"{value['func_name']}")
+            func_item.setFont(0, self.font)
+
+            #func_item.setData(0, Qt.UserRole, key)
+            #self.cekandset_expand(func_item, key)
+            if "member" in value:
+                for child in value["member"]:
+                    item = QTreeWidgetItem(func_item)
+                    item.setText(0, f"{child}")
+                    item.setFont(0, self.font)
+
+
+
 
 
     def cekandset_expand(self, tree, id):
@@ -681,6 +704,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
         SIGNALS.window_frida_stalker.connect(self.refresh_from_global_owindow)
         SIGNALS.window_frida_tracer.connect(self.refresh_from_global_owindow_tracer)
+        SIGNALS.window_frida_tracer_allocator.connect(self.refresh_from_global_owindow_tracer_allocator)
 
 
         tree_widget = QTreeWidget()
@@ -723,6 +747,15 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
             index += 1
         return f'{size:.1f}{units[index]}'
 
+
+    def refresh_from_global_owindow_tracer_allocator(self):
+        title = GLOBAL.window_frida_tracer_title
+
+        self.dlg = DialogTracerCallTree(sid=title, data=self.bv)
+        self.dlg.resize(340, 550) # w,h
+        self.dlg.show()
+        self.dlg.raise_()
+        self.dlg.activateWindow()
 
     def refresh_from_global_owindow_tracer(self):
         title = GLOBAL.window_frida_tracer_title

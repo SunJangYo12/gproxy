@@ -105,17 +105,36 @@ def on_message(message, data):
            if mykey not in ALL_ALLOC:
                ALL_ALLOC[mykey] = info
 
+
+        elif message['payload']['type'] == 'inputbuffer_hit':
+           info = message['payload']['log']
+           mykey = info["key"]
+           if mykey not in ALL_ALLOC:
+               ALL_ALLOC[mykey] = info
+
+
         elif message['payload']['type'] == 'hook_hit':
            info = message['payload']['log']
            proxy.settofrida_func(info, "")
 
-           if info["heap_area"]:
-               heap_area = info["heap_area"].split("-> ")
-               ptr  = heap_area[1]
-               func = heap_area[0].split("] ")
+           if "heap_area" in info:
+               if info["heap_area"]:
+                   heap_area = info["heap_area"].split("-> ")
+                   ptr  = heap_area[1]
+                   func = heap_area[0].split("] ")
 
-               if func[1] not in ALL_ALLOC[ptr]["member"]:
-                   ALL_ALLOC[ptr]["member"].append(func[1])
+                   if func[1] not in ALL_ALLOC[ptr]["member"]:
+                       ALL_ALLOC[ptr]["member"].append(func[1])
+
+           elif "buff_area" in info:
+               if info["buff_area"]:
+                   buff_area = info["buff_area"].split("-> ")
+                   ptr  = buff_area[1]
+                   func = buff_area[0].split("] ")
+
+                   if func[1] not in ALL_ALLOC[ptr]["member"]:
+                       ALL_ALLOC[ptr]["member"].append(func[1])
+
 
 
         elif message['payload']['type'] == 'hookmalloc_hit':
@@ -357,7 +376,7 @@ def main():
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB (l/h/u): ")
 
-    DEBUG = False
+    DEBUG = True
 
     if target == "h":
        #ahost = input(">> Android host: ")
@@ -376,8 +395,8 @@ def main():
     elif target == "l":
        device = frida.get_local_device() #local linux
 
-       if True:
-           pid_raw = subprocess.run(["pidof", "heap_sim"], capture_output=True, text=True)
+       if DEBUG:
+           pid_raw = subprocess.run(["pidof", "user_input"], capture_output=True, text=True)
            pid_raw = pid_raw.stdout.split("\n")[0]
        else:
            pid_raw = input(">> Chose pid? (1234): ")
@@ -414,10 +433,12 @@ def main():
     else:
         print("1. shell/reverse_shell_java (s/sj)")
         print("2. enum_module/enum_symbol/enum_thread/enum_thread_live (em/es/et/etl)")
-        print("3. trace (tr)> (all/all-tree/all-malloc/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
+        print("3. trace (tr)> (all/all-tree/all-alloc/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
         print("      all = hook all symbol, symbol generate by frida,r2 and binja you chose this")
         print("      all-tree = hook all symbol with tree")
-        print("      all-malloc = hook all symbol when all function allocation buffer and access")
+        print("      all-alloc = hook all symbol when all function allocation buffer and access")
+        print("      all-binput = hook all symbol when all function allocation buffer and access")
+        print("                   from read, recv, fgets, fread")
         print("      <symbol> = single hook with symbol name")
         print("      0x11,0x22.. = custom count hook with address")
         print("")
@@ -591,7 +612,7 @@ def main():
         elif pshell == "tr":
             script.exports_sync.enummodules()
             if DEBUG:
-                in_module = "heap_sim"
+                in_module = "user_input"
             else:
                 in_module = input("\n>> Module> ")
 
@@ -684,7 +705,7 @@ def main():
                     proxy.settofrida_func(dick_sym, "init")
 
                 if DEBUG:
-                    in_symbol = "all-malloc"
+                    in_symbol = "all-binput"
                 else:
                     in_symbol = input(f"\n>> {in_module}> symbol> ")
 
@@ -698,14 +719,30 @@ def main():
                     proxy.settofrida_func("trace-func", "refresh")
                     break
 
-                elif in_symbol == "all-malloc":
+                elif in_symbol == "all-binput":
+                    script.exports_sync.setuphook("", "buffinput")
+                    time.sleep(1)
+
+                    setup_hook(script, dick_sym, None, None)
+
+                    proxy.settofrida_openwindow("tracer_allocator", "Trace buffer input")
+                    proxy.settofrida_func("trace-func", "refresh")
+                    while True:
+                        go = input("\nENTER for update..\n")
+
+                        with open("/tmp/trace-buffinput.json", "w") as fd:
+                            fd.write(json.dumps(ALL_ALLOC))
+
+                        proxy.settofrida_func("0", "hooktree_hit_all")
+
+                elif in_symbol == "all-alloc":
                     script.exports_sync.setuphook("", "allocator")
                     time.sleep(1)
 
                     setup_hook(script, dick_sym, None, None)
 
                     proxy.settofrida_openwindow("tracer_allocator", "Trace Allocator")
-                    #proxy.settofrida_func("trace-func", "refresh")
+                    proxy.settofrida_func("trace-func", "refresh")
                     while True:
                         go = input("\nENTER for update..\n")
 
@@ -713,9 +750,6 @@ def main():
                             fd.write(json.dumps(ALL_ALLOC))
 
                         proxy.settofrida_func("0", "hooktree_hit_all")
-
-                        #for key in ALL_ALLOC:
-                        #    print(ALL_ALLOC[key])
 
                 elif in_symbol == "all-tree":
                     setup_hook(script, dick_sym, "zzall-tree", None)

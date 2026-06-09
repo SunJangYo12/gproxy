@@ -54,13 +54,16 @@ function findAllocation(addr) {
         const start = ptr(alloc.ptr);
         const end = start.add(alloc.size);
 
-        //console.log("       "+addr+": "+start+" - "+end);
+        //console.log("       args="+addr+"(start="+start+" - end="+end+")");
         if (addr.compare(start) >= 0 && addr.compare(end) < 0) {
             return alloc;
         }
     }
     return null;
 }
+
+/*********** Buffer input Trace *******************/
+var is_buffinput = false;
 
 
 class FuzzerKu
@@ -538,6 +541,109 @@ class FuzzerKu
         }
     }
 
+    // sink for buff_input
+    setup_sink_buffinput() {
+        const subthis = this;
+
+        Interceptor.attach(Module.findExportByName(null, "fread"), {
+            onEnter(args) {
+                this.output = {}
+                //(void *ptr, size_t size, size_t nmemb, FILE *stream);
+                this.buf = args[0].toString();
+                this.size = args[1].toInt32();
+                this.nmemb = args[2].toInt32();
+                this.fd = args[3].toInt32();
+
+                alloc_range.set(this.buf, {
+                    ptr: this.buf,
+                    size: this.size
+                });
+
+                /*console.log(
+                    `[fread] buf=${this.buf} size=${this.size} nmemb=${this.nmemb} fd=${this.fd}`
+                );*/
+            },
+            onLeave(retval) {
+                //jika crash comment ini
+                this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");
+
+                const caller = DebugSymbol.fromAddress(this.returnAddress);
+                this.output["retval"] = retval;
+                this.output["key"] = this.buf;
+                this.output["func_name"] = "fread.caller_"+caller+"."+this.size;
+                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["member"] = [];
+                send({"type": "inputbuffer_hit", "log": this.output});
+            }
+        });
+
+        /*
+        Interceptor.attach(Module.findExportByName(null, "fgets"), {
+            onEnter(args) {
+                this.output = {}
+
+                console.log("enter fgets");
+                this.fd = args[0].toInt32();
+                this.buf = args[1].toString();
+                this.size = args[2].toInt32();
+
+                alloc_range.set(this.buf, {
+                    ptr: this.buf,
+                    size: this.size
+                });
+                console.log(
+                    `[read] fgets=${this.fd} buf=${this.buf} size=${this.size}`
+                );
+            },
+            onLeave(retval) {
+            }
+        });*/
+
+        /* Gak tau kenapa tidak terhit
+        Interceptor.attach(Module.findExportByName(null, "read"), {
+            onEnter(args) {
+                this.output = {}
+
+                this.fd = args[0].toInt32();
+                this.buf = args[1].toString();
+                this.size = args[2].toInt32();
+
+                alloc_range.set(this.buf, {
+                    ptr: this.buf,
+                    size: this.size
+                });
+                console.log(
+                    `[read] fd=${this.fd} buf=${this.buf} size=${this.size}`
+                );
+
+                this.backtrace = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+
+                    .join("\n");
+            },
+            onLeave(retval) {
+                const caller = DebugSymbol.fromAddress(this.returnAddress);
+                //jika crash comment ini
+                this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");
+
+                this.output["retval"] = retval;
+                this.output["key"] = retval;
+                this.output["func_name"] = "malloc.caller_"+caller+"."+this.size;
+                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["member"] = [];
+                send({"type": "allochook_hit", "log": this.output});
+            }
+        });*/
+    }
+
+    // sink for allocator
     setup_hookallocator() {
         const subthis = this;
 
@@ -931,9 +1037,17 @@ class FuzzerKu
 
                if (fstalking == "detach-all") {
                    is_alloctrace = false;
+                   is_buffinput = false;
                    this.logDebug("send", "Agent @ Cleaning hook instrument...", "info");
                    Interceptor.detachAll();
                    return
+               }
+
+               // Setup hook input sink buffer
+               if (fstalking == "buffinput") {
+                    is_buffinput = true;
+                    this.setup_sink_buffinput();
+                    return;
                }
 
                // Setup allocator hook
@@ -994,6 +1108,25 @@ class FuzzerKu
                                 this.context,
                                 Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
                                 .join("\n");
+
+                           if (is_buffinput) {
+                                // jumlah paramater target
+
+                                //console.log("proc: "+func_data.name);
+                                for (let i=0; i<6; i++) {
+                                    try {
+                                        const func_args = findAllocation(args[i]);
+
+                                        if (func_args) {
+                                            this.output["buff_area"] =
+                                                 "args["+i+"] "+
+                                                 func_data.name+
+                                                 " -> "+func_args.ptr;
+                                            //console.log(`${func_data.name} arg${i} -> ${func_args.ptr}`);
+                                        }
+                                    } catch (_) {}
+                                }
+                           }
 
                            if (is_alloctrace) {
                                 // jumlah paramater target

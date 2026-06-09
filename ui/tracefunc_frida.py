@@ -62,6 +62,8 @@ class DialogTracerCallTree(QDialog):
 
         if sid == "Trace Allocator":
             SIGNALS.frida_updatedhook.connect(self.load_tree_allocator)
+        elif sid == "Trace buffer input":
+            SIGNALS.frida_updatedhook.connect(self.load_tree_binput)
         else:
             SIGNALS.frida_updatedhook.connect(self.load_tree)
 
@@ -144,6 +146,25 @@ class DialogTracerCallTree(QDialog):
             for child in root["children"].values():
                 self.add_node_recursive(thread_item, child)
 
+    def load_tree_binput(self):
+        data = self.open_data("/tmp/trace-buffinput.json")
+
+        self.tree_widget.clear()
+        self.tree_widget.setHeaderLabels([f"Member tree: {len(data)} total"])
+
+        for key, value in data.items():
+            func_item = QTreeWidgetItem(self.tree_widget)
+            func_item.setText(0, f"{value['func_name']}")
+            func_item.setFont(0, self.font)
+
+            #func_item.setData(0, Qt.UserRole, key)
+            #self.cekandset_expand(func_item, key)
+            if "member" in value:
+                for child in value["member"]:
+                    item = QTreeWidgetItem(func_item)
+                    item.setText(0, f"{child}")
+                    item.setFont(0, self.font)
+
     def load_tree_allocator(self):
         data = self.open_data("/tmp/trace-allocator.json")
 
@@ -162,9 +183,6 @@ class DialogTracerCallTree(QDialog):
                     item = QTreeWidgetItem(func_item)
                     item.setText(0, f"{child}")
                     item.setFont(0, self.font)
-
-
-
 
 
     def cekandset_expand(self, tree, id):

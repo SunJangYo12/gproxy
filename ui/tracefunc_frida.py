@@ -227,7 +227,7 @@ class DialogTracerCallTree(QDialog):
             func = raw[0]
             caller = raw[1]
             len = raw[2]
-            buffer = value["key"]
+            buffer = value["key"].split("_")[1]
 
             func_item.setText(0, func)
             func_item.setText(1, buffer)
@@ -1132,9 +1132,6 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
                         child2.setFont(0, self.font)
                         child2.setData(0, Qt.UserRole, "%s" % bt )
 
-
-
-
     def refresh_from_global_sym_trace(self):
         self.sw_menu = "trace_symbol"
         self.tree_widget.clear()
@@ -1150,7 +1147,6 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
                 if int(data['count']) <= 1:
                     continue
 
-
             parent = QTreeWidgetItem(self.tree_widget)
 
             parent.setText(0, "%d  %s" % (data['count'], func_name) )
@@ -1164,8 +1160,6 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
                 parent.setForeground(0, QColor("orange"))
             else:
                 parent.setForeground(0, QColor("white"))
-
-
 
             for key in data["raw"]:
 

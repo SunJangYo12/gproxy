@@ -98,13 +98,6 @@ def on_message(message, data):
            info = message['payload']['log']
            print(f"[+] {info}")
 
-        elif message['payload']['type'] == 'allochook_hit':
-           info = message['payload']['log']
-           mykey = info["key"]
-
-           if mykey not in ALL_ALLOC:
-               ALL_ALLOC[mykey] = info
-
 
         elif message['payload']['type'] == 'inputbuffer_hit':
            info = message['payload']['log']
@@ -121,7 +114,7 @@ def on_message(message, data):
 
         elif message['payload']['type'] == 'hook_hit':
            info = message['payload']['log']
-           proxy.settofrida_func(info, "")
+           #proxy.settofrida_func(info, "")
 
            if "heap_area" in info:
                if info["heap_area"]:
@@ -663,7 +656,6 @@ def main():
                     p_rec = input(">> Single/path-recursive? s/<path>: ")
 
                     if p_rec != "s":
-
                         for f in os.listdir(p_rec):
                             pbase = script.exports_sync.getbase(f)
 
@@ -778,6 +770,13 @@ def main():
                     #proxy.settofrida_func("trace-func", "refresh")
                     while True:
                         go = input("\nENTER for update..\n")
+
+                        data = script.exports_sync.getalloctrace()
+
+                        for dat in data:
+                            mykey = dat["key"]
+                            if mykey not in ALL_ALLOC:
+                                ALL_ALLOC[mykey] = dat
 
                         with open("/tmp/trace-allocator.json", "w") as fd:
                             fd.write(json.dumps(ALL_ALLOC))

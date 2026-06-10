@@ -48,6 +48,7 @@ var func_handle = new NativeFunction(ptr(0x40131a), 'void', ['pointer']);
 
 /*********** Heap Trace *******************/
 const alloc_range = new Map();
+var out_traceheap = [];
 var is_alloctrace = false;
 function findAllocation(addr) {
     for (const [key, alloc] of alloc_range) {
@@ -727,25 +728,22 @@ class FuzzerKu
     // sink for allocator
     setup_hookallocator() {
         const subthis = this;
+        out_traceheap = [];
 
         Interceptor.attach(Module.findExportByName(null, "malloc"), {
             onEnter(args) {
                 this.output = {}
 
                 this.size = args[0].toInt32();
-                this.backtrace = Thread.backtrace(
-                    this.context,
-                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                    .join("\n");
             },
             onLeave(retval) {
                 alloc_range.set(retval.toString(), {
                     ptr: retval.toString(),
                     size: this.size
                 });
-                /*console.log(
+                console.log(
                     `[malloc] ${retval} size=${this.size}`
-                );*/
+                );
 
                 //jika crash comment ini
                 this.output["backtrace"] = Thread.backtrace(
@@ -755,19 +753,20 @@ class FuzzerKu
 
                 const caller = DebugSymbol.fromAddress(this.returnAddress);
                 this.output["retval"] = retval;
-                this.output["key"] = retval;
+                this.output["key"] = "malloc_"+retval;
                 this.output["func_name"] = "malloc||"+caller+"||"+this.size;
                 this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = [];
-                send({"type": "allochook_hit", "log": this.output});
+
+                out_traceheap.push(this.output);
             }
         });
         Interceptor.attach(Module.findExportByName(null, "free"), {
             onEnter(args) {
                 alloc_range.delete(args[0].toString());
-                /*console.log(
+                console.log(
                     `[free] ${args[0]}`
-                );*/
+                );
                 this.output = {}
 
                 //jika crash comment ini
@@ -779,9 +778,9 @@ class FuzzerKu
                 const caller = DebugSymbol.fromAddress(this.returnAddress);
                 this.output["func_name"] = "free||"+caller+"||-";
                 this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).address;
-                this.output["key"] = args[0].toString();
+                this.output["key"] = "free_"+args[0].toString();
 
-                send({"type": "allochook_hit", "log": this.output});
+                out_traceheap.push(this.output);
             }
         });
     }
@@ -1032,6 +1031,9 @@ class FuzzerKu
                      subthis.logDebug("send", mod_summary, "stalker");
                   }
                });
+            },
+            getalloctrace: () => {
+                return out_traceheap;
             },
             getfuzz: () => {
                 const outfuzz = {

@@ -121,7 +121,7 @@ def on_message(message, data):
 
         elif message['payload']['type'] == 'hook_hit':
            info = message['payload']['log']
-           #proxy.settofrida_func(info, "")
+           proxy.settofrida_func(info, "")
 
            if "heap_area" in info:
                if info["heap_area"]:

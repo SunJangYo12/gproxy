@@ -831,6 +831,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
 
     def refresh_from_global_owindow_tracer_allocator(self):
+        self.sw_menu = "trace_allocator"
         title = GLOBAL.window_frida_tracer_title
 
         self.dlg = DialogTracerCallTree(sid=title, data=self.bv)
@@ -840,6 +841,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         self.dlg.activateWindow()
 
     def refresh_from_global_owindow_tracer(self):
+        self.sw_menu = "trace"
         title = GLOBAL.window_frida_tracer_title
 
         self.dlg = DialogTracerCallTree(sid=title, data=self.bv)
@@ -850,6 +852,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
 
     def refresh_from_global_owindow(self):
+        self.sw_menu = "stalker"
         title = GLOBAL.window_frida_stalker_title
 
         self.dlg = DialogStalker(sid=title, data=self.bv)
@@ -861,11 +864,13 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
 
     def refresh_from_global_unity_method(self):
+        self.sw_menu = "unity_method"
         self.tree_widget.clear()
         self.tree_widget.headerItem().setText(0, "Class method list: %d" %len(GLOBAL.frida_enumunitymethod) )
 
 
     def refresh_from_global_unity_asm(self):
+        self.sw_menu = "unity_asm"
         self.tree_widget.clear()
         self.tree_widget.headerItem().setText(0, "Assembly list: %d" %len(GLOBAL.frida_enumunityasm) )
 
@@ -892,23 +897,23 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         return result
 
     def on_lineedit_callback(self, text):
+        if self.sw_menu == "module_list":
+            result_index = []
+            tsearch = text
 
-        result_index = []
-        tsearch = text
+            for hdata in GLOBAL.frida_enummodules:
+                proc = self.find_obj(tsearch, hdata)
 
-        for hdata in GLOBAL.frida_enummodules:
-            proc = self.find_obj(tsearch, hdata)
+                #print("search: "+hdata["name"])
+                if len(proc) > 0:
+                    #print("     found\n")
+                    result_index.append(proc)
 
-            #print("search: "+hdata["name"])
-            if len(proc) > 0:
-                #print("     found\n")
-                result_index.append(proc)
-
-        if text == "":
-            self.temp = {}
-        else:
-            self.temp = result_index
-        self.refresh_from_global()
+            if text == "":
+                self.temp = {}
+            else:
+                self.temp = result_index
+            self.refresh_from_global()
 
 
     def refresh_from_global(self):
@@ -946,6 +951,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
 
     def refresh_from_global_id_thread(self):
+        self.sw_menu = "thread_id"
         self.tree_widget.clear()
         self.tree_widget.headerItem().setText(0, "%s ID Thread List: %d" % (GLOBAL.refresh_view, len(GLOBAL.frida_idthreads)) )
 
@@ -1009,6 +1015,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
 
     def refresh_from_global_sym(self):
+        self.sw_menu = "symbol"
         self.tree_widget.clear()
         func_total = 0
 
@@ -1041,6 +1048,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
 
     def refresh_from_global_java_trace(self):
+        self.sw_menu = "trace_java"
         self.tree_widget.clear()
         self.tree_widget.headerItem().setText(0, "%s Trace Java List: %d" % (GLOBAL.refresh_view, len(GLOBAL.frida_functions_java)) )
 
@@ -1128,6 +1136,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
 
     def refresh_from_global_sym_trace(self):
+        self.sw_menu = "trace_symbol"
         self.tree_widget.clear()
         self.tree_widget.headerItem().setText(0, "%s Trace Function List: %d" % (GLOBAL.refresh_view, len(GLOBAL.frida_functions)) )
 
@@ -1310,6 +1319,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
         if self.sw_menu == "module_list":
             menu.addAction("Find")
+            menu.addAction("Clear all")
 
         elif self.sw_menu == "thread_list":
             menu.addAction("Coloring All")
@@ -1356,6 +1366,11 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
 
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
+
+        elif action == "Clear all":
+            GLOBAL.frida_enummodules = {}
+            self.temp = {}
+            self.refresh_from_global()
 
         elif action == "Coloring All":
             self.is_colortag = True

@@ -112,10 +112,16 @@ def on_message(message, data):
            if mykey not in ALL_ALLOC:
                ALL_ALLOC[mykey] = info
 
+        elif message['payload']['type'] == 'inputbuffer_network_hit':
+           info = message['payload']['log']
+           mykey = info["key"]
+           if mykey not in ALL_ALLOC:
+               ALL_ALLOC[mykey] = info
+
 
         elif message['payload']['type'] == 'hook_hit':
            info = message['payload']['log']
-           proxy.settofrida_func(info, "")
+           #proxy.settofrida_func(info, "")
 
            if "heap_area" in info:
                if info["heap_area"]:
@@ -129,6 +135,15 @@ def on_message(message, data):
            elif "buff_area" in info:
                if info["buff_area"]:
                    buff_area = info["buff_area"].split("-> ")
+                   ptr  = buff_area[1]
+                   func = buff_area[0].split("] ")
+
+                   if func[1] not in ALL_ALLOC[ptr]["member"]:
+                       ALL_ALLOC[ptr]["member"].append(func[1])
+
+           elif "buff_network_area" in info:
+               if info["buff_network_area"]:
+                   buff_area = info["buff_network_area"].split("-> ")
                    ptr  = buff_area[1]
                    func = buff_area[0].split("] ")
 
@@ -376,7 +391,7 @@ def main():
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB (l/h/u): ")
 
-    DEBUG = True
+    DEBUG = False
 
     if target == "h":
        #ahost = input(">> Android host: ")
@@ -438,7 +453,9 @@ def main():
         print("      all-tree = hook all symbol with tree")
         print("      all-alloc = hook all symbol when all function allocation buffer and access")
         print("      all-binput = hook all symbol when all function allocation buffer and access")
-        print("                   from read, recv, fgets, fread")
+        print("                   from input file eg. read, fgets, fread")
+        print("      all-bnet = hook all symbol when all function allocation buffer and access")
+        print("                   from input network eg. recv etc")
         print("      <symbol> = single hook with symbol name")
         print("      0x11,0x22.. = custom count hook with address")
         print("")
@@ -640,7 +657,8 @@ def main():
 
                 elif in_swsym == "r2":
                     print("[+] Using radare2 symbol.")
-                    # $ r2 -e scr.color=0 -A -q -c 'afl' libname.so | awk '{print $1, "libname.so!"$4}' > funcs.txt
+                    # read -p "libname: " libname
+                    # r2 -e scr.color=0 -A -q -c 'afl' $libname | awk '{print $1, "$libname!"$4}' > funcs.txt
 
                     p_rec = input(">> Single/path-recursive? s/<path>: ")
 
@@ -705,7 +723,7 @@ def main():
                     proxy.settofrida_func(dick_sym, "init")
 
                 if DEBUG:
-                    in_symbol = "all-binput"
+                    in_symbol = "all-alloc"
                 else:
                     in_symbol = input(f"\n>> {in_module}> symbol> ")
 
@@ -718,6 +736,21 @@ def main():
 
                     proxy.settofrida_func("trace-func", "refresh")
                     break
+
+                elif in_symbol == "all-bnet":
+                    script.exports_sync.setuphook("", "buffnetwork")
+                    time.sleep(1)
+
+                    setup_hook(script, dick_sym, None, None)
+
+                    proxy.settofrida_openwindow("tracer_allocator", "Trace buffer input network")
+                    proxy.settofrida_func("trace-func", "refresh")
+                    while True:
+                        go = input("\nENTER for update..\n")
+
+                        with open("/tmp/trace-buffinput.json", "w") as fd:
+                            fd.write(json.dumps(ALL_ALLOC))
+                        proxy.settofrida_func("0", "hooktree_hit_all")
 
                 elif in_symbol == "all-binput":
                     script.exports_sync.setuphook("", "buffinput")
@@ -742,7 +775,7 @@ def main():
                     setup_hook(script, dick_sym, None, None)
 
                     proxy.settofrida_openwindow("tracer_allocator", "Trace Allocator")
-                    proxy.settofrida_func("trace-func", "refresh")
+                    #proxy.settofrida_func("trace-func", "refresh")
                     while True:
                         go = input("\nENTER for update..\n")
 

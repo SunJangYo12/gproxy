@@ -64,6 +64,8 @@ class DialogTracerCallTree(QDialog):
             SIGNALS.frida_updatedhook.connect(self.load_tree_allocator)
         elif sid == "Trace buffer input":
             SIGNALS.frida_updatedhook.connect(self.load_tree_binput)
+        elif sid == "Trace buffer input network":
+            SIGNALS.frida_updatedhook.connect(self.load_tree_binput_network)
         else:
             SIGNALS.frida_updatedhook.connect(self.load_tree)
 
@@ -146,16 +148,63 @@ class DialogTracerCallTree(QDialog):
             for child in root["children"].values():
                 self.add_node_recursive(thread_item, child)
 
+    def load_tree_binput_network(self):
+        data = self.open_data("/tmp/trace-buffinput.json")
+
+        self.tree_widget.clear()
+        self.tree_widget.setHeaderLabels(["function", "buffer", "size", "caller"])
+
+        for key, value in data.items():
+            func_item = QTreeWidgetItem(self.tree_widget)
+
+            raw = value["func_name"].split("||")
+            func = raw[0]
+            caller = raw[1]
+            len = raw[2]
+            buffer = value["key"]
+
+            func_item.setText(0, func)
+            func_item.setText(1, buffer)
+            func_item.setText(2, len)
+            func_item.setText(3, caller)
+
+            func_item.setFont(0, self.font)
+            func_item.setFont(1, self.font)
+            func_item.setFont(2, self.font)
+            func_item.setFont(3, self.font)
+
+            #func_item.setData(0, Qt.UserRole, key)
+            #self.cekandset_expand(func_item, key)
+            if "member" in value:
+                for child in value["member"]:
+                    item = QTreeWidgetItem(func_item)
+                    item.setText(0, f"{child}")
+                    item.setFont(0, self.font)
+
     def load_tree_binput(self):
         data = self.open_data("/tmp/trace-buffinput.json")
 
         self.tree_widget.clear()
-        self.tree_widget.setHeaderLabels([f"Member tree: {len(data)} total"])
+        self.tree_widget.setHeaderLabels(["function", "buffer", "size", "caller"])
 
         for key, value in data.items():
             func_item = QTreeWidgetItem(self.tree_widget)
-            func_item.setText(0, f"{value['func_name']}")
+
+            raw = value["func_name"].split("||")
+            func = raw[0]
+            caller = raw[1]
+            len = raw[2]
+            buffer = value["key"]
+
+            func_item.setText(0, func)
+            func_item.setText(1, buffer)
+            func_item.setText(2, len)
+            func_item.setText(3, caller)
+
             func_item.setFont(0, self.font)
+            func_item.setFont(1, self.font)
+            func_item.setFont(2, self.font)
+            func_item.setFont(3, self.font)
 
             #func_item.setData(0, Qt.UserRole, key)
             #self.cekandset_expand(func_item, key)
@@ -169,12 +218,26 @@ class DialogTracerCallTree(QDialog):
         data = self.open_data("/tmp/trace-allocator.json")
 
         self.tree_widget.clear()
-        self.tree_widget.setHeaderLabels([f"Member tree: {len(data)} total"])
+        self.tree_widget.setHeaderLabels(["function", "buffer", "size", "caller"])
 
         for key, value in data.items():
             func_item = QTreeWidgetItem(self.tree_widget)
-            func_item.setText(0, f"{value['func_name']}")
+
+            raw = value["func_name"].split("||")
+            func = raw[0]
+            caller = raw[1]
+            len = raw[2]
+            buffer = value["key"]
+
+            func_item.setText(0, func)
+            func_item.setText(1, buffer)
+            func_item.setText(2, len)
+            func_item.setText(3, caller)
+
             func_item.setFont(0, self.font)
+            func_item.setFont(1, self.font)
+            func_item.setFont(2, self.font)
+            func_item.setFont(3, self.font)
 
             #func_item.setData(0, Qt.UserRole, key)
             #self.cekandset_expand(func_item, key)
@@ -743,6 +806,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         #search
         self.lineEdit = QLineEdit()
         self.lineEdit.setObjectName(u"lineEdit")
+        self.lineEdit.textChanged.connect(self.on_lineedit_callback);
 
         layout = QVBoxLayout()
         layout.addWidget(tree_widget)
@@ -753,9 +817,9 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         self.font = getMonospaceFont(self)
         self.expanded_items = set()
         self.sw_menu = ""
+        self.temp = {}
         self.is_colortag = False
         self.color_tag = []
-
 
     def format_size(self, size):
         units = ['B', 'K', 'M', 'G', 'T']
@@ -813,13 +877,49 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
             parent.setData(0, Qt.UserRole, data )
 
 
+    def find_obj(self, fdata, data):
+        result = {}
+        for key in data:
+            val = data[key]
+
+            #print(f"{key}: {val}")
+
+            #if key == "moduleName":
+            if True:
+                if str(val).find(fdata) >= 0:
+                    result = data
+            #break
+        return result
+
+    def on_lineedit_callback(self, text):
+
+        result_index = []
+        tsearch = text
+
+        for hdata in GLOBAL.frida_enummodules:
+            proc = self.find_obj(tsearch, hdata)
+
+            #print("search: "+hdata["name"])
+            if len(proc) > 0:
+                #print("     found\n")
+                result_index.append(proc)
+
+        if text == "":
+            self.temp = {}
+        else:
+            self.temp = result_index
+        self.refresh_from_global()
+
 
     def refresh_from_global(self):
+        if len(self.temp) == 0:
+            self.temp = GLOBAL.frida_enummodules
+
         self.sw_menu = "module_list"
         self.tree_widget.clear()
-        self.tree_widget.headerItem().setText(0, "Module List: %d" %len(GLOBAL.frida_enummodules) )
+        self.tree_widget.headerItem().setText(0, "Module List: %d" %len(self.temp) )
 
-        for data in GLOBAL.frida_enummodules:
+        for data in self.temp:
             parent = QTreeWidgetItem(self.tree_widget)
 
             msize = self.format_size(int(data.get('size')) )

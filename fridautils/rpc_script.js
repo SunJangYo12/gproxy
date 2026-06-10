@@ -62,6 +62,9 @@ function findAllocation(addr) {
     return null;
 }
 
+/*********** Buffer network input Trace *******************/
+var is_buffnetwork = false;
+
 /*********** Buffer input Trace *******************/
 var is_buffinput = false;
 
@@ -541,6 +544,84 @@ class FuzzerKu
         }
     }
 
+    // sink for buff_input network
+    setup_sink_buffinput_network() {
+        const subthis = this;
+
+        Interceptor.attach(Module.findExportByName(null, "recvfrom"), {
+            onEnter(args) {
+                this.output = {}
+                //     ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
+                //        struct sockaddr *src_addr, socklen_t *addrlen);
+
+                this.sockfd = args[0].toInt32();
+                this.buf = args[1].toString();
+                this.size = args[2].toInt32();
+                this.flags = args[3].toInt32();
+                this.src_addr = args[4].toString();
+                this.addr_len = args[5].toString();
+
+                /*
+                alloc_range.set(this.buf, {
+                    ptr: this.buf,
+                    size: this.size
+                });*/
+                console.log(
+                    `[recvfrom] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.sockfd}`
+                );
+            },
+            onLeave(retval) {
+                //jika crash comment ini
+                /*this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");
+
+                const caller = DebugSymbol.fromAddress(this.returnAddress);
+                this.output["retval"] = retval;
+                this.output["key"] = this.buf;
+                this.output["func_name"] = "recv||caller_"+caller+"||"+this.size;
+                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["member"] = [];
+                send({"type": "inputbuffer_network_hit", "log": this.output});*/
+            }
+        });
+
+        Interceptor.attach(Module.findExportByName(null, "recv"), {
+            onEnter(args) {
+                this.output = {}
+                // ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+                this.sockfd = args[0].toInt32();
+                this.buf = args[1].toString();
+                this.size = args[2].toInt32();
+                this.flags = args[3].toInt32();
+
+                alloc_range.set(this.buf, {
+                    ptr: this.buf,
+                    size: this.size
+                });
+                console.log(
+                    `[recv] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.fd}`
+                );
+            },
+            onLeave(retval) {
+                //jika crash comment ini
+                this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");
+
+                const caller = DebugSymbol.fromAddress(this.returnAddress);
+                this.output["retval"] = retval;
+                this.output["key"] = this.buf;
+                this.output["func_name"] = "recv||"+caller+"||"+this.size;
+                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["member"] = [];
+                send({"type": "inputbuffer_network_hit", "log": this.output});
+            }
+        });
+    }
+
     // sink for buff_input
     setup_sink_buffinput() {
         const subthis = this;
@@ -573,7 +654,7 @@ class FuzzerKu
                 const caller = DebugSymbol.fromAddress(this.returnAddress);
                 this.output["retval"] = retval;
                 this.output["key"] = this.buf;
-                this.output["func_name"] = "fread.caller_"+caller+"."+this.size;
+                this.output["func_name"] = "fread||"+caller+"||"+this.size;
                 this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = [];
                 send({"type": "inputbuffer_hit", "log": this.output});
@@ -675,7 +756,7 @@ class FuzzerKu
                 const caller = DebugSymbol.fromAddress(this.returnAddress);
                 this.output["retval"] = retval;
                 this.output["key"] = retval;
-                this.output["func_name"] = "malloc.caller_"+caller+"."+this.size;
+                this.output["func_name"] = "malloc||"+caller+"||"+this.size;
                 this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = [];
                 send({"type": "allochook_hit", "log": this.output});
@@ -696,7 +777,7 @@ class FuzzerKu
                     .join("\n");
 
                 const caller = DebugSymbol.fromAddress(this.returnAddress);
-                this.output["func_name"] = "free.caller_"+caller+"."+args[0].toString();
+                this.output["func_name"] = "free||"+caller+"||-";
                 this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).address;
                 this.output["key"] = args[0].toString();
 
@@ -1038,9 +1119,17 @@ class FuzzerKu
                if (fstalking == "detach-all") {
                    is_alloctrace = false;
                    is_buffinput = false;
+                   is_buffnetwork = false;
                    this.logDebug("send", "Agent @ Cleaning hook instrument...", "info");
                    Interceptor.detachAll();
                    return
+               }
+
+               // Setup hook network input sink buffer
+               if (fstalking == "buffnetwork") {
+                    is_buffnetwork = true;
+                    this.setup_sink_buffinput_network();
+                    return;
                }
 
                // Setup hook input sink buffer
@@ -1108,6 +1197,25 @@ class FuzzerKu
                                 this.context,
                                 Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
                                 .join("\n");
+
+                           if (is_buffnetwork) {
+                                // jumlah paramater target
+
+                                //console.log("proc: "+func_data.name);
+                                for (let i=0; i<6; i++) {
+                                    try {
+                                        const func_args = findAllocation(args[i]);
+
+                                        if (func_args) {
+                                            this.output["buff_network_area"] =
+                                                 "args["+i+"] "+
+                                                 func_data.name+
+                                                 " -> "+func_args.ptr;
+                                            //console.log(`${func_data.name} arg${i} -> ${func_args.ptr}`);
+                                        }
+                                    } catch (_) {}
+                                }
+                           }
 
                            if (is_buffinput) {
                                 // jumlah paramater target

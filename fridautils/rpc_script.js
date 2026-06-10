@@ -1248,7 +1248,7 @@ class FuzzerKu
                                             this.output["heap_area"] =
                                                  "args["+i+"] "+
                                                  func_data.name+
-                                                 " -> "+alloc.ptr;
+                                                 " -> malloc_"+alloc.ptr;
                                             //console.log(`${func_data.name} arg${i} -> ${alloc.ptr}`);
                                         }
                                     } catch (_) {}

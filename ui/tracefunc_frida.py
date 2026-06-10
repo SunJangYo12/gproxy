@@ -78,7 +78,7 @@ class DialogTracerCallTree(QDialog):
         self.is_update = True
         self.color_data = []
         self.expanded_items = set()
-
+        self.trace_alocator = ""
 
     def add_node_recursive(self, parent_item, node):
         name = node["name"]
@@ -116,8 +116,6 @@ class DialogTracerCallTree(QDialog):
         for child in node["children"].values():
             self.add_node_recursive_color(child)
 
-
-
     def open_data(self, filename):
         with open(filename) as f:
             data = json.load(f)
@@ -125,6 +123,7 @@ class DialogTracerCallTree(QDialog):
         return data
 
     def load_tree(self):
+        self.sw_menu = "trace_func"
         if not self.is_update:
             self.tree_widget.setHeaderLabels([f"DEAD Call tree"])
             return
@@ -149,6 +148,7 @@ class DialogTracerCallTree(QDialog):
                 self.add_node_recursive(thread_item, child)
 
     def load_tree_binput_network(self):
+        self.sw_menu = "trace_bnet"
         data = self.open_data("/tmp/trace-buffinput.json")
 
         self.tree_widget.clear()
@@ -182,6 +182,7 @@ class DialogTracerCallTree(QDialog):
                     item.setFont(0, self.font)
 
     def load_tree_binput(self):
+        sw.sw_menu = "trace_binput"
         data = self.open_data("/tmp/trace-buffinput.json")
 
         self.tree_widget.clear()
@@ -215,10 +216,11 @@ class DialogTracerCallTree(QDialog):
                     item.setFont(0, self.font)
 
     def load_tree_allocator(self):
+        self.sw_menu = "trace_alocator"
         data = self.open_data("/tmp/trace-allocator.json")
 
         self.tree_widget.clear()
-        self.tree_widget.setHeaderLabels(["function", "buffer", "size", "caller"])
+        self.tree_widget.setHeaderLabels(["Allocator member", "buffer", "size", "caller"])
 
         for key, value in data.items():
             func_item = QTreeWidgetItem(self.tree_widget)
@@ -239,13 +241,22 @@ class DialogTracerCallTree(QDialog):
             func_item.setFont(2, self.font)
             func_item.setFont(3, self.font)
 
-            #func_item.setData(0, Qt.UserRole, key)
-            #self.cekandset_expand(func_item, key)
+            func_item.setData(0, Qt.UserRole, value["key"])
+            self.cekandset_expand(func_item, value["key"])
             if "member" in value:
                 for child in value["member"]:
                     item = QTreeWidgetItem(func_item)
                     item.setText(0, f"{child}")
                     item.setFont(0, self.font)
+
+            if "backtrace" in value:
+                item = QTreeWidgetItem(func_item)
+                item.setText(0, "Backtrace")
+                item.setFont(0, self.font)
+                for bt in value["backtrace"].split("\n"):
+                    bt_item = QTreeWidgetItem(item)
+                    bt_item.setText(0, bt)
+                    bt_item.setFont(0, self.font)
 
 
     def cekandset_expand(self, tree, id):
@@ -268,12 +279,15 @@ class DialogTracerCallTree(QDialog):
         item = self.tree_widget.itemAt(position)
         menu = QMenu()
 
-        menu.addAction("Address")
-        menu.addAction("Jump")
-        menu.addAction("Stop update")
-        menu.addAction("Start update")
-        menu.addAction("Coloring All")
-        menu.addAction("Remove All Color")
+        if self.sw_menu == "trace_func":
+            menu.addAction("Address")
+            menu.addAction("Jump")
+            menu.addAction("Stop update")
+            menu.addAction("Start update")
+            menu.addAction("Coloring All")
+            menu.addAction("Remove All Color")
+        elif self.sw_menu == "trace_alocator":
+            menu.addAction("Show backtrace")
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
         if action:
@@ -286,6 +300,8 @@ class DialogTracerCallTree(QDialog):
         if action == "Address":
             print(raw[1])
 
+        elif action == "Show backtrace":
+            print(data)
 
         elif action == "Jump":
             addr = raw[1]

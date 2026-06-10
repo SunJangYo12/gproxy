@@ -122,8 +122,11 @@ def on_message(message, data):
                    ptr  = heap_area[1]
                    func = heap_area[0].split("] ")
 
-                   if func[1] not in ALL_ALLOC[ptr]["member"]:
-                       ALL_ALLOC[ptr]["member"].append(func[1])
+                   try:
+                       if func[1] not in ALL_ALLOC[ptr]["member"]:
+                           ALL_ALLOC[ptr]["member"].append(func[1])
+                   except:
+                       pass
 
            elif "buff_area" in info:
                if info["buff_area"]:
@@ -384,7 +387,7 @@ def main():
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB (l/h/u): ")
 
-    DEBUG = False
+    DEBUG = True
 
     if target == "h":
        #ahost = input(">> Android host: ")
@@ -404,7 +407,7 @@ def main():
        device = frida.get_local_device() #local linux
 
        if DEBUG:
-           pid_raw = subprocess.run(["pidof", "user_input"], capture_output=True, text=True)
+           pid_raw = subprocess.run(["pidof", "heap_sim"], capture_output=True, text=True)
            pid_raw = pid_raw.stdout.split("\n")[0]
        else:
            pid_raw = input(">> Chose pid? (1234): ")
@@ -622,7 +625,7 @@ def main():
         elif pshell == "tr":
             script.exports_sync.enummodules()
             if DEBUG:
-                in_module = "user_input"
+                in_module = "heap_sim"
             else:
                 in_module = input("\n>> Module> ")
 

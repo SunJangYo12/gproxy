@@ -11,6 +11,7 @@ import threading
 import json
 from collections import Counter
 import subprocess
+import hashlib
 
 proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 
@@ -129,9 +130,9 @@ def on_message(message, data):
                    sink_args = str(raw["sink_args"])
                    sink_name = raw["sink"]
                    sink_ptr  = raw["sink_ptr"]
+                   tainted = info["tainted"]
 
                    id = sink_name+"_"+sink_ptr
-
 
                    #pakai try jika belum di ENTER atau update
                    try:
@@ -141,8 +142,11 @@ def on_message(message, data):
                                "sink_args": sink_args,
                                "sink_name": sink_name,
                                "sink_ptr": sink_ptr,
-                               "skor": info["skor"]
+                               "skor": "0"
                            }
+                           for tn in tainted:
+                               if tn not in ALL_ALLOC[id]["tainted"]:
+                                   ALL_ALLOC[id]["tainted"].append(tn)
                    except:
                        pass
 
@@ -771,6 +775,8 @@ def main():
 
                         for dat in data:
                             id = dat["key"]
+                            #id = hashlib.sha256(json.dumps(dat, sort_keys=True).encode()).hexdigest()
+
                             if id not in ALL_ALLOC:
                                 ALL_ALLOC[id] = dat
 

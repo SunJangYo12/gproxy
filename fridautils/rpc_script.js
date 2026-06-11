@@ -635,9 +635,48 @@ class FuzzerKu
     setup_manipulate_buffer() {
         const subthis = this;
 
+        // copy
         Interceptor.attach(Module.findExportByName(null, "memcpy"), {
             onEnter(args) {
                 //void *memcpy(void *dest, const void *src, size_t n);
+                this.dst = args[0].toString();
+                this.src = args[1].toString();
+                this.size = args[2].toInt32();
+
+                try {
+                    //addFuncScore(this.returnAddress, 5);
+                    const cek = findAllocation(ptr(this.src));
+
+                    if (cek) {
+                        tainted.add(this.dst);
+                        console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
+                    }
+                } catch (_) {}
+            }
+        });
+/*
+        Interceptor.attach(Module.findExportByName(null, "strcpy"), {
+            onEnter(args) {
+                //char *strcpy(char *dest, const char *src);
+                this.dst = args[0].toString();
+                this.src = args[1].toString();
+                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
+
+                try {
+                    const cek = findAllocation(ptr(this.src));
+                    addFuncScore(this.caller, 8);
+
+                    if (cek) {
+                        tainted.add(this.dst);
+                        console.log(`strcpy(src=${this.src},dst=${this.dst},caller=${this.caller})`);
+                    }
+                } catch (_) {}
+            }
+        });
+
+        Interceptor.attach(Module.findExportByName(null, "strncpy"), {
+            onEnter(args) {
+                //char *strncpy(char *dest, const char *src, size_t n);
                 this.dst = args[0].toString();
                 this.src = args[1].toString();
                 this.size = args[2].toInt32();
@@ -649,13 +688,110 @@ class FuzzerKu
 
                     if (cek) {
                         tainted.add(this.dst);
-                        console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
+                        //console.log(`strncpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
                     }
                 } catch (e) {console.log(e)}
             },
             onLeave(retval) {
             }
         });
+
+
+        // move
+        Interceptor.attach(Module.findExportByName(null, "memmove"), {
+            onEnter(args) {
+                //void *memmove(void *dest, const void *src, size_t n);
+                this.dst = args[0].toString();
+                this.src = args[1].toString();
+                this.size = args[2].toInt32();
+                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
+
+                try {
+                    const cek = findAllocation(ptr(this.src));
+                    addFuncScore(this.caller, 4);
+
+                    if (cek) {
+                        tainted.add(this.dst);
+                        //console.log(`memmove(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
+                    }
+                } catch (e) {console.log(e)}
+            },
+            onLeave(retval) {
+            }
+        });
+
+        // compare
+        Interceptor.attach(Module.findExportByName(null, "memcmp"), {
+            onEnter(args) {
+                //int memcmp(const void *s1, const void *s2, size_t n);
+                this.s1 = args[0].toString();
+                this.s2 = args[1].toString();
+                this.size = args[2].toInt32();
+                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
+
+                addFuncScore(this.caller, 7);
+                //console.log(`memcmp(s1=${this.s1},dst=${this.s2},size=${this.size},caller=${this.caller})`);
+            },
+            onLeave(retval) {
+            }
+        });
+
+        Interceptor.attach(Module.findExportByName(null, "strcmp"), {
+            onEnter(args) {
+                //int strcmp(const char *s1, const char *s2);
+                this.s1 = args[0].toString();
+                this.s2 = args[1].toString();
+                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
+
+                addFuncScore(this.caller, 6);
+                //console.log(`strcmp(src=${this.s1},dst=${this.s2},caller=${this.caller})`);
+            },
+            onLeave(retval) {
+            }
+        });
+
+        Interceptor.attach(Module.findExportByName(null, "strncmp"), {
+            onEnter(args) {
+                // int strncmp(const char *s1, const char *s2, size_t n);
+                this.s1 = args[0].toString();
+                this.s2 = args[1].toString();
+                this.size = args[2].toInt32();
+                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
+
+                addFuncScore(this.caller, 5);
+                //console.log(`strncmp(src=${this.s1},dst=${this.s2},size=${this.size},caller=${this.caller})`);
+            },
+            onLeave(retval) {
+            }
+        });
+
+        Interceptor.attach(Module.findExportByName(null, "strlen"), {
+            onEnter(args) {
+                // size_t strlen(const char *s);
+                this.s1 = args[0].toString();
+                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
+
+                addFuncScore(this.caller, 4);
+                //console.log(`strlen(buf=${this.s1},caller=${this.caller})`);
+            },
+            onLeave(retval) {
+            }
+        });
+
+        Interceptor.attach(Module.findExportByName(null, "memset"), {
+            onEnter(args) {
+                //void *memset(void *s, int c, size_t n);
+                this.s1 = args[0].toString();
+                this.c = args[1].toInt32();
+                this.n = args[2].toInt32();
+                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
+
+                addFuncScore(this.caller, 4);
+                //console.log(`memset(buf=${this.s1},c=${this.c},n=${this.n},caller=${this.caller})`);
+            },
+            onLeave(retval) {
+            }
+        });*/
     }
 
     // sink for buff_input
@@ -691,12 +827,14 @@ class FuzzerKu
 
                 const caller = DebugSymbol.fromAddress(this.returnAddress);
                 this.output["retval"] = retval;
-                this.output["key"] = "read_"+this.buf;
                 this.output["func_name"] = "read||"+caller+"||"+this.size;
                 this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = {};
-                this.output["tainted"] = tainted;
+                this.output["tainted"] = [...tainted];
+                this.output["key"] = "read_"+this.buf;
                 out_tracebuffer.push(this.output);
+
+                //addFuncScore(caller.name.split("+")[0], 15);
             }
         });
 
@@ -733,6 +871,7 @@ class FuzzerKu
                 this.output["member"] = [];
                 //send({"type": "inputbuffer_hit", "log": this.output});
                 out_tracebuffer.push(this.output);
+                addFuncScore(DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0], 14);
             }
         });
     }
@@ -771,6 +910,7 @@ class FuzzerKu
                 this.output["member"] = [];
 
                 out_traceheap.push(this.output);
+                addFuncScore(DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0], 13);
             }
         });
         Interceptor.attach(Module.findExportByName(null, "free"), {
@@ -793,6 +933,7 @@ class FuzzerKu
                 this.output["key"] = "free_"+args[0].toString();
 
                 out_traceheap.push(this.output);
+                addFuncScore(DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0], 14);
             }
         });
     }
@@ -1048,6 +1189,11 @@ class FuzzerKu
                 return out_traceheap;
             },
             getbuffertrace: () => {
+                console.log("opopop: "+func_scores.size);
+                func_scores.forEach(function(m) {
+                    console.log("sdsdzzzzzzzzzz");
+                });
+
                 return out_tracebuffer;
             },
             getfuzz: () => {
@@ -1276,15 +1422,14 @@ class FuzzerKu
                            this.output["retval"] = retval
                            this.output["func_name"] = func_data.name
                            this.output["func_addr"] = func_data.address
+                           this.output["tainted"] = [...tainted]
 
-                           const skor = func_scores.get(func_data.name);
+                          /* const skor = 0; //func_scores.get(func_data.name);
                            if (skor) {
                                this.output["skor"] = skor;
                            } else {
                                this.output["skor"] = 0;
-                           }
-
-                           console.log(JSON.stringify(tainted));
+                           }*/
 
                            send({"type": "hook_hit", "log": this.output});
                        }

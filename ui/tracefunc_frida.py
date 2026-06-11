@@ -182,11 +182,11 @@ class DialogTracerCallTree(QDialog):
                     item.setFont(0, self.font)
 
     def load_tree_binput(self):
-        sw.sw_menu = "trace_binput"
+        self.sw_menu = "trace_binput"
         data = self.open_data("/tmp/trace-buffinput.json")
 
         self.tree_widget.clear()
-        self.tree_widget.setHeaderLabels(["function", "buffer", "size", "caller"])
+        self.tree_widget.setHeaderLabels(["function member", "buffer", "size", "caller"])
 
         for key, value in data.items():
             func_item = QTreeWidgetItem(self.tree_widget)
@@ -214,6 +214,31 @@ class DialogTracerCallTree(QDialog):
                     item = QTreeWidgetItem(func_item)
                     item.setText(0, f"{child}")
                     item.setFont(0, self.font)
+
+                    for field in value["member"][child]:
+                        val = value["member"][child][field]
+                        fitem = QTreeWidgetItem(item)
+                        fitem.setText(0, f"{field}: {val}")
+                        fitem.setFont(0, self.font)
+
+            if "backtrace" in value:
+                item = QTreeWidgetItem(func_item)
+                item.setText(0, "Backtrace")
+                item.setFont(0, self.font)
+                for bt in value["backtrace"].split("\n"):
+                    bt_item = QTreeWidgetItem(item)
+                    bt_item.setText(0, bt)
+                    bt_item.setFont(0, self.font)
+
+            if "tainted" in value:
+                item = QTreeWidgetItem(func_item)
+                item.setText(0, "Tainted")
+                item.setFont(0, self.font)
+                for bt in value["tainted"]:
+                    print(bt)
+                    #bt_item = QTreeWidgetItem(item)
+                    #bt_item.setText(0, bt)
+                    #bt_item.setFont(0, self.font)
 
     def load_tree_allocator(self):
         self.sw_menu = "trace_alocator"

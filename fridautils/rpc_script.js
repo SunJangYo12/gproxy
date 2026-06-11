@@ -68,7 +68,15 @@ var is_buffnetwork = false;
 
 /*********** Buffer input Trace *******************/
 var is_buffinput = false;
-
+var out_tracebuffer = [];
+var tainted = new Set();
+const func_scores = new Map();
+function addFuncScore(funcName, score) {
+    func_scores.set(
+        funcName,
+        (func_scores.get(funcName) || 0) + score
+    );
+}
 
 class FuzzerKu
 {
@@ -623,9 +631,74 @@ class FuzzerKu
         });
     }
 
+    // for score function parsing
+    setup_manipulate_buffer() {
+        const subthis = this;
+
+        Interceptor.attach(Module.findExportByName(null, "memcpy"), {
+            onEnter(args) {
+                //void *memcpy(void *dest, const void *src, size_t n);
+                this.dst = args[0].toString();
+                this.src = args[1].toString();
+                this.size = args[2].toInt32();
+                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
+
+                try {
+                    const cek = findAllocation(ptr(this.src));
+                    addFuncScore(this.caller, 5);
+
+                    if (cek) {
+                        tainted.add(this.dst);
+                        console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
+                    }
+                } catch (e) {console.log(e)}
+            },
+            onLeave(retval) {
+            }
+        });
+    }
+
     // sink for buff_input
     setup_sink_buffinput() {
         const subthis = this;
+        out_tracebuffer = [];
+
+        Interceptor.attach(Module.findExportByName(null, "read"), {
+            onEnter(args) {
+                this.output = {}
+                //ssize_t read(int fd, void *buf, size_t count);
+
+                this.fd = args[0].toInt32();
+                this.buf = args[1].toString();
+                this.size = args[2].toInt32();
+
+                alloc_range.set(this.buf, {
+                    ptr: this.buf,
+                    size: this.size,
+                    sink: "read"
+                });
+
+                console.log(
+                    `[read] buf=${this.buf} size=${this.size} fd=${this.fd}`
+                );
+            },
+            onLeave(retval) {
+                //jika crash comment ini
+                this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");
+
+                const caller = DebugSymbol.fromAddress(this.returnAddress);
+                this.output["retval"] = retval;
+                this.output["key"] = "read_"+this.buf;
+                this.output["func_name"] = "read||"+caller+"||"+this.size;
+                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["member"] = {};
+                this.output["tainted"] = tainted;
+                out_tracebuffer.push(this.output);
+            }
+        });
 
         Interceptor.attach(Module.findExportByName(null, "fread"), {
             onEnter(args) {
@@ -638,12 +711,12 @@ class FuzzerKu
 
                 alloc_range.set(this.buf, {
                     ptr: this.buf,
-                    size: this.size
+                    size: this.nmemb
                 });
 
-                /*console.log(
+                console.log(
                     `[fread] buf=${this.buf} size=${this.size} nmemb=${this.nmemb} fd=${this.fd}`
-                );*/
+                );
             },
             onLeave(retval) {
                 //jika crash comment ini
@@ -654,75 +727,14 @@ class FuzzerKu
 
                 const caller = DebugSymbol.fromAddress(this.returnAddress);
                 this.output["retval"] = retval;
-                this.output["key"] = this.buf;
-                this.output["func_name"] = "fread||"+caller+"||"+this.size;
+                this.output["key"] = "fread_"+this.buf;
+                this.output["func_name"] = "fread||"+caller+"||"+this.nmemb;
                 this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = [];
-                send({"type": "inputbuffer_hit", "log": this.output});
+                //send({"type": "inputbuffer_hit", "log": this.output});
+                out_tracebuffer.push(this.output);
             }
         });
-
-        /*
-        Interceptor.attach(Module.findExportByName(null, "fgets"), {
-            onEnter(args) {
-                this.output = {}
-
-                console.log("enter fgets");
-                this.fd = args[0].toInt32();
-                this.buf = args[1].toString();
-                this.size = args[2].toInt32();
-
-                alloc_range.set(this.buf, {
-                    ptr: this.buf,
-                    size: this.size
-                });
-                console.log(
-                    `[read] fgets=${this.fd} buf=${this.buf} size=${this.size}`
-                );
-            },
-            onLeave(retval) {
-            }
-        });*/
-
-        /* Gak tau kenapa tidak terhit
-        Interceptor.attach(Module.findExportByName(null, "read"), {
-            onEnter(args) {
-                this.output = {}
-
-                this.fd = args[0].toInt32();
-                this.buf = args[1].toString();
-                this.size = args[2].toInt32();
-
-                alloc_range.set(this.buf, {
-                    ptr: this.buf,
-                    size: this.size
-                });
-                console.log(
-                    `[read] fd=${this.fd} buf=${this.buf} size=${this.size}`
-                );
-
-                this.backtrace = Thread.backtrace(
-                    this.context,
-                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-
-                    .join("\n");
-            },
-            onLeave(retval) {
-                const caller = DebugSymbol.fromAddress(this.returnAddress);
-                //jika crash comment ini
-                this.output["backtrace"] = Thread.backtrace(
-                    this.context,
-                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                    .join("\n");
-
-                this.output["retval"] = retval;
-                this.output["key"] = retval;
-                this.output["func_name"] = "malloc.caller_"+caller+"."+this.size;
-                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
-                this.output["member"] = [];
-                send({"type": "allochook_hit", "log": this.output});
-            }
-        });*/
     }
 
     // sink for allocator
@@ -1035,6 +1047,9 @@ class FuzzerKu
             getalloctrace: () => {
                 return out_traceheap;
             },
+            getbuffertrace: () => {
+                return out_tracebuffer;
+            },
             getfuzz: () => {
                 const outfuzz = {
                     "fuzz_cases": fuzz_cases,
@@ -1138,6 +1153,7 @@ class FuzzerKu
                if (fstalking == "buffinput") {
                     is_buffinput = true;
                     this.setup_sink_buffinput();
+                    this.setup_manipulate_buffer();
                     return;
                }
 
@@ -1221,17 +1237,18 @@ class FuzzerKu
 
                            if (is_buffinput) {
                                 // jumlah paramater target
-
-                                //console.log("proc: "+func_data.name);
                                 for (let i=0; i<6; i++) {
                                     try {
                                         const func_args = findAllocation(args[i]);
 
                                         if (func_args) {
-                                            this.output["buff_area"] =
-                                                 "args["+i+"] "+
-                                                 func_data.name+
-                                                 " -> "+func_args.ptr;
+                                            const data = {
+                                                "name": func_data.name,
+                                                "sink_args": i,
+                                                "sink_ptr": func_args.ptr,
+                                                "sink": func_args.sink
+                                            };
+                                            this.output["buff_area"] = data;
                                             //console.log(`${func_data.name} arg${i} -> ${func_args.ptr}`);
                                         }
                                     } catch (_) {}
@@ -1260,7 +1277,16 @@ class FuzzerKu
                            this.output["func_name"] = func_data.name
                            this.output["func_addr"] = func_data.address
 
-                           subthis.logDebug("send", this.output, "hook_hit");
+                           const skor = func_scores.get(func_data.name);
+                           if (skor) {
+                               this.output["skor"] = skor;
+                           } else {
+                               this.output["skor"] = 0;
+                           }
+
+                           console.log(JSON.stringify(tainted));
+
+                           send({"type": "hook_hit", "log": this.output});
                        }
                    });
                }

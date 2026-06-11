@@ -99,12 +99,6 @@ def on_message(message, data):
            print(f"[+] {info}")
 
 
-        elif message['payload']['type'] == 'inputbuffer_hit':
-           info = message['payload']['log']
-           mykey = info["key"]
-           if mykey not in ALL_ALLOC:
-               ALL_ALLOC[mykey] = info
-
         elif message['payload']['type'] == 'inputbuffer_network_hit':
            info = message['payload']['log']
            mykey = info["key"]
@@ -130,12 +124,27 @@ def on_message(message, data):
 
            elif "buff_area" in info:
                if info["buff_area"]:
-                   buff_area = info["buff_area"].split("-> ")
-                   ptr  = buff_area[1]
-                   func = buff_area[0].split("] ")
+                   raw = info["buff_area"]
+                   func_name = raw["name"]
+                   sink_args = str(raw["sink_args"])
+                   sink_name = raw["sink"]
+                   sink_ptr  = raw["sink_ptr"]
 
-                   if func[1] not in ALL_ALLOC[ptr]["member"]:
-                       ALL_ALLOC[ptr]["member"].append(func[1])
+                   id = sink_name+"_"+sink_ptr
+
+
+                   #pakai try jika belum di ENTER atau update
+                   try:
+                       if func_name not in ALL_ALLOC[id]["member"]:
+                           ALL_ALLOC[id]["member"][func_name] = {
+                               "func_name": func_name,
+                               "sink_args": sink_args,
+                               "sink_name": sink_name,
+                               "sink_ptr": sink_ptr,
+                               "skor": info["skor"]
+                           }
+                   except:
+                       pass
 
            elif "buff_network_area" in info:
                if info["buff_network_area"]:
@@ -407,7 +416,7 @@ def main():
        device = frida.get_local_device() #local linux
 
        if DEBUG:
-           pid_raw = subprocess.run(["pidof", "heap_sim"], capture_output=True, text=True)
+           pid_raw = subprocess.run(["pidof", "user_input"], capture_output=True, text=True)
            pid_raw = pid_raw.stdout.split("\n")[0]
        else:
            pid_raw = input(">> Chose pid? (1234): ")
@@ -625,7 +634,7 @@ def main():
         elif pshell == "tr":
             script.exports_sync.enummodules()
             if DEBUG:
-                in_module = "heap_sim"
+                in_module = "user_input"
             else:
                 in_module = input("\n>> Module> ")
 
@@ -718,7 +727,7 @@ def main():
                     proxy.settofrida_func(dick_sym, "init")
 
                 if DEBUG:
-                    in_symbol = "all-alloc"
+                    in_symbol = "all-binput"
                 else:
                     in_symbol = input(f"\n>> {in_module}> symbol> ")
 
@@ -754,13 +763,19 @@ def main():
                     setup_hook(script, dick_sym, None, None)
 
                     proxy.settofrida_openwindow("tracer_allocator", "Trace buffer input")
-                    proxy.settofrida_func("trace-func", "refresh")
+                    #proxy.settofrida_func("trace-func", "refresh")
                     while True:
                         go = input("\nENTER for update..\n")
 
+                        data = script.exports_sync.getbuffertrace()
+
+                        for dat in data:
+                            id = dat["key"]
+                            if id not in ALL_ALLOC:
+                                ALL_ALLOC[id] = dat
+
                         with open("/tmp/trace-buffinput.json", "w") as fd:
                             fd.write(json.dumps(ALL_ALLOC))
-
                         proxy.settofrida_func("0", "hooktree_hit_all")
 
                 elif in_symbol == "all-alloc":

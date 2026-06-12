@@ -216,11 +216,24 @@ class DialogTracerCallTree(QDialog):
                     item.setText(0, f"{child} +{skor}")
                     item.setFont(0, self.font)
 
+                    # child function field
                     for field in value["member"][child]:
                         val = value["member"][child][field]
                         fitem = QTreeWidgetItem(item)
-                        fitem.setText(0, f"{field}: {val}")
+
+                        if field == "buf_clone":
+                            fitem.setText(0, f"{field}")
+                            for bclone in val:
+                                by = bclone["func"]
+                                dst = bclone["dst"]
+                                bitem = QTreeWidgetItem(fitem)
+                                bitem.setText(0, f"{dst}: {by}")
+                                bitem.setFont(0, self.font)
+                        else:
+                            fitem.setText(0, f"{field}: {val}")
+
                         fitem.setFont(0, self.font)
+
 
             if "backtrace" in value:
                 bt_data = value["backtrace"].split("\n")

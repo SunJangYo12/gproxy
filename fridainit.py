@@ -130,23 +130,20 @@ def on_message(message, data):
                    sink_args = str(raw["sink_args"])
                    sink_name = raw["sink"]
                    sink_ptr  = raw["sink_ptr"]
-                   tainted = info["tainted"]
 
                    id = sink_name+"_"+sink_ptr
 
                    #pakai try jika belum di ENTER atau update
                    try:
-                       if func_name not in ALL_ALLOC[id]["member"]:
+                       if True: #func_name not in ALL_ALLOC[id]["member"]:
                            ALL_ALLOC[id]["member"][func_name] = {
                                "func_name": func_name,
                                "sink_args": sink_args,
                                "sink_name": sink_name,
-                               "sink_ptr": sink_ptr,
-                               "skor": info["skor"]
+                               "sink_ptr":  sink_ptr,
+                               "skor":      info["skor"],
+                               "buf_clone": info["buf_clone"]
                            }
-                           for tn in tainted:
-                               if tn not in ALL_ALLOC[id]["tainted"]:
-                                   ALL_ALLOC[id]["tainted"].append(tn)
                    except:
                        pass
 
@@ -400,7 +397,7 @@ def main():
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB (l/h/u): ")
 
-    DEBUG = False
+    DEBUG = True
 
     if target == "h":
        #ahost = input(">> Android host: ")

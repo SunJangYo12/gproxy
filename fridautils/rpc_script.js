@@ -70,6 +70,7 @@ var is_buffnetwork = false;
 var is_buffinput = false;
 var out_tracebuffer = [];
 var tainted = new Set();
+const tainted_resolve = new Map();
 const func_score_resolve = new Map();
 const func_scores = new Map();
 function addFuncScore(funcName, score) {
@@ -650,7 +651,7 @@ class FuzzerKu
                     const cek = findAllocation(ptr(this.src));
 
                     if (cek) {
-                        tainted.add("memcpy_"+this.dst);
+                        tainted.add("memcpy_"+this.dst+"_"+this.returnAddress.toString());
                         //console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.returnAddress})`);
                     }
                 } catch (_) {}
@@ -808,9 +809,9 @@ class FuzzerKu
                     sink: "read"
                 });
 
-                /*console.log(
+                console.log(
                     `[read] buf=${this.buf} size=${this.size} fd=${this.fd}`
-                );*/
+                );
             },
             onLeave(retval) {
                 //jika crash comment ini
@@ -1183,6 +1184,7 @@ class FuzzerKu
                 return out_traceheap;
             },
             getbuffertrace: () => {
+                // resolving symbol for score in func hit
                 for (const [addr, score] of func_scores.entries()) {
                     const sym = DebugSymbol.fromAddress(ptr(addr));
                     const resolve = sym.name.split("+")[0]
@@ -1190,6 +1192,33 @@ class FuzzerKu
 
                     console.log("[+] sym resolve score: "+score+" "+sym);
                 }
+
+                // generate whois function cloned buffer
+                const tdata = [...tainted]
+                for (const item of tdata) {
+                    const [func, dst, caller] = item.split("_");
+
+                    const sym = DebugSymbol.fromAddress(ptr(caller));
+                    const resolve = sym.name.split("+")[0]
+
+                    if (!tainted_resolve.has(resolve))
+                        tainted_resolve.set(resolve, []);
+
+                    /*tainted_resolve.get(resolve).push({
+                        func,
+                        dst
+                    });*/
+
+                    // mencegah array duplikat
+                    const arr = tainted_resolve.get(resolve);
+                    if (!arr.some(x => x.dst === dst)) {
+                        arr.push({
+                            func,
+                            dst
+                        });
+                    }
+                }
+
                 return out_tracebuffer;
             },
             getfuzz: () => {
@@ -1418,13 +1447,23 @@ class FuzzerKu
                            this.output["retval"] = retval
                            this.output["func_name"] = func_data.name
                            this.output["func_addr"] = func_data.address
-                           this.output["tainted"] = [...tainted]
+                           //this.output["tainted"] = [...tainted]
 
+
+                           // get score
                            const skor = func_score_resolve.get(func_data.name);
                            if (skor) {
                                this.output["skor"] = skor;
                            } else {
                                this.output["skor"] = 0;
+                           }
+
+                           // get clone mem by memcpy etc.
+                           const buf_clone = tainted_resolve.get(func_data.name);
+                           if (buf_clone) {
+                               this.output["buf_clone"] = buf_clone;
+                           } else {
+                               this.output["buf_clone"] = [];
                            }
 
                            send({"type": "hook_hit", "log": this.output});

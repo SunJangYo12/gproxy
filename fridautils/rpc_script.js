@@ -70,6 +70,7 @@ var is_buffnetwork = false;
 var is_buffinput = false;
 var out_tracebuffer = [];
 var tainted = new Set();
+const func_score_resolve = new Map();
 const func_scores = new Map();
 function addFuncScore(funcName, score) {
     func_scores.set(
@@ -644,12 +645,13 @@ class FuzzerKu
                 this.size = args[2].toInt32();
 
                 try {
-                    //addFuncScore(this.returnAddress, 5);
+                    // tidak langsung resolve simbol alias DebugSymbol karena overhead
+                    addFuncScore(this.returnAddress.toString(), 5);
                     const cek = findAllocation(ptr(this.src));
 
                     if (cek) {
                         tainted.add(this.dst);
-                        console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
+                        console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.returnAddress})`);
                     }
                 } catch (_) {}
             }
@@ -871,7 +873,7 @@ class FuzzerKu
                 this.output["member"] = [];
                 //send({"type": "inputbuffer_hit", "log": this.output});
                 out_tracebuffer.push(this.output);
-                addFuncScore(DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0], 14);
+                //addFuncScore(DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0], 14);
             }
         });
     }
@@ -910,7 +912,7 @@ class FuzzerKu
                 this.output["member"] = [];
 
                 out_traceheap.push(this.output);
-                addFuncScore(DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0], 13);
+                //addFuncScore(DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0], 13);
             }
         });
         Interceptor.attach(Module.findExportByName(null, "free"), {
@@ -933,7 +935,7 @@ class FuzzerKu
                 this.output["key"] = "free_"+args[0].toString();
 
                 out_traceheap.push(this.output);
-                addFuncScore(DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0], 14);
+                //addFuncScore(DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0], 14);
             }
         });
     }
@@ -1189,11 +1191,10 @@ class FuzzerKu
                 return out_traceheap;
             },
             getbuffertrace: () => {
-                console.log("opopop: "+func_scores.size);
-                func_scores.forEach(function(m) {
-                    console.log("sdsdzzzzzzzzzz");
-                });
-
+                for (const [addr, score] of func_scores.entries()) {
+                    const resolve = DebugSymbol.fromAddress(ptr(addr)).name.split("+")[0]
+                    func_score_resolve.set(resolve, score);
+                }
                 return out_tracebuffer;
             },
             getfuzz: () => {
@@ -1424,12 +1425,12 @@ class FuzzerKu
                            this.output["func_addr"] = func_data.address
                            this.output["tainted"] = [...tainted]
 
-                          /* const skor = 0; //func_scores.get(func_data.name);
+                           const skor = func_score_resolve.get(func_data.name);
                            if (skor) {
                                this.output["skor"] = skor;
                            } else {
                                this.output["skor"] = 0;
-                           }*/
+                           }
 
                            send({"type": "hook_hit", "log": this.output});
                        }

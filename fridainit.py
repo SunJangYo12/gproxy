@@ -142,7 +142,7 @@ def on_message(message, data):
                                "sink_args": sink_args,
                                "sink_name": sink_name,
                                "sink_ptr": sink_ptr,
-                               "skor": "0"
+                               "skor": info["skor"]
                            }
                            for tn in tainted:
                                if tn not in ALL_ALLOC[id]["tainted"]:
@@ -400,7 +400,7 @@ def main():
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB (l/h/u): ")
 
-    DEBUG = True
+    DEBUG = False
 
     if target == "h":
        #ahost = input(">> Android host: ")

@@ -1203,6 +1203,7 @@ class FuzzerKu
                     const sym = DebugSymbol.fromAddress(ptr(caller));
                     const resolve = sym.name.split("+")[0]
 
+                    console.log("[+] taint proc: "+item+"  "+sym);
                     tainted_raw.add(func+"_"+dst+"_"+sym);
 
                     if (!tainted_resolve.has(resolve))

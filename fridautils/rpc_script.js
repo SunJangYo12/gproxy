@@ -650,27 +650,26 @@ class FuzzerKu
                     const cek = findAllocation(ptr(this.src));
 
                     if (cek) {
-                        tainted.add(this.dst);
-                        console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.returnAddress})`);
+                        tainted.add("memcpy_"+this.dst);
+                        //console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.returnAddress})`);
                     }
                 } catch (_) {}
             }
         });
-/*
+
         Interceptor.attach(Module.findExportByName(null, "strcpy"), {
             onEnter(args) {
                 //char *strcpy(char *dest, const char *src);
                 this.dst = args[0].toString();
                 this.src = args[1].toString();
-                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
 
                 try {
                     const cek = findAllocation(ptr(this.src));
-                    addFuncScore(this.caller, 8);
+                    addFuncScore(this.returnAddress.toString(), 8);
 
                     if (cek) {
-                        tainted.add(this.dst);
-                        console.log(`strcpy(src=${this.src},dst=${this.dst},caller=${this.caller})`);
+                        tainted.add("strcpy_"+this.dst);
+                        //console.log(`strcpy(src=${this.src},dst=${this.dst},caller=${this.caller})`);
                     }
                 } catch (_) {}
             }
@@ -682,14 +681,13 @@ class FuzzerKu
                 this.dst = args[0].toString();
                 this.src = args[1].toString();
                 this.size = args[2].toInt32();
-                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
 
                 try {
                     const cek = findAllocation(ptr(this.src));
-                    addFuncScore(this.caller, 5);
+                    addFuncScore(this.returnAddress.toString(), 5);
 
                     if (cek) {
-                        tainted.add(this.dst);
+                        tainted.add("strncpy_"+this.dst);
                         //console.log(`strncpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
                     }
                 } catch (e) {console.log(e)}
@@ -706,14 +704,13 @@ class FuzzerKu
                 this.dst = args[0].toString();
                 this.src = args[1].toString();
                 this.size = args[2].toInt32();
-                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
 
                 try {
                     const cek = findAllocation(ptr(this.src));
-                    addFuncScore(this.caller, 4);
+                    addFuncScore(this.returnAddress.toString(), 4);
 
                     if (cek) {
-                        tainted.add(this.dst);
+                        tainted.add("memmove_"+this.dst);
                         //console.log(`memmove(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
                     }
                 } catch (e) {console.log(e)}
@@ -729,9 +726,8 @@ class FuzzerKu
                 this.s1 = args[0].toString();
                 this.s2 = args[1].toString();
                 this.size = args[2].toInt32();
-                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
 
-                addFuncScore(this.caller, 7);
+                addFuncScore(this.returnAddress.toString(), 7);
                 //console.log(`memcmp(s1=${this.s1},dst=${this.s2},size=${this.size},caller=${this.caller})`);
             },
             onLeave(retval) {
@@ -743,9 +739,8 @@ class FuzzerKu
                 //int strcmp(const char *s1, const char *s2);
                 this.s1 = args[0].toString();
                 this.s2 = args[1].toString();
-                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
 
-                addFuncScore(this.caller, 6);
+                addFuncScore(this.returnAddress.toString(), 6);
                 //console.log(`strcmp(src=${this.s1},dst=${this.s2},caller=${this.caller})`);
             },
             onLeave(retval) {
@@ -758,9 +753,8 @@ class FuzzerKu
                 this.s1 = args[0].toString();
                 this.s2 = args[1].toString();
                 this.size = args[2].toInt32();
-                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
 
-                addFuncScore(this.caller, 5);
+                addFuncScore(this.returnAddress.toString(), 5);
                 //console.log(`strncmp(src=${this.s1},dst=${this.s2},size=${this.size},caller=${this.caller})`);
             },
             onLeave(retval) {
@@ -771,9 +765,8 @@ class FuzzerKu
             onEnter(args) {
                 // size_t strlen(const char *s);
                 this.s1 = args[0].toString();
-                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
 
-                addFuncScore(this.caller, 4);
+                addFuncScore(this.returnAddress.toString(), 4);
                 //console.log(`strlen(buf=${this.s1},caller=${this.caller})`);
             },
             onLeave(retval) {
@@ -786,14 +779,13 @@ class FuzzerKu
                 this.s1 = args[0].toString();
                 this.c = args[1].toInt32();
                 this.n = args[2].toInt32();
-                this.caller = DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0]
 
-                addFuncScore(this.caller, 4);
+                addFuncScore(this.returnAddress.toString(), 4);
                 //console.log(`memset(buf=${this.s1},c=${this.c},n=${this.n},caller=${this.caller})`);
             },
             onLeave(retval) {
             }
-        });*/
+        });
     }
 
     // sink for buff_input
@@ -816,9 +808,9 @@ class FuzzerKu
                     sink: "read"
                 });
 
-                console.log(
+                /*console.log(
                     `[read] buf=${this.buf} size=${this.size} fd=${this.fd}`
-                );
+                );*/
             },
             onLeave(retval) {
                 //jika crash comment ini
@@ -1192,8 +1184,11 @@ class FuzzerKu
             },
             getbuffertrace: () => {
                 for (const [addr, score] of func_scores.entries()) {
-                    const resolve = DebugSymbol.fromAddress(ptr(addr)).name.split("+")[0]
+                    const sym = DebugSymbol.fromAddress(ptr(addr));
+                    const resolve = sym.name.split("+")[0]
                     func_score_resolve.set(resolve, score);
+
+                    console.log("[+] sym resolve score: "+score+" "+sym);
                 }
                 return out_tracebuffer;
             },

@@ -70,9 +70,11 @@ var is_buffnetwork = false;
 var is_buffinput = false;
 var out_tracebuffer = [];
 var tainted = new Set();
+var tainted_raw = new Set();
 const tainted_resolve = new Map();
 const func_score_resolve = new Map();
 const func_scores = new Map();
+
 function addFuncScore(funcName, score) {
     func_scores.set(
         funcName,
@@ -669,7 +671,7 @@ class FuzzerKu
                     addFuncScore(this.returnAddress.toString(), 8);
 
                     if (cek) {
-                        tainted.add("strcpy_"+this.dst);
+                        tainted.add("strcpy_"+this.dst+"_"+this.returnAddress.toString());
                         //console.log(`strcpy(src=${this.src},dst=${this.dst},caller=${this.caller})`);
                     }
                 } catch (_) {}
@@ -688,7 +690,7 @@ class FuzzerKu
                     addFuncScore(this.returnAddress.toString(), 5);
 
                     if (cek) {
-                        tainted.add("strncpy_"+this.dst);
+                        tainted.add("strncpy_"+this.dst+"_"+this.returnAddress.toString());
                         //console.log(`strncpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
                     }
                 } catch (e) {console.log(e)}
@@ -711,7 +713,7 @@ class FuzzerKu
                     addFuncScore(this.returnAddress.toString(), 4);
 
                     if (cek) {
-                        tainted.add("memmove_"+this.dst);
+                        tainted.add("memmove_"+this.dst+"_"+this.returnAddress.toString());
                         //console.log(`memmove(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
                     }
                 } catch (e) {console.log(e)}
@@ -825,7 +827,7 @@ class FuzzerKu
                 this.output["func_name"] = "read||"+caller+"||"+this.size;
                 this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = {};
-                this.output["tainted"] = [...tainted];
+                this.output["tainted"] = [...tainted_raw];
                 this.output["key"] = "read_"+this.buf;
                 out_tracebuffer.push(this.output);
 
@@ -1201,6 +1203,8 @@ class FuzzerKu
                     const sym = DebugSymbol.fromAddress(ptr(caller));
                     const resolve = sym.name.split("+")[0]
 
+                    tainted_raw.add(func+"_"+dst+"_"+sym);
+
                     if (!tainted_resolve.has(resolve))
                         tainted_resolve.set(resolve, []);
 
@@ -1218,6 +1222,17 @@ class FuzzerKu
                         });
                     }
                 }
+
+                /*var xx;
+                for (const [key, value] of tainted_resolve) {
+                    //console.log(key, JSON.stringify(value));
+                    xx = key;
+                }
+                const zz = tainted_resolve.get(xx);
+                if (zz)
+                    console.log("zzzzzzzzz: "+JSON.stringify(zz));
+                */
+
 
                 return out_tracebuffer;
             },
@@ -1447,8 +1462,6 @@ class FuzzerKu
                            this.output["retval"] = retval
                            this.output["func_name"] = func_data.name
                            this.output["func_addr"] = func_data.address
-                           //this.output["tainted"] = [...tainted]
-
 
                            // get score
                            const skor = func_score_resolve.get(func_data.name);

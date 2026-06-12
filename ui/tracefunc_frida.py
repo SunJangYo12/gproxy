@@ -231,9 +231,7 @@ class DialogTracerCallTree(QDialog):
                                 bitem.setFont(0, self.font)
                         else:
                             fitem.setText(0, f"{field}: {val}")
-
                         fitem.setFont(0, self.font)
-
 
             if "backtrace" in value:
                 bt_data = value["backtrace"].split("\n")
@@ -248,7 +246,7 @@ class DialogTracerCallTree(QDialog):
             if "tainted" in value:
                 tdata = value["tainted"]
                 item = QTreeWidgetItem(func_item)
-                item.setText(0, "Tainted")
+                item.setText(0, "Tainted(by,buff,caller)")
                 item.setFont(0, self.font)
                 for taint in tdata:
                     t_item = QTreeWidgetItem(item)

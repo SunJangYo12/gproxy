@@ -90,40 +90,16 @@ const clone_tree = new Map();
 function getChain(buf) {
     let cur = buf;
     const chain = [];
-
     while (clone_tree.has(cur)) {
         const meta = clone_tree.get(cur);
-
         chain.push({
             ptr: cur,
             ...meta
         });
-
         if (meta.parent === null)
             break;
-
         cur = meta.parent;
     }
-
-    return chain.reverse();
-}
-
-
-function zgetChain(buf) {
-    let cur = buf;
-    const chain = [];
-
-    while (clone_tree.has(cur)) {
-        const meta = clone_tree.get(cur);
-
-        chain.push(cur);
-
-        if (meta.parent === null)
-            break;
-
-        cur = meta.parent;
-    }
-
     return chain.reverse();
 }
 
@@ -704,10 +680,10 @@ class FuzzerKu
                             sink: "memcpy"
                         });
 
-                        clone_tree.set(
-                            this.dst,
-                            {parent: cek.ptr.toString(), sink: "memcpy"}
-                        );
+                        clone_tree.set(this.dst, {
+                            parent: cek.ptr.toString(),
+                            sink: "memcpy"
+                        });
                         //console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.returnAddress})`);
                     }
                 } catch (_) {}
@@ -866,7 +842,10 @@ class FuzzerKu
                     clone: new Set(),
                 });
 
-                clone_tree.set(this.buf, {parent: null, sink: "read"});
+                clone_tree.set(this.buf, {
+                    parent: null,
+                    sink: "read"
+                });
 
                 console.log(
                     `[read] buf=${this.buf} size=${this.size} fd=${this.fd}`

@@ -188,6 +188,24 @@ class DialogTracerCallTree(QDialog):
         self.tree_widget.clear()
         self.tree_widget.setHeaderLabels(["function member", "buffer", "size", "caller"])
 
+        tbuff = []
+        tallocs = []
+        taint_item = None
+
+        # mencari root tree warisan
+        def get_descendants(zz, root_ptr):
+            result = []
+            def dfs(parent):
+                for ptr, node in zz:
+                    if ptr == parent:
+                        continue  # hindari root menunjuk dirinya sendiri
+
+                    if node["root"] == parent:
+                        result.append(node)
+                        dfs(ptr)
+            dfs(root_ptr)
+            return result
+
         for key, value in data.items():
             func_item = QTreeWidgetItem(self.tree_widget)
 
@@ -244,14 +262,19 @@ class DialogTracerCallTree(QDialog):
                     bt_item.setFont(0, self.font)
 
             if "tainted" in value:
-                tdata = value["tainted"]
+                tainted = value["tainted"]
                 item = QTreeWidgetItem(func_item)
-                item.setText(0, "Tainted(by,buff,caller)")
+                item.setText(0, "Cloned by")
                 item.setFont(0, self.font)
-                for taint in tdata:
-                    t_item = QTreeWidgetItem(item)
-                    t_item.setText(0, taint)
-                    t_item.setFont(0, self.font)
+
+                def add_children(parent_item, node):
+                    for name, children in node.items():
+                        xitem = QTreeWidgetItem([name])
+                        xitem.setFont(0, self.font)
+                        parent_item.addChild(xitem)
+                        add_children(xitem, children)
+
+                add_children(item, tainted)
 
     def load_tree_allocator(self):
         self.sw_menu = "trace_alocator"

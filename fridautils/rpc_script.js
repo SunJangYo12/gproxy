@@ -69,6 +69,7 @@ var is_buffnetwork = false;
 /*********** Buffer input Trace *******************/
 var is_buffinput = false;
 var out_tracebuffer = [];
+
 var tainted = new Set();
 var tainted_raw = new Set();
 const tainted_resolve = new Map();
@@ -81,6 +82,28 @@ function addFuncScore(funcName, score) {
         (func_scores.get(funcName) || 0) + score
     );
 }
+
+// key   = buffer hasil clone
+// value = buffer sumber (parent)
+const clone_tree = new Map();
+
+function getChain(buf) {
+    let cur = buf;
+    const chain = [];
+
+    while (clone_tree.has(cur)) {
+        chain.push(cur);
+
+        const parent = clone_tree.get(cur);
+        if (parent === null)
+            break;
+
+        cur = parent;
+    }
+
+    return chain.reverse();
+}
+
 
 class FuzzerKu
 {
@@ -653,7 +676,16 @@ class FuzzerKu
                     const cek = findAllocation(ptr(this.src));
 
                     if (cek) {
-                        tainted.add("memcpy_"+this.dst+"_"+this.returnAddress.toString());
+                        alloc_range.set(this.dst, {
+                            ptr: this.dst,
+                            size: this.size,
+                            sink: "memcpy"
+                        });
+
+                        clone_tree.set(
+                            this.dst,
+                            cek.ptr.toString()
+                        );
                         //console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.returnAddress})`);
                     }
                 } catch (_) {}
@@ -808,8 +840,11 @@ class FuzzerKu
                 alloc_range.set(this.buf, {
                     ptr: this.buf,
                     size: this.size,
-                    sink: "read"
+                    sink: "read",
+                    clone: new Set(),
                 });
+
+                clone_tree.set(this.buf, null);
 
                 console.log(
                     `[read] buf=${this.buf} size=${this.size} fd=${this.fd}`
@@ -827,10 +862,11 @@ class FuzzerKu
                 this.output["func_name"] = "read||"+caller+"||"+this.size;
                 this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = {};
-                this.output["tainted"] = [...tainted_raw];
                 this.output["key"] = "read_"+this.buf;
-                out_tracebuffer.push(this.output);
+                this.output["tainted"] = {};
+                //this.output["tainted"] = [...alloc_range]; //[...tainted_raw];
 
+                out_tracebuffer.push(this.output);
                 //addFuncScore(caller.name.split("+")[0], 15);
             }
         });
@@ -1196,23 +1232,19 @@ class FuzzerKu
                 }
 
                 // generate whois function cloned buffer
+                /*
                 const tdata = [...tainted]
                 for (const item of tdata) {
-                    const [func, dst, caller] = item.split("_");
+                    const [func, dst, caller, root] = item.split("_");
 
                     const sym = DebugSymbol.fromAddress(ptr(caller));
                     const resolve = sym.name.split("+")[0]
 
-                    console.log("[+] taint proc: "+item+"  "+sym);
+                    console.log("[+] taint proc: "+item+"  root="+root+"   sym="+sym);
                     tainted_raw.add(func+"_"+dst+"_"+sym);
 
                     if (!tainted_resolve.has(resolve))
                         tainted_resolve.set(resolve, []);
-
-                    /*tainted_resolve.get(resolve).push({
-                        func,
-                        dst
-                    });*/
 
                     // mencegah array duplikat
                     const arr = tainted_resolve.get(resolve);
@@ -1222,20 +1254,23 @@ class FuzzerKu
                             dst
                         });
                     }
+                }*/
+
+                /*
+                for (const [key, value] of alloc_range) {
+                    console.log(key, JSON.stringify(value));
+                }*/
+
+                const cout = [];
+                for (const [key, value] of alloc_range) {
+                    cout.push({
+                        "key": key,
+                        "chain": getChain(key.toString()),
+                    });
                 }
 
-                /*var xx;
-                for (const [key, value] of tainted_resolve) {
-                    //console.log(key, JSON.stringify(value));
-                    xx = key;
-                }
-                const zz = tainted_resolve.get(xx);
-                if (zz)
-                    console.log("zzzzzzzzz: "+JSON.stringify(zz));
-                */
-
-
-                return out_tracebuffer;
+                //return out_tracebuffer;
+                send({"type": "zhook_hit", "log": out_tracebuffer, "chain": cout});
             },
             getfuzz: () => {
                 const outfuzz = {

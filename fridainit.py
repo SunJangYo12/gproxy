@@ -18,6 +18,30 @@ proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 pwd = None
 ALL_ALLOC = {}
 
+def print_taint(data):
+    tree = {}
+    for path in data:
+        node = tree
+        for addr in path:
+            node = node.setdefault(addr, {})
+
+    def print_tree(node, indent=""):
+        for k, v in node.items():
+            print(indent + k)
+            print_tree(v, indent + "    ")
+
+    print_tree(tree)
+
+def get_taint_subtree(data, root):
+    tree = {}
+    for path in data:
+        node = tree
+        for addr in path:
+            node = node.setdefault(addr, {})
+
+    #roots = list(tree.keys())
+    return tree[root]
+
 def on_message(message, data):
     if message['type'] == 'send':
         if message['payload']['type'] == 'enum_modules':
@@ -105,6 +129,34 @@ def on_message(message, data):
            mykey = info["key"]
            if mykey not in ALL_ALLOC:
                ALL_ALLOC[mykey] = info
+
+
+        elif message['payload']['type'] == 'zhook_hit':
+           data = message['payload']['log']
+           all_chain = message['payload']['chain']
+
+           x = []
+
+           for i in all_chain:
+               x.append(i["chain"])
+               #print(i["key"], i["chain"])
+
+           print_taint(x)
+
+           print("============================")
+           for dat in data:
+               id = dat["key"]
+               key = id.split("_")[1]
+
+               subtree = get_taint_subtree(x, key)
+               dat["tainted"] = subtree
+
+               if id not in ALL_ALLOC:
+                   ALL_ALLOC[id] = dat
+
+           with open("/tmp/trace-buffinput.json", "w") as fd:
+               fd.write(json.dumps(ALL_ALLOC))
+           proxy.settofrida_func("0", "hooktree_hit_all")
 
 
         elif message['payload']['type'] == 'hook_hit':
@@ -397,7 +449,7 @@ def main():
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB (l/h/u): ")
 
-    DEBUG = False
+    DEBUG = True
 
     if target == "h":
        #ahost = input(">> Android host: ")
@@ -417,7 +469,7 @@ def main():
        device = frida.get_local_device() #local linux
 
        if DEBUG:
-           pid_raw = subprocess.run(["pidof", "user_input"], capture_output=True, text=True)
+           pid_raw = subprocess.run(["pidof", "apache2"], capture_output=True, text=True)
            pid_raw = pid_raw.stdout.split("\n")[0]
        else:
            pid_raw = input(">> Chose pid? (1234): ")
@@ -645,7 +697,7 @@ def main():
             if DEBUG:
                 in_swsym = "frida"
             else:
-                in_swsym = input("\n>> Dump symbol address? frida/bn/r2: > ")
+                in_swsym = input("\n>> Dump symbol address? frida/bn/r2:> ")
 
             while True:
                 isbn = 0
@@ -770,16 +822,6 @@ def main():
 
                         data = script.exports_sync.getbuffertrace()
 
-                        for dat in data:
-                            id = dat["key"]
-                            #id = hashlib.sha256(json.dumps(dat, sort_keys=True).encode()).hexdigest()
-
-                            if id not in ALL_ALLOC:
-                                ALL_ALLOC[id] = dat
-
-                        with open("/tmp/trace-buffinput.json", "w") as fd:
-                            fd.write(json.dumps(ALL_ALLOC))
-                        proxy.settofrida_func("0", "hooktree_hit_all")
 
                 elif in_symbol == "all-alloc":
                     script.exports_sync.setuphook("", "allocator")

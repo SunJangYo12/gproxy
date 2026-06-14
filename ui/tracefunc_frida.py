@@ -267,14 +267,17 @@ class DialogTracerCallTree(QDialog):
                 item.setText(0, "Cloned by")
                 item.setFont(0, self.font)
 
-                def add_children(parent_item, node):
-                    for name, children in node.items():
-                        xitem = QTreeWidgetItem([name])
-                        xitem.setFont(0, self.font)
-                        parent_item.addChild(xitem)
-                        add_children(xitem, children)
+                def add_node(parent_item, node):
+                    meta = node["__meta__"]
+                    text = f"{meta['ptr']} [{meta['sink']}]"
+                    xitem = QTreeWidgetItem([text])
+                    xitem.setFont(0, self.font)
+                    parent_item.addChild(xitem)
+                    for child in node["__children__"].values():
+                        add_node(xitem, child)
 
-                add_children(item, tainted)
+                add_node(item, tainted)
+#                print(json.dumps(tainted, indent=2))
 
     def load_tree_allocator(self):
         self.sw_menu = "trace_alocator"

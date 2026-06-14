@@ -18,29 +18,29 @@ proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 pwd = None
 ALL_ALLOC = {}
 
-def print_taint(data):
+def xget_taint_subtree(data, root):
     tree = {}
-    for path in data:
+    for chain in data:
         node = tree
-        for addr in path:
+        for entry in chain:
+            addr = entry["ptr"]
             node = node.setdefault(addr, {})
+    return tree.get(root, {})
 
-    def print_tree(node, indent=""):
-        for k, v in node.items():
-            print(indent + k)
-            print_tree(v, indent + "    ")
-
-    print_tree(tree)
 
 def get_taint_subtree(data, root):
     tree = {}
-    for path in data:
+    for item in data:
         node = tree
-        for addr in path:
-            node = node.setdefault(addr, {})
-
-    #roots = list(tree.keys())
-    return tree[root]
+        for entry in item:
+            addr = entry["ptr"]
+            if addr not in node:
+                node[addr] = {
+                    "__meta__": entry,
+                    "__children__": {}
+                }
+            node = node[addr]["__children__"]
+    return tree.get(root)
 
 def on_message(message, data):
     if message['type'] == 'send':
@@ -135,20 +135,19 @@ def on_message(message, data):
            data = message['payload']['log']
            all_chain = message['payload']['chain']
 
-           x = []
+           #print(all_chain)
+
+           tchain = []
 
            for i in all_chain:
-               x.append(i["chain"])
-               #print(i["key"], i["chain"])
+               tchain.append(i["chain"])
 
-           print_taint(x)
-
-           print("============================")
            for dat in data:
                id = dat["key"]
                key = id.split("_")[1]
 
-               subtree = get_taint_subtree(x, key)
+               subtree = get_taint_subtree(tchain, key)
+               print(subtree)
                dat["tainted"] = subtree
 
                if id not in ALL_ALLOC:

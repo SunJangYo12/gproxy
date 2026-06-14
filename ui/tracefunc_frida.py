@@ -269,7 +269,7 @@ class DialogTracerCallTree(QDialog):
 
                 def add_node(parent_item, node):
                     meta = node["__meta__"]
-                    text = f"{meta['ptr']} [{meta['sink']}]"
+                    text = f"{meta['ptr']} {meta['caller_name']}"
                     xitem = QTreeWidgetItem([text])
                     xitem.setFont(0, self.font)
                     parent_item.addChild(xitem)

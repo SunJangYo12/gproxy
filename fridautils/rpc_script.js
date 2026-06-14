@@ -87,7 +87,32 @@ function addFuncScore(funcName, score) {
 // value = buffer sumber (parent)
 const clone_tree = new Map();
 
+
 function getChain(buf) {
+    let cur = buf;
+    const chain = [];
+    while (clone_tree.has(cur)) {
+        const meta = clone_tree.get(cur);
+        let caller_name = null;
+        if (meta.caller) {
+            try {
+                const sym = DebugSymbol.fromAddress(ptr(meta.caller));
+                caller_name = sym.name;
+            } catch (e) {}
+        }
+        chain.push({
+            ptr: cur,
+            ...meta,
+            caller_name: caller_name
+        });
+        if (meta.parent === null)
+            break;
+        cur = meta.parent;
+    }
+    return chain.reverse();
+}
+
+function xgetChain(buf) {
     let cur = buf;
     const chain = [];
     while (clone_tree.has(cur)) {
@@ -682,7 +707,8 @@ class FuzzerKu
 
                         clone_tree.set(this.dst, {
                             parent: cek.ptr.toString(),
-                            sink: "memcpy"
+                            sink: "memcpy",
+                            caller: this.returnAddress.toString()
                         });
                         //console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.returnAddress})`);
                     }
@@ -844,7 +870,8 @@ class FuzzerKu
 
                 clone_tree.set(this.buf, {
                     parent: null,
-                    sink: "read"
+                    sink: "read",
+                    caller: this.returnAddress.toString()
                 });
 
                 console.log(

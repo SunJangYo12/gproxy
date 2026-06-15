@@ -682,7 +682,7 @@ class FuzzerKu
                             prevbuf: previewBuffer(ptr(child), this.size),
                             prevHexbuf: previewHexBuffer(ptr(child), this.size)
                         });
-                        if (DEBUG) console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
+                        //console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
                     }
                 } catch (_) {}
             }
@@ -849,7 +849,7 @@ class FuzzerKu
         const subthis = this;
         out_tracebuffer = [];
         const DEBUG = true;
-
+/*
         Interceptor.attach(Module.findExportByName(null, "recvfrom"), {
             onEnter(args) {
                 this.output = {}
@@ -943,7 +943,7 @@ class FuzzerKu
                 //addFuncScore(this.returnAddress.toString(), 10);
             }
         });
-
+*/
         Interceptor.attach(Module.findExportByName(null, "read"), {
             onEnter(args) {
                 this.output = {}
@@ -988,7 +988,7 @@ class FuzzerKu
                 //this.output["tainted"] = [...alloc_range]; //[...tainted_raw];
 
                 out_tracebuffer.push(this.output);
-                //addFuncScore(this.returnAddress.toString(), 10);
+                addFuncScore(this.returnAddress.toString(), 10);
             }
         });
 
@@ -1005,17 +1005,17 @@ class FuzzerKu
             onLeave(retval) {
                 alloc_range.set(this.buf, {
                     ptr: this.buf,
-                    size: this.nmemb,
+                    size: this.size,
                     sink: "fread",
                     clone: new Set(),
                 });
                 clone_tree.set(this.buf, {
                     parent: null,
                     sink: "fread",
-                    size: this.nmemb,
+                    size: this.size,
                     caller: this.returnAddress.toString(),
-                    prevbuf:    previewBuffer(ptr(this.buf), this.nmemb),
-                    prevHexbuf: previewHexBuffer(ptr(this.buf), this.nmemb),
+                    prevbuf:    previewBuffer(ptr(this.buf), this.size),
+                    prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                 });
 
                 //jika crash comment ini

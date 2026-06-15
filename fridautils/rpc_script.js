@@ -103,17 +103,25 @@ function getChain(buf) {
 
         const meta = clone_tree.get(cur);
         let caller_name = null;
+        let caller_skor = 0;
         if (meta.caller) {
             try {
                 const sym = DebugSymbol.fromAddress(ptr(meta.caller));
                 caller_name = sym; //sym.name;
-                console.log("[+] buffer resove: "+sym);
+
+                const resolve = sym.name.split("+")[0]
+                caller_skor = func_score_resolve.get(resolve);
+                if (!caller_skor) {
+                    caller_skor = 0;
+                }
+                console.log("[+] buffer resove: "+caller_skor+"  "+sym);
             } catch (e) {}
         }
         chain.push({
             ptr: cur,
             ...meta,
-            caller_name: caller_name
+            caller_name: caller_name,
+            caller_skor: caller_skor
         });
         if (meta.parent === null)
             break;
@@ -658,7 +666,6 @@ class FuzzerKu
 
                         if (child === parent)
                             return;
-
                         if (clone_tree.has(child))
                             return;
 
@@ -667,7 +674,6 @@ class FuzzerKu
                             size: this.size,
                             sink: "memcpy"
                         });
-
                         clone_tree.set(child, {
                             parent: parent,
                             sink: "memcpy",

@@ -416,7 +416,7 @@ def main():
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB (l/h/u): ")
 
-    DEBUG = True
+    DEBUG = False
 
     if target == "h":
        #ahost = input(">> Android host: ")

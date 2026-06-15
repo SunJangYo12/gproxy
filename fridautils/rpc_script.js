@@ -635,7 +635,8 @@ class FuzzerKu
                 this.src = args[1].toString();
                 this.size = args[2].toInt32();
                 this.caller = this.returnAddress.toString();
-
+            },
+            onLeave(retval) {
                 try {
                     // tidak langsung resolve simbol alias DebugSymbol karena overhead
                     addFuncScore(this.caller, 5);
@@ -668,7 +669,8 @@ class FuzzerKu
                 this.dst = args[0].toString();
                 this.src = args[1].toString();
                 this.caller = this.returnAddress.toString();
-
+            },
+            onLeave(retval) {
                 try {
                     const cek = findAllocation(ptr(this.src));
                     addFuncScore(this.caller, 8);
@@ -678,7 +680,9 @@ class FuzzerKu
                             parent: cek.ptr.toString(),
                             sink: "strcpy",
                             size: "unkown",
-                            caller: this.caller
+                            caller: this.caller,
+                            prevbuf: previewBuffer(ptr(this.dst), 5),
+                            prevHexbuf: previewHexBuffer(ptr(this.dst), 5)
                         });
                         if (DEBUG) console.log(`strcpy(src=${this.src},dst=${this.dst},caller=${this.caller})`);
                     }
@@ -693,7 +697,8 @@ class FuzzerKu
                 this.src = args[1].toString();
                 this.size = args[2].toInt32();
                 this.caller = this.returnAddress.toString();
-
+            },
+            onLeave(retval) {
                 try {
                     const cek = findAllocation(ptr(this.src));
                     addFuncScore(this.caller, 5);
@@ -703,18 +708,15 @@ class FuzzerKu
                             parent: cek.ptr.toString(),
                             sink: "strncpy",
                             size: this.size,
-                            caller: this.caller
+                            caller: this.caller,
+                            prevbuf: previewBuffer(ptr(this.dst), this.size),
+                            prevHexbuf: previewHexBuffer(ptr(this.dst), this.size)
                         });
                         if (DEBUG) console.log(`strncpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
                     }
-                } catch (e) {console.log(e)}
-            },
-            onLeave(retval) {
+                } catch (_) {}
             }
         });
-
-
-        // move
         Interceptor.attach(Module.findExportByName(null, "memmove"), {
             onEnter(args) {
                 //void *memmove(void *dest, const void *src, size_t n);
@@ -722,7 +724,8 @@ class FuzzerKu
                 this.src = args[1].toString();
                 this.size = args[2].toInt32();
                 this.caller = this.returnAddress.toString();
-
+            },
+            onLeave(retval) {
                 try {
                     const cek = findAllocation(ptr(this.src));
                     addFuncScore(this.caller, 4);
@@ -732,13 +735,13 @@ class FuzzerKu
                             parent: cek.ptr.toString(),
                             sink: "memmove",
                             size: this.size,
-                            caller: this.caller
+                            caller: this.caller,
+                            prevbuf: previewBuffer(ptr(this.dst), this.size),
+                            prevHexbuf: previewHexBuffer(ptr(this.dst), this.size)
                         });
                         if (DEBUG) console.log(`memmove(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
                     }
-                } catch (e) {console.log(e)}
-            },
-            onLeave(retval) {
+                } catch (_) {}
             }
         });
 /*
@@ -879,24 +882,24 @@ class FuzzerKu
                 this.buf = args[1].toString();
                 this.size = args[2].toInt32();
                 this.flags = args[3].toInt32();
-
+                if (DEBUG) console.log(`[recv] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.fd}`);
+            },
+            onLeave(retval) {
                 alloc_range.set(this.buf, {
                     ptr: this.buf,
                     size: this.size,
                     sink: "recv",
                     clone: new Set(),
                 });
-
                 clone_tree.set(this.buf, {
                     parent: null,
                     sink: "recv",
                     size: this.size,
-                    caller: this.returnAddress.toString()
+                    caller: this.returnAddress.toString(),
+                    prevbuf:    previewBuffer(ptr(this.buf), this.size),
+                    prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                 });
 
-                if (DEBUG) console.log(`[recv] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.fd}`);
-            },
-            onLeave(retval) {
                 //jika crash comment ini
                 this.output["backtrace"] = Thread.backtrace(
                     this.context,
@@ -972,24 +975,24 @@ class FuzzerKu
                 this.size = args[1].toInt32();
                 this.nmemb = args[2].toInt32();
                 this.fd = args[3].toInt32();
-
+                if (DEBUG) console.log(`[fread] buf=${this.buf} size=${this.size} nmemb=${this.nmemb} fd=${this.fd}`);
+            },
+            onLeave(retval) {
                 alloc_range.set(this.buf, {
                     ptr: this.buf,
                     size: this.nmemb,
                     sink: "fread",
                     clone: new Set(),
                 });
-
                 clone_tree.set(this.buf, {
                     parent: null,
                     sink: "fread",
-                    size: this.size,
-                    caller: this.returnAddress.toString()
+                    size: this.nmemb,
+                    caller: this.returnAddress.toString(),
+                    prevbuf:    previewBuffer(ptr(this.buf), this.nmemb),
+                    prevHexbuf: previewHexBuffer(ptr(this.buf), this.nmemb),
                 });
 
-                if (DEBUG) console.log(`[fread] buf=${this.buf} size=${this.size} nmemb=${this.nmemb} fd=${this.fd}`);
-            },
-            onLeave(retval) {
                 //jika crash comment ini
                 this.output["backtrace"] = Thread.backtrace(
                     this.context,

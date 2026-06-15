@@ -269,9 +269,24 @@ class DialogTracerCallTree(QDialog):
 
                 def add_node(parent_item, node):
                     meta = node["__meta__"]
-                    text = f"{meta['ptr']} {meta['caller_name']}"
+                    text = f"{meta['ptr']} {meta['caller_name']['name']}"
                     xitem = QTreeWidgetItem([text])
                     xitem.setFont(0, self.font)
+
+                    try:
+                        pbuff = meta['prevbuf']
+                        phbuff = meta['prevHexbuf']
+                    except:
+                        pbuff = "-"
+                        phbuff = "-"
+
+                    xitem.setToolTip(0,
+                        f"Sink: {meta['sink']}\nSize: {meta['size']}\nCaller module: {meta['caller_name']['moduleName']}\n"\
+                        f"Prev: {pbuff}\nPrevHex: {phbuff}"
+                    )
+
+                    #xitem.setData(0, Qt.UserRole, meta["sink"])
+
                     parent_item.addChild(xitem)
                     for child in node["__children__"].values():
                         add_node(xitem, child)

@@ -115,13 +115,6 @@ def on_message(message, data):
            print(f"[+] {info}")
 
 
-        elif message['payload']['type'] == 'inputbuffer_network_hit':
-           info = message['payload']['log']
-           mykey = info["key"]
-           if mykey not in ALL_ALLOC:
-               ALL_ALLOC[mykey] = info
-
-
         elif message['payload']['type'] == 'zhook_hit':
            data = message['payload']['log']
            all_chain = message['payload']['chain']
@@ -180,21 +173,9 @@ def on_message(message, data):
                                "sink_name": sink_name,
                                "sink_ptr":  sink_ptr,
                                "skor":      info["skor"],
-                               "buf_clone": info["buf_clone"]
                            }
                    except:
                        pass
-
-           elif "buff_network_area" in info:
-               if info["buff_network_area"]:
-                   buff_area = info["buff_network_area"].split("-> ")
-                   ptr  = buff_area[1]
-                   func = buff_area[0].split("] ")
-
-                   if func[1] not in ALL_ALLOC[ptr]["member"]:
-                       ALL_ALLOC[ptr]["member"].append(func[1])
-
-
 
         elif message['payload']['type'] == 'hookmalloc_hit':
            info = message['payload']['log']
@@ -495,11 +476,10 @@ def main():
         print("3. trace (tr)> (all/all-tree/all-alloc/<symbol>/0x11,0x22.../back)> (block/back/mnemonic(all,ret,jne)/<enter=none-fast)")
         print("      all = hook all symbol, symbol generate by frida,r2 and binja you chose this")
         print("      all-tree = hook all symbol with tree")
-        print("      all-alloc = hook all symbol when all function allocation buffer and access")
-        print("      all-binput = hook all symbol when all function allocation buffer and access")
-        print("                   from input file eg. read, fgets, fread")
-        print("      all-bnet = hook all symbol when all function allocation buffer and access")
-        print("                   from input network eg. recv etc")
+        print("      all-alloc = hook all symbol, while all function touch it buffer by allocation")
+        print("                   malloc, calloc, realloc")
+        print("      all-binput = hook all symbol, while all function touch it buffer by allocation")
+        print("                   read, fread, fgets, recv, recvfrom")
         print("      <symbol> = single hook with symbol name")
         print("      0x11,0x22.. = custom count hook with address")
         print("")
@@ -673,7 +653,7 @@ def main():
         elif pshell == "tr":
             script.exports_sync.enummodules()
             if DEBUG:
-                in_module = "user_input"
+                in_module = "test"
             else:
                 in_module = input("\n>> Module> ")
 
@@ -779,21 +759,6 @@ def main():
 
                     proxy.settofrida_func("trace-func", "refresh")
                     break
-
-                elif in_symbol == "all-bnet":
-                    script.exports_sync.setuphook("", "buffnetwork")
-                    time.sleep(1)
-
-                    setup_hook(script, dick_sym, None, None)
-
-                    proxy.settofrida_openwindow("tracer_allocator", "Trace buffer input network")
-                    proxy.settofrida_func("trace-func", "refresh")
-                    while True:
-                        go = input("\nENTER for update..\n")
-
-                        with open("/tmp/trace-buffinput.json", "w") as fd:
-                            fd.write(json.dumps(ALL_ALLOC))
-                        proxy.settofrida_func("0", "hooktree_hit_all")
 
                 elif in_symbol == "all-binput":
                     script.exports_sync.setuphook("", "buffinput")

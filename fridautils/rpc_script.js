@@ -87,7 +87,6 @@ function addFuncScore(funcName, score) {
 // value = buffer sumber (parent)
 const clone_tree = new Map();
 
-
 function getChain(buf) {
     let cur = buf;
     const chain = [];
@@ -97,7 +96,8 @@ function getChain(buf) {
         if (meta.caller) {
             try {
                 const sym = DebugSymbol.fromAddress(ptr(meta.caller));
-                caller_name = sym.name;
+                caller_name = sym; //sym.name;
+                console.log("[+] buffer resove: "+meta.caller+" "+sym);
             } catch (e) {}
         }
         chain.push({
@@ -112,20 +112,39 @@ function getChain(buf) {
     return chain.reverse();
 }
 
-function xgetChain(buf) {
-    let cur = buf;
-    const chain = [];
-    while (clone_tree.has(cur)) {
-        const meta = clone_tree.get(cur);
-        chain.push({
-            ptr: cur,
-            ...meta
-        });
-        if (meta.parent === null)
-            break;
-        cur = meta.parent;
+
+function previewBuffer(ptrBuf, size) {
+    const max = Math.min(size, 32);
+    try {
+        const bytes = new Uint8Array(
+            Memory.readByteArray(ptrBuf, max)
+        );
+        let out = "";
+        for (const b of bytes) {
+            if (b >= 0x20 && b <= 0x7e)
+                out += String.fromCharCode(b);
+            else
+                out += "\\x" + b.toString(16).padStart(2, "0");
+        }
+        return out;
+    } catch (_) {
+        return "<unreadable>";
     }
-    return chain.reverse();
+}
+function previewHexBuffer(ptrBuf, size) {
+    const max = Math.min(size, 32);
+    try {
+        const bytes = new Uint8Array(
+            Memory.readByteArray(ptrBuf, max)
+        );
+
+        return Array.from(bytes)
+            .map(b => b.toString(16).padStart(2, "0"))
+            .join(" ");
+
+    } catch (_) {
+        return "<unreadable>";
+    }
 }
 
 class FuzzerKu
@@ -603,87 +622,10 @@ class FuzzerKu
         }
     }
 
-    // sink for buff_input network
-    setup_sink_buffinput_network() {
-        const subthis = this;
-
-        Interceptor.attach(Module.findExportByName(null, "recvfrom"), {
-            onEnter(args) {
-                this.output = {}
-                //     ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
-                //        struct sockaddr *src_addr, socklen_t *addrlen);
-
-                this.sockfd = args[0].toInt32();
-                this.buf = args[1].toString();
-                this.size = args[2].toInt32();
-                this.flags = args[3].toInt32();
-                this.src_addr = args[4].toString();
-                this.addr_len = args[5].toString();
-
-                /*
-                alloc_range.set(this.buf, {
-                    ptr: this.buf,
-                    size: this.size
-                });*/
-                console.log(
-                    `[recvfrom] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.sockfd}`
-                );
-            },
-            onLeave(retval) {
-                //jika crash comment ini
-                /*this.output["backtrace"] = Thread.backtrace(
-                    this.context,
-                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                    .join("\n");
-
-                const caller = DebugSymbol.fromAddress(this.returnAddress);
-                this.output["retval"] = retval;
-                this.output["key"] = this.buf;
-                this.output["func_name"] = "recv||caller_"+caller+"||"+this.size;
-                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
-                this.output["member"] = [];
-                send({"type": "inputbuffer_network_hit", "log": this.output});*/
-            }
-        });
-
-        Interceptor.attach(Module.findExportByName(null, "recv"), {
-            onEnter(args) {
-                this.output = {}
-                // ssize_t recv(int sockfd, void *buf, size_t len, int flags);
-                this.sockfd = args[0].toInt32();
-                this.buf = args[1].toString();
-                this.size = args[2].toInt32();
-                this.flags = args[3].toInt32();
-
-                alloc_range.set(this.buf, {
-                    ptr: this.buf,
-                    size: this.size
-                });
-                console.log(
-                    `[recv] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.fd}`
-                );
-            },
-            onLeave(retval) {
-                //jika crash comment ini
-                this.output["backtrace"] = Thread.backtrace(
-                    this.context,
-                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                    .join("\n");
-
-                const caller = DebugSymbol.fromAddress(this.returnAddress);
-                this.output["retval"] = retval;
-                this.output["key"] = this.buf;
-                this.output["func_name"] = "recv||"+caller+"||"+this.size;
-                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
-                this.output["member"] = [];
-                send({"type": "inputbuffer_network_hit", "log": this.output});
-            }
-        });
-    }
-
     // for score function parsing
     setup_manipulate_buffer() {
         const subthis = this;
+        const DEBUG = false;
 
         // copy
         Interceptor.attach(Module.findExportByName(null, "memcpy"), {
@@ -692,10 +634,11 @@ class FuzzerKu
                 this.dst = args[0].toString();
                 this.src = args[1].toString();
                 this.size = args[2].toInt32();
+                this.caller = this.returnAddress.toString();
 
                 try {
                     // tidak langsung resolve simbol alias DebugSymbol karena overhead
-                    addFuncScore(this.returnAddress.toString(), 5);
+                    addFuncScore(this.caller, 5);
                     const cek = findAllocation(ptr(this.src));
 
                     if (cek) {
@@ -708,9 +651,12 @@ class FuzzerKu
                         clone_tree.set(this.dst, {
                             parent: cek.ptr.toString(),
                             sink: "memcpy",
-                            caller: this.returnAddress.toString()
+                            size: this.size,
+                            caller: this.caller,
+                            prevbuf: previewBuffer(ptr(this.dst), this.size),
+                            prevHexbuf: previewHexBuffer(ptr(this.dst), this.size)
                         });
-                        //console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.returnAddress})`);
+                        if (DEBUG) console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
                     }
                 } catch (_) {}
             }
@@ -721,14 +667,20 @@ class FuzzerKu
                 //char *strcpy(char *dest, const char *src);
                 this.dst = args[0].toString();
                 this.src = args[1].toString();
+                this.caller = this.returnAddress.toString();
 
                 try {
                     const cek = findAllocation(ptr(this.src));
-                    addFuncScore(this.returnAddress.toString(), 8);
+                    addFuncScore(this.caller, 8);
 
                     if (cek) {
-                        tainted.add("strcpy_"+this.dst+"_"+this.returnAddress.toString());
-                        //console.log(`strcpy(src=${this.src},dst=${this.dst},caller=${this.caller})`);
+                        clone_tree.set(this.dst, {
+                            parent: cek.ptr.toString(),
+                            sink: "strcpy",
+                            size: "unkown",
+                            caller: this.caller
+                        });
+                        if (DEBUG) console.log(`strcpy(src=${this.src},dst=${this.dst},caller=${this.caller})`);
                     }
                 } catch (_) {}
             }
@@ -740,14 +692,20 @@ class FuzzerKu
                 this.dst = args[0].toString();
                 this.src = args[1].toString();
                 this.size = args[2].toInt32();
+                this.caller = this.returnAddress.toString();
 
                 try {
                     const cek = findAllocation(ptr(this.src));
-                    addFuncScore(this.returnAddress.toString(), 5);
+                    addFuncScore(this.caller, 5);
 
                     if (cek) {
-                        tainted.add("strncpy_"+this.dst+"_"+this.returnAddress.toString());
-                        //console.log(`strncpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
+                        clone_tree.set(this.dst, {
+                            parent: cek.ptr.toString(),
+                            sink: "strncpy",
+                            size: this.size,
+                            caller: this.caller
+                        });
+                        if (DEBUG) console.log(`strncpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
                     }
                 } catch (e) {console.log(e)}
             },
@@ -763,21 +721,27 @@ class FuzzerKu
                 this.dst = args[0].toString();
                 this.src = args[1].toString();
                 this.size = args[2].toInt32();
+                this.caller = this.returnAddress.toString();
 
                 try {
                     const cek = findAllocation(ptr(this.src));
-                    addFuncScore(this.returnAddress.toString(), 4);
+                    addFuncScore(this.caller, 4);
 
                     if (cek) {
-                        tainted.add("memmove_"+this.dst+"_"+this.returnAddress.toString());
-                        //console.log(`memmove(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
+                        clone_tree.set(this.dst, {
+                            parent: cek.ptr.toString(),
+                            sink: "memmove",
+                            size: this.size,
+                            caller: this.caller
+                        });
+                        if (DEBUG) console.log(`memmove(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
                     }
                 } catch (e) {console.log(e)}
             },
             onLeave(retval) {
             }
         });
-
+/*
         // compare
         Interceptor.attach(Module.findExportByName(null, "memcmp"), {
             onEnter(args) {
@@ -785,9 +749,10 @@ class FuzzerKu
                 this.s1 = args[0].toString();
                 this.s2 = args[1].toString();
                 this.size = args[2].toInt32();
+                this.caller = this.returnAddress.toString();
 
-                addFuncScore(this.returnAddress.toString(), 7);
-                //console.log(`memcmp(s1=${this.s1},dst=${this.s2},size=${this.size},caller=${this.caller})`);
+                addFuncScore(this.caller, 7);
+                if (DEBUG) console.log(`memcmp(s1=${this.s1},dst=${this.s2},size=${this.size},caller=${this.caller})`);
             },
             onLeave(retval) {
             }
@@ -798,9 +763,10 @@ class FuzzerKu
                 //int strcmp(const char *s1, const char *s2);
                 this.s1 = args[0].toString();
                 this.s2 = args[1].toString();
+                this.caller = this.returnAddress.toString();
 
-                addFuncScore(this.returnAddress.toString(), 6);
-                //console.log(`strcmp(src=${this.s1},dst=${this.s2},caller=${this.caller})`);
+                addFuncScore(this.caller, 6);
+                if (DEBUG) console.log(`strcmp(src=${this.s1},dst=${this.s2},caller=${this.caller})`);
             },
             onLeave(retval) {
             }
@@ -812,9 +778,10 @@ class FuzzerKu
                 this.s1 = args[0].toString();
                 this.s2 = args[1].toString();
                 this.size = args[2].toInt32();
+                this.caller = this.returnAddress.toString();
 
-                addFuncScore(this.returnAddress.toString(), 5);
-                //console.log(`strncmp(src=${this.s1},dst=${this.s2},size=${this.size},caller=${this.caller})`);
+                addFuncScore(this.caller, 5);
+                if (DEBUG) console.log(`strncmp(src=${this.s1},dst=${this.s2},size=${this.size},caller=${this.caller})`);
             },
             onLeave(retval) {
             }
@@ -824,9 +791,10 @@ class FuzzerKu
             onEnter(args) {
                 // size_t strlen(const char *s);
                 this.s1 = args[0].toString();
+                this.caller = this.returnAddress.toString();
 
-                addFuncScore(this.returnAddress.toString(), 4);
-                //console.log(`strlen(buf=${this.s1},caller=${this.caller})`);
+                addFuncScore(this.caller, 4);
+                if (DEBUG) console.log(`strlen(buf=${this.s1},caller=${this.caller})`);
             },
             onLeave(retval) {
             }
@@ -838,19 +806,115 @@ class FuzzerKu
                 this.s1 = args[0].toString();
                 this.c = args[1].toInt32();
                 this.n = args[2].toInt32();
+                this.caller = this.returnAddress.toString();
 
-                addFuncScore(this.returnAddress.toString(), 4);
-                //console.log(`memset(buf=${this.s1},c=${this.c},n=${this.n},caller=${this.caller})`);
+                addFuncScore(this.caller, 4);
+                if (DEBUG) console.log(`memset(buf=${this.s1},c=${this.c},n=${this.n},caller=${this.caller})`);
             },
             onLeave(retval) {
             }
-        });
+        });*/
     }
 
     // sink for buff_input
     setup_sink_buffinput() {
         const subthis = this;
         out_tracebuffer = [];
+        const DEBUG = false;
+
+        Interceptor.attach(Module.findExportByName(null, "recvfrom"), {
+            onEnter(args) {
+                this.output = {}
+                //     ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
+                //        struct sockaddr *src_addr, socklen_t *addrlen);
+
+                this.sockfd = args[0].toInt32();
+                this.buf = args[1].toString();
+                this.size = args[2].toInt32();
+                this.flags = args[3].toInt32();
+                this.src_addr = args[4].toString();
+                this.addr_len = args[5].toString();
+
+                alloc_range.set(this.buf, {
+                    ptr: this.buf,
+                    size: this.size,
+                    sink: "recvfrom",
+                    clone: new Set(),
+                });
+
+                clone_tree.set(this.buf, {
+                    parent: null,
+                    sink: "recvfrom",
+                    size: this.size,
+                    caller: this.returnAddress.toString()
+                });
+
+                if (DEBUG) console.log(`[recvfrom] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.sockfd}`);
+            },
+            onLeave(retval) {
+                //jika crash comment ini
+                this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");
+
+                const caller = DebugSymbol.fromAddress(this.returnAddress);
+                this.output["retval"] = retval;
+                this.output["key"] = "recvfrom_"+this.buf;
+                this.output["func_name"] = "recv||caller_"+caller+"||"+this.size;
+                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["member"] = {};
+                this.output["tainted"] = {};
+
+                out_tracebuffer.push(this.output);
+                addFuncScore(this.returnAddress.toString(), 10);
+            }
+        });
+
+        Interceptor.attach(Module.findExportByName(null, "recv"), {
+            onEnter(args) {
+                this.output = {}
+                // ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+                this.sockfd = args[0].toInt32();
+                this.buf = args[1].toString();
+                this.size = args[2].toInt32();
+                this.flags = args[3].toInt32();
+
+                alloc_range.set(this.buf, {
+                    ptr: this.buf,
+                    size: this.size,
+                    sink: "recv",
+                    clone: new Set(),
+                });
+
+                clone_tree.set(this.buf, {
+                    parent: null,
+                    sink: "recv",
+                    size: this.size,
+                    caller: this.returnAddress.toString()
+                });
+
+                if (DEBUG) console.log(`[recv] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.fd}`);
+            },
+            onLeave(retval) {
+                //jika crash comment ini
+                this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");
+
+                const caller = DebugSymbol.fromAddress(this.returnAddress);
+                this.output["retval"] = retval;
+                this.output["key"] = "recv_"+this.buf;
+                this.output["func_name"] = "recv||"+caller+"||"+this.size;
+                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["member"] = {};
+                this.output["tainted"] = {};
+
+                out_tracebuffer.push(this.output);
+                addFuncScore(this.returnAddress.toString(), 10);
+            }
+        });
 
         Interceptor.attach(Module.findExportByName(null, "read"), {
             onEnter(args) {
@@ -861,6 +925,9 @@ class FuzzerKu
                 this.buf = args[1].toString();
                 this.size = args[2].toInt32();
 
+                if (DEBUG) console.log(`[read] buf=${this.buf} size=${this.size} fd=${this.fd}`);
+            },
+            onLeave(retval) {
                 alloc_range.set(this.buf, {
                     ptr: this.buf,
                     size: this.size,
@@ -871,14 +938,12 @@ class FuzzerKu
                 clone_tree.set(this.buf, {
                     parent: null,
                     sink: "read",
-                    caller: this.returnAddress.toString()
+                    size: this.size,
+                    caller: this.returnAddress.toString(),
+                    prevbuf:    previewBuffer(ptr(this.buf), this.size),
+                    prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                 });
 
-                console.log(
-                    `[read] buf=${this.buf} size=${this.size} fd=${this.fd}`
-                );
-            },
-            onLeave(retval) {
                 //jika crash comment ini
                 this.output["backtrace"] = Thread.backtrace(
                     this.context,
@@ -895,7 +960,7 @@ class FuzzerKu
                 //this.output["tainted"] = [...alloc_range]; //[...tainted_raw];
 
                 out_tracebuffer.push(this.output);
-                //addFuncScore(caller.name.split("+")[0], 15);
+                addFuncScore(this.returnAddress.toString(), 10);
             }
         });
 
@@ -910,12 +975,19 @@ class FuzzerKu
 
                 alloc_range.set(this.buf, {
                     ptr: this.buf,
-                    size: this.nmemb
+                    size: this.nmemb,
+                    sink: "fread",
+                    clone: new Set(),
                 });
 
-                console.log(
-                    `[fread] buf=${this.buf} size=${this.size} nmemb=${this.nmemb} fd=${this.fd}`
-                );
+                clone_tree.set(this.buf, {
+                    parent: null,
+                    sink: "fread",
+                    size: this.size,
+                    caller: this.returnAddress.toString()
+                });
+
+                if (DEBUG) console.log(`[fread] buf=${this.buf} size=${this.size} nmemb=${this.nmemb} fd=${this.fd}`);
             },
             onLeave(retval) {
                 //jika crash comment ini
@@ -930,9 +1002,8 @@ class FuzzerKu
                 this.output["func_name"] = "fread||"+caller+"||"+this.nmemb;
                 this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = [];
-                //send({"type": "inputbuffer_hit", "log": this.output});
                 out_tracebuffer.push(this.output);
-                //addFuncScore(DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0], 14);
+                addFuncScore(this.returnAddress.toString(), 10);
             }
         });
     }
@@ -953,6 +1024,14 @@ class FuzzerKu
                     ptr: retval.toString(),
                     size: this.size
                 });
+
+                clone_tree.set(retval.toString(), {
+                    parent: null,
+                    sink: "malloc",
+                    size: this.size,
+                    caller: this.returnAddress.toString()
+                });
+
                 console.log(
                     `[malloc] ${retval} size=${this.size}`
                 );
@@ -971,12 +1050,15 @@ class FuzzerKu
                 this.output["member"] = [];
 
                 out_traceheap.push(this.output);
-                //addFuncScore(DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0], 13);
+                addFuncScore(this.returnAddress.toString(), 10);
             }
         });
         Interceptor.attach(Module.findExportByName(null, "free"), {
             onEnter(args) {
                 alloc_range.delete(args[0].toString());
+
+                clone_tree.delete(args[0].toString());
+
                 console.log(
                     `[free] ${args[0]}`
                 );
@@ -994,7 +1076,7 @@ class FuzzerKu
                 this.output["key"] = "free_"+args[0].toString();
 
                 out_traceheap.push(this.output);
-                //addFuncScore(DebugSymbol.fromAddress(this.returnAddress).name.split("+")[0], 14);
+                addFuncScore(this.returnAddress.toString(), 10);
             }
         });
     }
@@ -1386,17 +1468,9 @@ class FuzzerKu
                if (fstalking == "detach-all") {
                    is_alloctrace = false;
                    is_buffinput = false;
-                   is_buffnetwork = false;
                    this.logDebug("send", "Agent @ Cleaning hook instrument...", "info");
                    Interceptor.detachAll();
                    return
-               }
-
-               // Setup hook network input sink buffer
-               if (fstalking == "buffnetwork") {
-                    is_buffnetwork = true;
-                    this.setup_sink_buffinput_network();
-                    return;
                }
 
                // Setup hook input sink buffer
@@ -1466,24 +1540,6 @@ class FuzzerKu
                                 Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
                                 .join("\n");
 
-                           if (is_buffnetwork) {
-                                // jumlah paramater target
-
-                                //console.log("proc: "+func_data.name);
-                                for (let i=0; i<6; i++) {
-                                    try {
-                                        const func_args = findAllocation(args[i]);
-
-                                        if (func_args) {
-                                            this.output["buff_network_area"] =
-                                                 "args["+i+"] "+
-                                                 func_data.name+
-                                                 " -> "+func_args.ptr;
-                                            //console.log(`${func_data.name} arg${i} -> ${func_args.ptr}`);
-                                        }
-                                    } catch (_) {}
-                                }
-                           }
 
                            if (is_buffinput) {
                                 // jumlah paramater target
@@ -1499,7 +1555,7 @@ class FuzzerKu
                                                 "sink": func_args.sink
                                             };
                                             this.output["buff_area"] = data;
-                                            //console.log(`${func_data.name} arg${i} -> ${func_args.ptr}`);
+                                            console.log(`${func_data.name} arg${i} -> ${func_args.ptr}`);
                                         }
                                     } catch (_) {}
                                 }

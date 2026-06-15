@@ -653,24 +653,28 @@ class FuzzerKu
                     const cek = findAllocation(ptr(this.src));
 
                     if (cek) {
-                        if (cek.ptr.toString() === this.dst) {
-                            console.log("[!] SELF LOOP", this.dst+" "+cek.ptr.toString());
-                            return;
-                        }
+                        const parent = cek.ptr.toString();
+                        const child = this.dst;
 
-                        alloc_range.set(this.dst, {
-                            ptr: this.dst,
+                        if (child === parent)
+                            return;
+
+                        if (clone_tree.has(child))
+                            return;
+
+                        alloc_range.set(child, {
+                            ptr: child,
                             size: this.size,
                             sink: "memcpy"
                         });
 
-                        clone_tree.set(this.dst, {
-                            parent: cek.ptr.toString(),
+                        clone_tree.set(child, {
+                            parent: parent,
                             sink: "memcpy",
                             size: this.size,
                             caller: this.caller,
-                            prevbuf: previewBuffer(ptr(this.dst), this.size),
-                            prevHexbuf: previewHexBuffer(ptr(this.dst), this.size)
+                            prevbuf: previewBuffer(ptr(child), this.size),
+                            prevHexbuf: previewHexBuffer(ptr(child), this.size)
                         });
                         if (DEBUG) console.log(`memcpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
                     }

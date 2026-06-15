@@ -90,14 +90,24 @@ const clone_tree = new Map();
 function getChain(buf) {
     let cur = buf;
     const chain = [];
+
+    const visited = new Set();
+
     while (clone_tree.has(cur)) {
+        if (visited.has(cur)) {
+            console.log("[!] CYCLE DETECTED:", cur);
+            console.log("[!] Chain:", JSON.stringify(chain));
+            break;
+        }
+        visited.add(cur);
+
         const meta = clone_tree.get(cur);
         let caller_name = null;
         if (meta.caller) {
             try {
                 const sym = DebugSymbol.fromAddress(ptr(meta.caller));
                 caller_name = sym; //sym.name;
-                console.log("[+] buffer resove: "+meta.caller+" "+sym);
+                console.log("[+] buffer resove: "+sym);
             } catch (e) {}
         }
         chain.push({
@@ -643,6 +653,11 @@ class FuzzerKu
                     const cek = findAllocation(ptr(this.src));
 
                     if (cek) {
+                        if (cek.ptr.toString() === this.dst) {
+                            console.log("[!] SELF LOOP", this.dst+" "+cek.ptr.toString());
+                            return;
+                        }
+
                         alloc_range.set(this.dst, {
                             ptr: this.dst,
                             size: this.size,
@@ -662,7 +677,7 @@ class FuzzerKu
                 } catch (_) {}
             }
         });
-
+/*
         Interceptor.attach(Module.findExportByName(null, "strcpy"), {
             onEnter(args) {
                 //char *strcpy(char *dest, const char *src);
@@ -744,7 +759,7 @@ class FuzzerKu
                 } catch (_) {}
             }
         });
-/*
+
         // compare
         Interceptor.attach(Module.findExportByName(null, "memcmp"), {
             onEnter(args) {
@@ -823,7 +838,7 @@ class FuzzerKu
     setup_sink_buffinput() {
         const subthis = this;
         out_tracebuffer = [];
-        const DEBUG = false;
+        const DEBUG = true;
 
         Interceptor.attach(Module.findExportByName(null, "recvfrom"), {
             onEnter(args) {
@@ -870,7 +885,7 @@ class FuzzerKu
                 this.output["tainted"] = {};
 
                 out_tracebuffer.push(this.output);
-                addFuncScore(this.returnAddress.toString(), 10);
+                //addFuncScore(this.returnAddress.toString(), 10);
             }
         });
 
@@ -915,7 +930,7 @@ class FuzzerKu
                 this.output["tainted"] = {};
 
                 out_tracebuffer.push(this.output);
-                addFuncScore(this.returnAddress.toString(), 10);
+                //addFuncScore(this.returnAddress.toString(), 10);
             }
         });
 
@@ -963,7 +978,7 @@ class FuzzerKu
                 //this.output["tainted"] = [...alloc_range]; //[...tainted_raw];
 
                 out_tracebuffer.push(this.output);
-                addFuncScore(this.returnAddress.toString(), 10);
+                //addFuncScore(this.returnAddress.toString(), 10);
             }
         });
 
@@ -1006,7 +1021,7 @@ class FuzzerKu
                 this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = [];
                 out_tracebuffer.push(this.output);
-                addFuncScore(this.returnAddress.toString(), 10);
+                //addFuncScore(this.returnAddress.toString(), 10);
             }
         });
     }
@@ -1343,31 +1358,6 @@ class FuzzerKu
 
                     console.log("[+] sym resolve score: "+score+" "+sym);
                 }
-
-                // generate whois function cloned buffer
-                /*
-                const tdata = [...tainted]
-                for (const item of tdata) {
-                    const [func, dst, caller, root] = item.split("_");
-
-                    const sym = DebugSymbol.fromAddress(ptr(caller));
-                    const resolve = sym.name.split("+")[0]
-
-                    console.log("[+] taint proc: "+item+"  root="+root+"   sym="+sym);
-                    tainted_raw.add(func+"_"+dst+"_"+sym);
-
-                    if (!tainted_resolve.has(resolve))
-                        tainted_resolve.set(resolve, []);
-
-                    // mencegah array duplikat
-                    const arr = tainted_resolve.get(resolve);
-                    if (!arr.some(x => x.dst === dst)) {
-                        arr.push({
-                            func,
-                            dst
-                        });
-                    }
-                }*/
 
                 /*
                 for (const [key, value] of alloc_range) {

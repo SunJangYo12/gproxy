@@ -930,7 +930,7 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         title = GLOBAL.window_frida_tracer_title
 
         self.dlg = DialogTracerCallTree(sid=title, data=self.bv)
-        self.dlg.resize(340, 550) # w,h
+        self.dlg.resize(740, 550) # w,h
         self.dlg.show()
         self.dlg.raise_()
         self.dlg.activateWindow()

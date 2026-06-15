@@ -8,6 +8,8 @@ Youtube Demo 1
 Youtube Demo 2 (real target)
 [![Demo 2](https://img.youtube.com/vi/qLTcykEyN0I/maxresdefault.jpg)](https://m.youtube.com/watch?v=qLTcykEyN0I)
 
+Buffer tracing
+![](image/xc.png)
 
 # Requirenment
 ```
@@ -616,4 +618,29 @@ $ cp -R /tes/lib/zout /tmp
 >> et
 TIPS: untuk mengetahui thread baru yang muncul klik kanan> coloring Al, lalu (et)
 dan list yang tidak terwarnai adalah thread baru
+```
+
+# Buffer tracing
+```
+>> tr
+[+] Agent @ Getting modules...
+[+] Send to binja...
+[+] Done.
+
+>> Module> zzz
+
+>> Dump symbol address? frida/bn/r2:> frida
+[+] Using frida symbol.
+>> Symbol/Import/Export? s/i/e: s 
+[+] Agent @ Getting symbols to hook...
+
+>> zzz> symbol> all-binput
+
+#NOTE
+1. untuk Module tidak wajib, berguna jika tracing cepat hanya buffer terkait
+   jika ditambahkan maka skor akan muncul yang menandai fungsi tertentu banyak
+   memakai strcmp, memcmp, dll misal mencari fungsi parser.
+2. untuk update antara ui binja pertama triger fitur program target alias
+   hook mulai mengumpulkan data tekan ENTER di console ini dan window
+   binja "trace buffer" akan muncul lalu ENTER lagi untuk menampilkan data di UI.
 ```

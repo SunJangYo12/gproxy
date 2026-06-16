@@ -161,6 +161,8 @@ def on_message(message, data):
                    sink_args = str(raw["sink_args"])
                    sink_name = raw["sink"]
                    sink_ptr  = raw["sink_ptr"]
+                   thread    = raw["thread"]
+                   context   = raw["context"]
 
                    id = sink_name+"_"+sink_ptr
 
@@ -173,6 +175,8 @@ def on_message(message, data):
                                "sink_name": sink_name,
                                "sink_ptr":  sink_ptr,
                                "skor":      info["skor"],
+                               "thread":    thread,
+                               "context":   context,
                            }
                    except:
                        pass
@@ -416,7 +420,7 @@ def main():
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB (l/h/u): ")
 
-    DEBUG = False
+    DEBUG = True
 
     if target == "h":
        #ahost = input(">> Android host: ")
@@ -661,7 +665,7 @@ def main():
                 continue
 
             if DEBUG:
-                in_swsym = "frida"
+                in_swsym = "bn"
             else:
                 in_swsym = input("\n>> Dump symbol address? frida/bn/r2:> ")
 

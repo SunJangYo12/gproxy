@@ -13,7 +13,8 @@ from .ui import (
 from binaryninja import (
     core_version,
     log_info,
-    highlight
+    highlight,
+    SymbolType
 )
 
 from .constants import (
@@ -190,8 +191,15 @@ class Gproxy:
         generate symbol to file
         """
         with open("/tmp/funcs.txt", "w") as out:
-            for f in self.view.functions:
-                out.write(f"{hex(f.start)} {f.symbol.full_name}\n")
+
+            for func in self.view.functions:
+                sym = self.view.get_symbol_at(func.start)
+                if sym:
+                    if sym.type == SymbolType.FunctionSymbol:
+                        out.write(f"{hex(func.start)} {func.symbol.full_name}\n")
+
+#            for f in self.view.functions:
+#                out.write(f"{hex(f.start)} {f.symbol.full_name}\n")
 
         return True
 

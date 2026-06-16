@@ -186,7 +186,7 @@ class DialogTracerCallTree(QDialog):
         data = self.open_data("/tmp/trace-buffinput.json")
 
         self.tree_widget.clear()
-        self.tree_widget.setHeaderLabels(["Function member", "buffer", "size", "caller"])
+        self.tree_widget.setHeaderLabels(["Function member", "Buffer", "Size", "Caller"])
 
         tbuff = []
         tallocs = []
@@ -220,22 +220,14 @@ class DialogTracerCallTree(QDialog):
                     item.setText(0, f"{child} +{skor}")
                     item.setFont(0, self.font)
 
-                    # child function field
-                    for field in value["member"][child]:
-                        val = value["member"][child][field]
-                        fitem = QTreeWidgetItem(item)
-
-                        if field == "buf_clone":
-                            fitem.setText(0, f"{field}")
-                            for bclone in val:
-                                by = bclone["func"]
-                                dst = bclone["dst"]
-                                bitem = QTreeWidgetItem(fitem)
-                                bitem.setText(0, f"{dst}: {by}")
-                                bitem.setFont(0, self.font)
-                        else:
-                            fitem.setText(0, f"{field}: {val}")
-                        fitem.setFont(0, self.font)
+                    sink      = value["member"][child]["sink_name"]
+                    sink_args = value["member"][child]["sink_args"]
+                    sink_ptr  = value["member"][child]["sink_ptr"]
+                    item.setToolTip(0,
+                        f"Sink     : {sink}\n"\
+                        f"Sink args: {sink_args}\n"\
+                        f"Sink ptr : {sink_ptr}\n"\
+                    )
 
             if "backtrace" in value:
                 bt_data = value["backtrace"].split("\n")

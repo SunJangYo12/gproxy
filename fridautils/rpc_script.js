@@ -70,12 +70,10 @@ var is_buffnetwork = false;
 var is_buffinput = false;
 var out_tracebuffer = [];
 
-var tainted = new Set();
-var tainted_raw = new Set();
-const tainted_resolve = new Map();
+
+// function score
 const func_score_resolve = new Map();
 const func_scores = new Map();
-
 function addFuncScore(funcName, score) {
     func_scores.set(
         funcName,
@@ -987,7 +985,6 @@ class FuzzerKu
                 this.output["member"] = {};
                 this.output["key"] = "read_"+this.buf;
                 this.output["tainted"] = {};
-                //this.output["tainted"] = [...alloc_range]; //[...tainted_raw];
 
                 out_tracebuffer.push(this.output);
                 addFuncScore(this.returnAddress.toString(), 10);
@@ -1360,13 +1357,23 @@ class FuzzerKu
                 return out_traceheap;
             },
             getbuffertrace: () => {
+
                 // resolving symbol for score in func hit
                 for (const [addr, score] of func_scores.entries()) {
-                    const sym = DebugSymbol.fromAddress(ptr(addr));
-                    const resolve = sym.name.split("+")[0]
-                    func_score_resolve.set(resolve, score);
+                    try {
+                        const sym = DebugSymbol.fromAddress(ptr(addr));
+                        const resolve = sym.name.split("+")[0]
 
-                    console.log("[+] sym resolve score: "+score+" "+sym);
+                        //func_score_resolve.set(resolve, score);
+
+                        func_score_resolve.set(resolve,
+                                (func_score_resolve.get(resolve) || 0) + score
+                        );
+
+                        console.log("[+] sym resolve score: "+score+" "+resolve);
+                    } catch(e) {
+                        console.log("[+] sym resolve ERR: "+e)
+                    }
                 }
                 console.log("Done.");
 
@@ -1532,6 +1539,7 @@ class FuzzerKu
                            this.output["argumen"] = "none";
                            this.output["backtrace"] = "none"
 
+                           /*
                            try {
                                this.output["argumen"] = "args[0]: "+
                                     Memory.readCString(ptr(args[0]));
@@ -1542,8 +1550,7 @@ class FuzzerKu
                            this.output["backtrace"] = Thread.backtrace(
                                 this.context,
                                 Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                                .join("\n");
-
+                                .join("\n");*/
 
                            if (is_buffinput) {
                                 // jumlah paramater target
@@ -1554,6 +1561,8 @@ class FuzzerKu
                                         if (func_args) {
                                             const data = {
                                                 "name": func_data.name,
+                                                "thread": this.threadId,
+                                                "context": this.context,
                                                 "sink_args": i,
                                                 "sink_ptr": func_args.ptr,
                                                 "sink": func_args.sink
@@ -1593,14 +1602,6 @@ class FuzzerKu
                                this.output["skor"] = skor;
                            } else {
                                this.output["skor"] = 0;
-                           }
-
-                           // get clone mem by memcpy etc.
-                           const buf_clone = tainted_resolve.get(func_data.name);
-                           if (buf_clone) {
-                               this.output["buf_clone"] = buf_clone;
-                           } else {
-                               this.output["buf_clone"] = [];
                            }
 
                            send({"type": "hook_hit", "log": this.output});

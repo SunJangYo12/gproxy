@@ -416,7 +416,7 @@ def main():
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB (l/h/u): ")
 
-    DEBUG = True
+    DEBUG = False
 
     if target == "h":
        #ahost = input(">> Android host: ")
@@ -653,7 +653,7 @@ def main():
         elif pshell == "tr":
             script.exports_sync.enummodules()
             if DEBUG:
-                in_module = "test"
+                in_module = "apache2"
             else:
                 in_module = input("\n>> Module> ")
 
@@ -689,35 +689,27 @@ def main():
                     if p_rec != "s":
                         for f in os.listdir(p_rec):
                             pbase = script.exports_sync.getbase(f)
-
                             print(f"[+] Processing: {pbase} ({f})")
 
                             if pbase == -1:
                                 print(f"[+] Fail")
                                 continue
-
                             proc = setup_hooktree_r2(f"{p_rec}/{f}", int(pbase, 0))
-
                             dick_sym.extend(proc) #tidak nested list
-
                     else:
                         pfuncs = input(">> Path funcs.txt default: (/tmp/funcs.txt) ")
                         pbase = input(">> Base lib: ")
                         pbase = int(pbase, 0)
-
                         if pfuncs == "":
                             pfuncs = "/tmp/funcs.txt"
-
                         dick_sym = setup_hooktree_r2(pfuncs, pbase)
-
-
 
                 elif in_swsym == "bn":
                     print("\n[+] Using binaryninja symbol.")
-                    print("[i] NOTE: In Binaryninja, file > rebase. Base address from enum modules")
-                    print("          after rebase, restart server in bn view > gproxy > stop/start")
                     proxy.setgeneratesymbol()
                     print("[+] Generate done.")
+                    pbase = input(">> Base target lib: ")
+                    pbase = int(pbase, 0)
 
                     isbn = 1
 
@@ -726,18 +718,17 @@ def main():
                             line = line.strip()
                             if not line:
                                 continue
-
                             parts = line.split()
                             addr = parts[0]
                             name = parts[1] if len(parts) > 1 else None
+                            addr = int(addr, 0)
 
                             out = {
-                                "address": addr,
+                                "address": hex(pbase + addr),
                                 "name": name,
                                 "type": "function"
                             }
                             dick_sym.append(out)
-
 
                 #init for total symbol
                 if len(dick_sym) >= 300:

@@ -186,25 +186,11 @@ class DialogTracerCallTree(QDialog):
         data = self.open_data("/tmp/trace-buffinput.json")
 
         self.tree_widget.clear()
-        self.tree_widget.setHeaderLabels(["function member", "buffer", "size", "caller"])
+        self.tree_widget.setHeaderLabels(["Function member", "buffer", "size", "caller"])
 
         tbuff = []
         tallocs = []
         taint_item = None
-
-        # mencari root tree warisan
-        def get_descendants(zz, root_ptr):
-            result = []
-            def dfs(parent):
-                for ptr, node in zz:
-                    if ptr == parent:
-                        continue  # hindari root menunjuk dirinya sendiri
-
-                    if node["root"] == parent:
-                        result.append(node)
-                        dfs(ptr)
-            dfs(root_ptr)
-            return result
 
         for key, value in data.items():
             func_item = QTreeWidgetItem(self.tree_widget)
@@ -281,8 +267,11 @@ class DialogTracerCallTree(QDialog):
                         phbuff = "-"
 
                     xitem.setToolTip(0,
-                        f"Sink: {meta['sink']}\nSize: {meta['size']}\nCaller module: {meta['caller_name']['moduleName']}\n"\
-                        f"Prev: {pbuff}\nPrevHex: {phbuff}"
+                        f"Sink: {meta['sink']}\nThread: {meta['threadId']}\n"\
+                        f"Caller module: {meta['caller_name']['moduleName']}\n"\
+                        f"Size: {meta['size']}\n"\
+                        f"Dump: {pbuff}\nDumpHex: {phbuff}\n"\
+                        f"Backtrace: \n{meta['backtrace']}\n"
                     )
 
                     #xitem.setData(0, Qt.UserRole, meta["sink"])

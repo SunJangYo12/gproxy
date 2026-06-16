@@ -87,7 +87,7 @@ function addFuncScore(funcName, score) {
 // value = buffer sumber (parent)
 const clone_tree = new Map();
 
-function getChain(buf) {
+function resolveBuffer(buf) {
     let cur = buf;
     const chain = [];
 
@@ -104,6 +104,13 @@ function getChain(buf) {
         const meta = clone_tree.get(cur);
         let caller_name = null;
         let caller_skor = 0;
+
+        // jika lambat ubah ini ke zz
+        const backtrace = "zz"; /*Thread.backtrace(
+            meta.context,
+            Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+           .join("\n");*/
+
         if (meta.caller) {
             try {
                 const sym = DebugSymbol.fromAddress(ptr(meta.caller));
@@ -121,7 +128,8 @@ function getChain(buf) {
             ptr: cur,
             ...meta,
             caller_name: caller_name,
-            caller_skor: caller_skor
+            caller_skor: caller_skor,
+            backtrace: backtrace,
         });
         if (meta.parent === null)
             break;
@@ -656,8 +664,6 @@ class FuzzerKu
             },
             onLeave(retval) {
                 try {
-                    // tidak langsung resolve simbol alias DebugSymbol karena overhead
-                    addFuncScore(this.caller, 5);
                     const cek = findAllocation(ptr(this.src));
 
                     if (cek) {
@@ -677,6 +683,8 @@ class FuzzerKu
                         clone_tree.set(child, {
                             parent: parent,
                             sink: "memcpy",
+                            context: this.context,
+                            threadId: this.threadId,
                             size: this.size,
                             caller: this.caller,
                             prevbuf: previewBuffer(ptr(child), this.size),
@@ -687,6 +695,7 @@ class FuzzerKu
                 } catch (_) {}
             }
         });
+
 /*
         Interceptor.attach(Module.findExportByName(null, "strcpy"), {
             onEnter(args) {
@@ -698,7 +707,6 @@ class FuzzerKu
             onLeave(retval) {
                 try {
                     const cek = findAllocation(ptr(this.src));
-                    addFuncScore(this.caller, 8);
 
                     if (cek) {
                         clone_tree.set(this.dst, {
@@ -726,7 +734,6 @@ class FuzzerKu
             onLeave(retval) {
                 try {
                     const cek = findAllocation(ptr(this.src));
-                    addFuncScore(this.caller, 5);
 
                     if (cek) {
                         clone_tree.set(this.dst, {
@@ -753,7 +760,6 @@ class FuzzerKu
             onLeave(retval) {
                 try {
                     const cek = findAllocation(ptr(this.src));
-                    addFuncScore(this.caller, 4);
 
                     if (cek) {
                         clone_tree.set(this.dst, {
@@ -768,9 +774,9 @@ class FuzzerKu
                     }
                 } catch (_) {}
             }
-        });
+        });*/
 
-        // compare
+        // Compare only add scoring
         Interceptor.attach(Module.findExportByName(null, "memcmp"), {
             onEnter(args) {
                 //int memcmp(const void *s1, const void *s2, size_t n);
@@ -841,7 +847,7 @@ class FuzzerKu
             },
             onLeave(retval) {
             }
-        });*/
+        });
     }
 
     // sink for buff_input
@@ -849,7 +855,7 @@ class FuzzerKu
         const subthis = this;
         out_tracebuffer = [];
         const DEBUG = true;
-/*
+
         Interceptor.attach(Module.findExportByName(null, "recvfrom"), {
             onEnter(args) {
                 this.output = {}
@@ -943,7 +949,7 @@ class FuzzerKu
                 //addFuncScore(this.returnAddress.toString(), 10);
             }
         });
-*/
+
         Interceptor.attach(Module.findExportByName(null, "read"), {
             onEnter(args) {
                 this.output = {}
@@ -967,21 +973,17 @@ class FuzzerKu
                     parent: null,
                     sink: "read",
                     size: this.size,
+                    context: this.context,
+                    threadId: this.threadId,
                     caller: this.returnAddress.toString(),
                     prevbuf:    previewBuffer(ptr(this.buf), this.size),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                 });
 
-                //jika crash comment ini
-                this.output["backtrace"] = Thread.backtrace(
-                    this.context,
-                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                    .join("\n");
-
-                const caller = DebugSymbol.fromAddress(this.returnAddress);
+                const caller = this.returnAddress; //DebugSymbol.fromAddress(this.returnAddress);
                 this.output["retval"] = retval;
                 this.output["func_name"] = "read||"+caller+"||"+this.size;
-                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["func_addr"] = this.context.pc; //DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = {};
                 this.output["key"] = "read_"+this.buf;
                 this.output["tainted"] = {};
@@ -997,41 +999,39 @@ class FuzzerKu
                 this.output = {}
                 //(void *ptr, size_t size, size_t nmemb, FILE *stream);
                 this.buf = args[0].toString();
-                this.size = args[1].toInt32();
-                this.nmemb = args[2].toInt32();
-                this.fd = args[3].toInt32();
+                this.size = args[1].toUInt32();
+                this.nmemb = args[2].toUInt32();
+                this.fd = args[3].toString();
                 if (DEBUG) console.log(`[fread] buf=${this.buf} size=${this.size} nmemb=${this.nmemb} fd=${this.fd}`);
             },
             onLeave(retval) {
+                const elems = retval.toInt32();
+                const bytesRead = elems * this.size;
+
                 alloc_range.set(this.buf, {
                     ptr: this.buf,
-                    size: this.size,
+                    size: bytesRead,
                     sink: "fread",
                     clone: new Set(),
                 });
                 clone_tree.set(this.buf, {
                     parent: null,
                     sink: "fread",
-                    size: this.size,
+                    size: bytesRead,
+                    context: this.context,
+                    threadId: this.threadId,
                     caller: this.returnAddress.toString(),
-                    prevbuf:    previewBuffer(ptr(this.buf), this.size),
-                    prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
+                    prevbuf:    previewBuffer(ptr(this.buf), bytesRead),
+                    prevHexbuf: previewHexBuffer(ptr(this.buf), bytesRead),
                 });
 
-                //jika crash comment ini
-                this.output["backtrace"] = Thread.backtrace(
-                    this.context,
-                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                    .join("\n");
-
-                const caller = DebugSymbol.fromAddress(this.returnAddress);
+                const caller = this.returnAddress; //DebugSymbol.fromAddress(this.returnAddress);
                 this.output["retval"] = retval;
                 this.output["key"] = "fread_"+this.buf;
                 this.output["func_name"] = "fread||"+caller+"||"+this.nmemb;
-                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["func_addr"] = this.context.pc; //DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = [];
                 out_tracebuffer.push(this.output);
-                //addFuncScore(this.returnAddress.toString(), 10);
             }
         });
     }
@@ -1368,6 +1368,7 @@ class FuzzerKu
 
                     console.log("[+] sym resolve score: "+score+" "+sym);
                 }
+                console.log("Done.");
 
                 /*
                 for (const [key, value] of alloc_range) {
@@ -1378,7 +1379,7 @@ class FuzzerKu
                 for (const [key, value] of alloc_range) {
                     cout.push({
                         "key": key,
-                        "chain": getChain(key.toString()),
+                        "chain": resolveBuffer(key.toString()),
                     });
                 }
 

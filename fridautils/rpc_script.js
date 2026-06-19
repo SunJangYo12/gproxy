@@ -85,7 +85,7 @@ function addFuncScore(funcName, score) {
 // value = buffer sumber (parent)
 const clone_tree = new Map();
 
-function resolveBuffer(buf) {
+function resolveBuffer(buf, curProc) {
     let cur = buf;
     const chain = [];
 
@@ -119,7 +119,7 @@ function resolveBuffer(buf) {
                 if (!caller_skor) {
                     caller_skor = 0;
                 }
-                console.log("[+] buffer resove: "+caller_skor+"  "+sym);
+                console.log("["+curProc+"/"+alloc_range.size+"] buffer resove: "+caller_skor+"  "+sym);
             } catch (e) {}
         }
         chain.push({
@@ -651,6 +651,7 @@ class FuzzerKu
         const subthis = this;
         const DEBUG = false;
 
+        /* APK: zarchiver
         const targetModules = new Set([
             "libcontrol.so",
             "libhandler.so",
@@ -661,7 +662,56 @@ class FuzzerKu
             "libiconv.so",
             "libp7zbin.so",
             "libunegg.so"
-        ]);
+        ]);*/
+        const targetModules = [
+            "libskia.so",
+            "libmedia.so",
+            "libjpeg.so",
+            "libpdfium.so",
+            "libimg_utils.so",
+            "libstagefright.so",
+            "libstagefright_foundation.so",
+            "libstagefright_http_support.so",
+            "libpng.so",
+            "libdng_sdk.so",
+            "libstagefright_omx.so",
+            "libstagefright_yuv.so",
+            "libstagefright_enc_common.so",
+            "libstagefright_avc_common.so",
+            "libstagefright_httplive.so",
+            "libtiff_directory.so",
+            "libmediaplayerservice.so",
+            "libdashplayer.so",
+            "libdiag.so",
+            "libexif.so",
+            "libvlc.so",
+            "libpytorch.so",
+            "libwhatsappmerged.so",
+            "libwhatsapp.so",
+            "libfb_sqlite_3500300.so",
+            "libdav1d.so",
+            "libwzav1.so",
+            "libwzav1_v2.so",
+        ];
+
+        const targetRanges = [];
+        for (const name of targetModules) {
+            const m = Process.findModuleByName(name);
+            targetRanges.push({
+                start: m.base,
+                end: m.base.add(m.size)
+            });
+        }
+        function inTargetModules(addr) {
+            for (const r of targetRanges) {
+                if (addr.compare(r.start) >= 0 &&
+                    addr.compare(r.end) < 0)
+                    return true;
+            }
+            return false;
+        }
+
+
         // copy
         Interceptor.attach(Module.findExportByName(null, "memcpy"), {
             onEnter(args) {
@@ -684,10 +734,7 @@ class FuzzerKu
                         if (clone_tree.has(child))
                             return;
 
-                        const mod = Process.findModuleByAddress(this.returnAddress);
-                        if (!mod)
-                            return;
-                        if (!targetModules.has(mod.name))
+                        if (!inTargetModules(this.returnAddress))
                             return;
 
                         alloc_range.set(child, {
@@ -1400,11 +1447,13 @@ class FuzzerKu
                 }*/
 
                 const cout = [];
+                let curProc = 1;
                 for (const [key, value] of alloc_range) {
                     cout.push({
                         "key": key,
-                        "chain": resolveBuffer(key.toString()),
+                        "chain": resolveBuffer(key.toString(), curProc),
                     });
+                    curProc += 1;
                 }
 
                 //return out_tracebuffer;

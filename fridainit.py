@@ -418,9 +418,9 @@ def main():
     print("\n\t=====================")
     print("\t Fuzzer proxy v3.0.1")
     print("\t=====================\n")
-    target = input(">> Select target? Linux/HostIP/USB (l/h/u): ")
+    target = input(">> Select target? Linux/HostIP/USB/TcpADB (l/h/u/t): ")
 
-    DEBUG = True
+    DEBUG = False
 
     if target == "h":
        #ahost = input(">> Android host: ")
@@ -430,7 +430,35 @@ def main():
        pid = int(pid_raw)
        device.resume(pid)
 
+
+    elif target == "t":
+       # this like: adb -s 192.168.0.100:5555
+       manager = frida.get_device_manager()
+
+       # get all service
+       #for device in manager.enumerate_devices():
+       #    print(device.id, device.name, device.type)
+
+       #tcpip = input(">> ADB tcpip: ")
+       tcpip = "192.168.0.100:5555"
+       device = manager.get_device(tcpip)
+
+       package = input(">> Chose package/process? (com.abc.df/mediaserver): ")
+       #package = "png_read"
+       ispaket = len(package.split(".")) > 1
+
+       if ispaket:
+           pid = device.spawn([package])
+           device.resume(pid)
+       else:
+           pid = package
+
+       #for p in device.enumerate_processes():
+       #    print(f"{p.pid:6} {p.name}")
+
     elif target == "u":
+       manager = frida.get_device_manager()
+
        device = frida.get_usb_device()
        package = input(">> Chose package? (com.abc): ")
        pid = device.spawn([package])
@@ -639,20 +667,18 @@ def main():
             print("  1). set function addr NativeFunction")
             print("  2). copy radamse binary to target device")
             print("==========================================")
-            in_fuzz = input("\n>> Start address> ")
-            end_fuzz = input("\n>> End address> ")
+            offset = "0x458c0" #input("\n>> Offset addr> ")
+            base = "0x559213aa8000" #input("\n>> Base lib> ")
 
-            script.exports_sync.setfuzz("0x40131a", end_fuzz)
+            offset = int(offset, 0)
+            base = int(base, 0)
+            zz = int("0x1f4", 0)
+
+            addr = hex(base + offset + zz)
+
+            script.exports_sync.setfuzz(addr)
             print("[+] Waiting hook...")
 
-            while True:
-                data = script.exports_sync.getfuzz()
-                cases = data["fuzz_cases"]
-                crashes = data["fuzz_crashes"]
-                cov = data["coverage"]
-
-                print(f"[+] Fuzz_cases:{cases} | Crash: {crashes} | Coverage: {cov}")
-                time.sleep(1)
 
         elif pshell == "tr":
             script.exports_sync.enummodules()
@@ -665,7 +691,7 @@ def main():
                 continue
 
             if DEBUG:
-                in_swsym = "bn"
+                in_swsym = "frida"
             else:
                 in_swsym = input("\n>> Dump symbol address? frida/bn/r2:> ")
 

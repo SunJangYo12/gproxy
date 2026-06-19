@@ -213,10 +213,15 @@ class DialogTracerCallTree(QDialog):
 
             func_item.setData(0, Qt.UserRole, value["key"])
             self.cekandset_expand(func_item, value["key"])
+
+            ritem = QTreeWidgetItem(func_item)
+            ritem.setText(0, "Function range")
+            ritem.setFont(0, self.font)
+
             if "member" in value:
                 for child in value["member"]:
                     skor = value["member"][child]["skor"]
-                    item = QTreeWidgetItem(func_item)
+                    item = QTreeWidgetItem(ritem)
                     item.setText(0, f"{child} +{skor}")
                     item.setFont(0, self.font)
 

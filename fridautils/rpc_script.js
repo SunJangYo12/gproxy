@@ -651,6 +651,17 @@ class FuzzerKu
         const subthis = this;
         const DEBUG = false;
 
+        const targetModules = new Set([
+            "libcontrol.so",
+            "libhandler.so",
+            "libmime.so",
+            "libp7zip.so",
+            "libunrar.so",
+            "libcoreutils.so",
+            "libiconv.so",
+            "libp7zbin.so",
+            "libunegg.so"
+        ]);
         // copy
         Interceptor.attach(Module.findExportByName(null, "memcpy"), {
             onEnter(args) {
@@ -671,6 +682,12 @@ class FuzzerKu
                         if (child === parent)
                             return;
                         if (clone_tree.has(child))
+                            return;
+
+                        const mod = Process.findModuleByAddress(this.returnAddress);
+                        if (!mod)
+                            return;
+                        if (!targetModules.has(mod.name))
                             return;
 
                         alloc_range.set(child, {
@@ -859,13 +876,21 @@ class FuzzerKu
                 this.output = {}
                 //     ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags,
                 //        struct sockaddr *src_addr, socklen_t *addrlen);
-
                 this.sockfd = args[0].toInt32();
                 this.buf = args[1].toString();
                 this.size = args[2].toInt32();
                 this.flags = args[3].toInt32();
                 this.src_addr = args[4].toString();
                 this.addr_len = args[5].toString();
+
+                if (DEBUG) console.log(`[recvfrom] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.sockfd}`);
+            },
+            onLeave(retval) {
+                //jika crash comment ini
+                /*this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");*/
 
                 alloc_range.set(this.buf, {
                     ptr: this.buf,
@@ -878,28 +903,22 @@ class FuzzerKu
                     parent: null,
                     sink: "recvfrom",
                     size: this.size,
+                    context: this.context,
+                    threadId: this.threadId,
+                    prevbuf:    previewBuffer(ptr(this.buf), this.size),
+                    prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                     caller: this.returnAddress.toString()
                 });
 
-                if (DEBUG) console.log(`[recvfrom] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.sockfd}`);
-            },
-            onLeave(retval) {
-                //jika crash comment ini
-                this.output["backtrace"] = Thread.backtrace(
-                    this.context,
-                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                    .join("\n");
-
-                const caller = DebugSymbol.fromAddress(this.returnAddress);
+                const caller = this.returnAddress; //DebugSymbol.fromAddress(this.returnAddress);
                 this.output["retval"] = retval;
                 this.output["key"] = "recvfrom_"+this.buf;
-                this.output["func_name"] = "recv||caller_"+caller+"||"+this.size;
-                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["func_name"] = "recvfrom||caller_"+caller+"||"+this.size;
+                this.output["func_addr"] = this.context.pc; //DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = {};
                 this.output["tainted"] = {};
 
                 out_tracebuffer.push(this.output);
-                //addFuncScore(this.returnAddress.toString(), 10);
             }
         });
 
@@ -924,27 +943,28 @@ class FuzzerKu
                     parent: null,
                     sink: "recv",
                     size: this.size,
+                    context: this.context,
+                    threadId: this.threadId,
                     caller: this.returnAddress.toString(),
                     prevbuf:    previewBuffer(ptr(this.buf), this.size),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                 });
 
                 //jika crash comment ini
-                this.output["backtrace"] = Thread.backtrace(
+                /*this.output["backtrace"] = Thread.backtrace(
                     this.context,
                     Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                    .join("\n");
+                    .join("\n");*/
 
-                const caller = DebugSymbol.fromAddress(this.returnAddress);
+                const caller = this.returnAddress; //DebugSymbol.fromAddress(this.returnAddress);
                 this.output["retval"] = retval;
                 this.output["key"] = "recv_"+this.buf;
                 this.output["func_name"] = "recv||"+caller+"||"+this.size;
-                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["func_addr"] = this.context.pc; //DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = {};
                 this.output["tainted"] = {};
 
                 out_tracebuffer.push(this.output);
-                //addFuncScore(this.returnAddress.toString(), 10);
             }
         });
 
@@ -987,7 +1007,6 @@ class FuzzerKu
                 this.output["tainted"] = {};
 
                 out_tracebuffer.push(this.output);
-                addFuncScore(this.returnAddress.toString(), 10);
             }
         });
 
@@ -1364,13 +1383,11 @@ class FuzzerKu
                         const sym = DebugSymbol.fromAddress(ptr(addr));
                         const resolve = sym.name.split("+")[0]
 
-                        //func_score_resolve.set(resolve, score);
-
                         func_score_resolve.set(resolve,
                                 (func_score_resolve.get(resolve) || 0) + score
                         );
 
-                        console.log("[+] sym resolve score: "+score+" "+resolve);
+                        console.log("[+] sym resolve score: "+score+" "+sym);
                     } catch(e) {
                         console.log("[+] sym resolve ERR: "+e)
                     }
@@ -1402,77 +1419,33 @@ class FuzzerKu
                 };
                 return outfuzz;
             },
-            setfuzz: (start, end) => {
-                const target_module = "test";
-                const MAP_SIZE = 65536;
-                const thread_id = Process.getCurrentThreadId();
-                var prev_loc_map = {};
-                var prev_loc_ptr = prev_loc_map[thread_id];
-                var trace_bits  = Memory.alloc(MAP_SIZE);
-                var virgin_bits = Memory.alloc(MAP_SIZE);
-                var start_addr = ptr(0);
-                var end_addr = ptr("-1");
+            setfuzz: (target) => {
 
-                for (var i=0; i<MAP_SIZE; i+=4)
-                    virgin_bits.add(i).writeU32(0xffffffff);
+                const hook = Interceptor.attach(Module.findExportByName(null, "memcpy"), {
+                //Interceptor.attach(ptr(target), {
+                    onEnter(args) {
+                            this.dst = args[0].toString();
+                            this.src = args[1].toString();
+                            this.size = args[2].toInt32();
 
-                prev_loc_ptr = Memory.alloc(32);
+                        const goodcaller = DebugSymbol.fromAddress(this.returnAddress).name;
+                        if (goodcaller == "ap_rgetline_core+0x1f4") {
 
-                var maps = function() {
-                    var maps = Process.enumerateModules();
-                    var i = 0;
-                    maps.map(function(o) { o.id = i++; });
-                    maps.map(function(o) { o.end = o.base.add(o.size); });
-                    return maps;
-                }();
+                            const dump = previewBuffer(ptr(this.dst), this.size)
 
-                if (target_module !== null) {
-                    maps.forEach(function(m) {
-                      if (m.name == target_module || m == target_module) {
-                        start_addr = m.base;
-                        end_addr = m.end;
-                      } else {
-                        Stalker.exclude(m);
-                      }
-                    });
-                } else {
-                    maps.forEach(function(m) {
-                        if (m.name.startsWith("libc.") || m.name.startsWith("libSystem.") || m.name.startsWith("frida")) {
-                            Stalker.exclude(m);
+                            if (dump.toLowerCase().includes("user-agent")) {
+                                console.log(dump);
+                            }
+
+
+
+
+                            //hook.detach();
                         }
-                    });
-                }
-
-                Stalker.trustThreshold = 0;
-                /*Stalker.follow(thread_id, {
-                  events: {
-                      call: false,
-                      ret: false,
-                      exec: false,
-                      block: false,
-                      compile: true
-                  },
-                  transform: __cm.transform,
-                });*/
-
-                const stalker_event_config = {
-                    call: false,
-                    ret: false,
-                    exec: false,
-                    block: false,
-                    compile: true,
-                };
-
-                Module.load("/media/jin/4abb279b-6d65-4663-97c2-26987f64673a/home/yuna/LabTes/frida-template/build/frida-template.so");
-                const xtransform = DebugSymbol.fromName("xtransform");
-
-                console.log("sdszzzzzzzzzzzzz: "+xtransform.address);
-                Stalker.follow(thread_id, {
-                    events: stalker_event_config,
-                    transform: xtransform.address,
+                    },
+                    onLeave(retval) {
+                    }
                 });
-
-                const target_function = ptr(start)
             },
             setuphook: (func_data, fstalking) => {
 

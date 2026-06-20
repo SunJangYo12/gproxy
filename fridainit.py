@@ -117,6 +117,7 @@ def on_message(message, data):
 
         elif message['payload']['type'] == 'zhook_hit':
            data = message['payload']['log']
+           go = message['payload']['go']
            all_chain = message['payload']['chain']
 
            tchain = []
@@ -133,8 +134,12 @@ def on_message(message, data):
                if id not in ALL_ALLOC:
                    ALL_ALLOC[id] = dat
 
-           with open("/tmp/trace-buffinput.json", "w") as fd:
-               fd.write(json.dumps(ALL_ALLOC))
+           if go == "l":
+               print("\n[+] Load .txt from saved")
+           else:
+               with open("/tmp/trace-buffinput.json", "w") as fd:
+                   fd.write(json.dumps(ALL_ALLOC))
+
            proxy.settofrida_func("0", "hooktree_hit_all")
 
 
@@ -790,10 +795,8 @@ def main():
                     proxy.settofrida_openwindow("tracer_allocator", "Trace buffer input")
                     #proxy.settofrida_func("trace-func", "refresh")
                     while True:
-                        go = input("\nENTER for update..\n")
-
-                        data = script.exports_sync.getbuffertrace()
-
+                        go = input("\nENTER for update/load: ENTER/l? \n")
+                        data = script.exports_sync.getbuffertrace(go)
 
                 elif in_symbol == "all-alloc":
                     script.exports_sync.setuphook("", "allocator")

@@ -663,7 +663,7 @@ class FuzzerKu
             "libiconv.so",
             "libp7zbin.so",
             "libunegg.so"
-        ];*/
+        ];
         const targetModules = [
             "libskia.so",
             "libmedia.so",
@@ -693,10 +693,10 @@ class FuzzerKu
             "libdav1d.so",
             "libwzav1.so",
             "libwzav1_v2.so",
-        ];/*
+        ];*/
         const targetModules = [
             "png_read"
-        ];*/
+        ];
 
         const targetRanges = [];
         for (const name of targetModules) {
@@ -1442,7 +1442,7 @@ class FuzzerKu
             getalloctrace: () => {
                 return out_traceheap;
             },
-            getbuffertrace: () => {
+            getbuffertrace: (go) => {
 
                 // resolving symbol for score in func hit
                 for (const [addr, score] of func_scores.entries()) {
@@ -1477,7 +1477,7 @@ class FuzzerKu
                 }
 
                 //return out_tracebuffer;
-                send({"type": "zhook_hit", "log": out_tracebuffer, "chain": cout});
+                send({"type": "zhook_hit", "log": out_tracebuffer, "chain": cout, "go": go});
             },
             getfuzz: () => {
                 const outfuzz = {

@@ -103,7 +103,7 @@ function resolveBuffer(buf, curProc) {
         let caller_name = null;
         let caller_skor = 0;
 
-        // jika lambat ubah ini ke zz
+        // jika lambat ubah ini ke zz HOTs
         const backtrace = "zz"; /*Thread.backtrace(
             meta.context,
             Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
@@ -651,8 +651,9 @@ class FuzzerKu
         const subthis = this;
         const DEBUG = false;
 
-        /* APK: zarchiver
-        const targetModules = new Set([
+        /*
+        //APK: zarchiver, WARNING: lib load secara lazy
+        const targetModules = [
             "libcontrol.so",
             "libhandler.so",
             "libmime.so",
@@ -662,7 +663,7 @@ class FuzzerKu
             "libiconv.so",
             "libp7zbin.so",
             "libunegg.so"
-        ]);*/
+        ];*/
         const targetModules = [
             "libskia.so",
             "libmedia.so",
@@ -692,7 +693,10 @@ class FuzzerKu
             "libdav1d.so",
             "libwzav1.so",
             "libwzav1_v2.so",
-        ];
+        ];/*
+        const targetModules = [
+            "png_read"
+        ];*/
 
         const targetRanges = [];
         for (const name of targetModules) {
@@ -710,7 +714,6 @@ class FuzzerKu
             }
             return false;
         }
-
 
         // copy
         Interceptor.attach(Module.findExportByName(null, "memcpy"), {
@@ -847,10 +850,11 @@ class FuzzerKu
                 this.size = args[2].toInt32();
                 this.caller = this.returnAddress.toString();
 
+                if (!inTargetModules(this.returnAddress))
+                    return;
+
                 addFuncScore(this.caller, 7);
                 if (DEBUG) console.log(`memcmp(s1=${this.s1},dst=${this.s2},size=${this.size},caller=${this.caller})`);
-            },
-            onLeave(retval) {
             }
         });
 
@@ -861,10 +865,11 @@ class FuzzerKu
                 this.s2 = args[1].toString();
                 this.caller = this.returnAddress.toString();
 
+                if (!inTargetModules(this.returnAddress))
+                    return;
+
                 addFuncScore(this.caller, 6);
                 if (DEBUG) console.log(`strcmp(src=${this.s1},dst=${this.s2},caller=${this.caller})`);
-            },
-            onLeave(retval) {
             }
         });
 
@@ -876,10 +881,11 @@ class FuzzerKu
                 this.size = args[2].toInt32();
                 this.caller = this.returnAddress.toString();
 
+                if (!inTargetModules(this.returnAddress))
+                    return;
+
                 addFuncScore(this.caller, 5);
                 if (DEBUG) console.log(`strncmp(src=${this.s1},dst=${this.s2},size=${this.size},caller=${this.caller})`);
-            },
-            onLeave(retval) {
             }
         });
 
@@ -889,10 +895,11 @@ class FuzzerKu
                 this.s1 = args[0].toString();
                 this.caller = this.returnAddress.toString();
 
+                if (!inTargetModules(this.returnAddress))
+                    return;
+
                 addFuncScore(this.caller, 4);
                 if (DEBUG) console.log(`strlen(buf=${this.s1},caller=${this.caller})`);
-            },
-            onLeave(retval) {
             }
         });
 
@@ -904,10 +911,11 @@ class FuzzerKu
                 this.n = args[2].toInt32();
                 this.caller = this.returnAddress.toString();
 
+                if (!inTargetModules(this.returnAddress))
+                    return;
+
                 addFuncScore(this.caller, 4);
                 if (DEBUG) console.log(`memset(buf=${this.s1},c=${this.c},n=${this.n},caller=${this.caller})`);
-            },
-            onLeave(retval) {
             }
         });
     }
@@ -934,10 +942,10 @@ class FuzzerKu
             },
             onLeave(retval) {
                 //jika crash comment ini
-                /*this.output["backtrace"] = Thread.backtrace(
+                this.output["backtrace"] = Thread.backtrace(
                     this.context,
                     Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                    .join("\n");*/
+                    .join("\n");
 
                 alloc_range.set(this.buf, {
                     ptr: this.buf,
@@ -998,10 +1006,10 @@ class FuzzerKu
                 });
 
                 //jika crash comment ini
-                /*this.output["backtrace"] = Thread.backtrace(
+                this.output["backtrace"] = Thread.backtrace(
                     this.context,
                     Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                    .join("\n");*/
+                    .join("\n");
 
                 const caller = this.returnAddress; //DebugSymbol.fromAddress(this.returnAddress);
                 this.output["retval"] = retval;
@@ -1045,6 +1053,12 @@ class FuzzerKu
                     prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                 });
 
+                //jika crash comment ini
+                this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");
+
                 const caller = this.returnAddress; //DebugSymbol.fromAddress(this.returnAddress);
                 this.output["retval"] = retval;
                 this.output["func_name"] = "read||"+caller+"||"+this.size;
@@ -1087,6 +1101,12 @@ class FuzzerKu
                     prevbuf:    previewBuffer(ptr(this.buf), bytesRead),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), bytesRead),
                 });
+
+                //jika crash comment ini
+                this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");
 
                 const caller = this.returnAddress; //DebugSymbol.fromAddress(this.returnAddress);
                 this.output["retval"] = retval;

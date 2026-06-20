@@ -440,11 +440,11 @@ def main():
        #    print(device.id, device.name, device.type)
 
        #tcpip = input(">> ADB tcpip: ")
-       tcpip = "192.168.0.100:5555"
+       tcpip = "192.168.0.101:5555"
        device = manager.get_device(tcpip)
 
        package = input(">> Chose package/process? (com.abc.df/mediaserver): ")
-       #package = "png_read"
+       #package = "ru.zdevs.zarchiver"
        ispaket = len(package.split(".")) > 1
 
        if ispaket:

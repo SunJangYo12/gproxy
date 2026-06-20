@@ -64,8 +64,6 @@ class DialogTracerCallTree(QDialog):
             SIGNALS.frida_updatedhook.connect(self.load_tree_allocator)
         elif sid == "Trace buffer input":
             SIGNALS.frida_updatedhook.connect(self.load_tree_binput)
-        elif sid == "Trace buffer input network":
-            SIGNALS.frida_updatedhook.connect(self.load_tree_binput_network)
         else:
             SIGNALS.frida_updatedhook.connect(self.load_tree)
 
@@ -147,40 +145,6 @@ class DialogTracerCallTree(QDialog):
             for child in root["children"].values():
                 self.add_node_recursive(thread_item, child)
 
-    def load_tree_binput_network(self):
-        self.sw_menu = "trace_bnet"
-        data = self.open_data("/tmp/trace-buffinput.json")
-
-        self.tree_widget.clear()
-        self.tree_widget.setHeaderLabels(["function", "buffer", "size", "caller"])
-
-        for key, value in data.items():
-            func_item = QTreeWidgetItem(self.tree_widget)
-
-            raw = value["func_name"].split("||")
-            func = raw[0]
-            caller = raw[1]
-            len = raw[2]
-            buffer = value["key"]
-
-            func_item.setText(0, func)
-            func_item.setText(1, buffer)
-            func_item.setText(2, len)
-            func_item.setText(3, caller)
-
-            func_item.setFont(0, self.font)
-            func_item.setFont(1, self.font)
-            func_item.setFont(2, self.font)
-            func_item.setFont(3, self.font)
-
-            #func_item.setData(0, Qt.UserRole, key)
-            #self.cekandset_expand(func_item, key)
-            if "member" in value:
-                for child in value["member"]:
-                    item = QTreeWidgetItem(func_item)
-                    item.setText(0, f"{child}")
-                    item.setFont(0, self.font)
-
     def load_tree_binput(self):
         self.sw_menu = "trace_binput"
         data = self.open_data("/tmp/trace-buffinput.json")
@@ -198,12 +162,22 @@ class DialogTracerCallTree(QDialog):
             raw = value["func_name"].split("||")
             func = raw[0]
             caller = raw[1]
-            len = raw[2]
+            zlen = raw[2]
             buffer = value["key"].split("_")[1]
 
-            func_item.setText(0, func)
+            len_clone = 0
+            if "tainted" in value:
+                tainted = value["tainted"]
+                len_clone = len(tainted["__children__"].values());
+
+
+            len_function = 0
+            if "member" in value:
+                len_function = len(value["member"])
+
+            func_item.setText(0, func+" clone: "+str(len_clone))
             func_item.setText(1, buffer)
-            func_item.setText(2, len)
+            func_item.setText(2, zlen)
             func_item.setText(3, caller)
 
             func_item.setFont(0, self.font)
@@ -215,7 +189,7 @@ class DialogTracerCallTree(QDialog):
             self.cekandset_expand(func_item, value["key"])
 
             ritem = QTreeWidgetItem(func_item)
-            ritem.setText(0, "Function range")
+            ritem.setText(0, "Function range total: "+str(len_function))
             ritem.setFont(0, self.font)
 
             if "member" in value:
@@ -237,7 +211,7 @@ class DialogTracerCallTree(QDialog):
             if "backtrace" in value:
                 bt_data = value["backtrace"].split("\n")
                 item = QTreeWidgetItem(func_item)
-                item.setText(0, "Backtrace")
+                item.setText(0, "Backtrace total: "+str(len(bt_data)))
                 item.setFont(0, self.font)
                 for bt in bt_data:
                     bt_item = QTreeWidgetItem(item)
@@ -245,7 +219,6 @@ class DialogTracerCallTree(QDialog):
                     bt_item.setFont(0, self.font)
 
             if "tainted" in value:
-                tainted = value["tainted"]
                 item = QTreeWidgetItem(func_item)
                 item.setText(0, "Cloned by")
                 item.setFont(0, self.font)
@@ -278,7 +251,6 @@ class DialogTracerCallTree(QDialog):
                         add_node(xitem, child)
 
                 add_node(item, tainted)
-#                print(json.dumps(tainted, indent=2))
 
     def load_tree_allocator(self):
         self.sw_menu = "trace_alocator"
@@ -293,12 +265,12 @@ class DialogTracerCallTree(QDialog):
             raw = value["func_name"].split("||")
             func = raw[0]
             caller = raw[1]
-            len = raw[2]
+            zlen = raw[2]
             buffer = value["key"].split("_")[1]
 
             func_item.setText(0, func)
             func_item.setText(1, buffer)
-            func_item.setText(2, len)
+            func_item.setText(2, zlen)
             func_item.setText(3, caller)
 
             func_item.setFont(0, self.font)

@@ -425,7 +425,7 @@ def main():
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB/TcpADB (l/h/u/t): ")
 
-    DEBUG = False
+    DEBUG = True
 
     if target == "h":
        #ahost = input(">> Android host: ")
@@ -448,8 +448,9 @@ def main():
        tcpip = "192.168.0.101:5555"
        device = manager.get_device(tcpip)
 
-       package = input(">> Chose package/process? (com.abc.df/mediaserver): ")
+       #package = input(">> Chose package/process? (com.abc.df/mediaserver): ")
        #package = "ru.zdevs.zarchiver"
+       package = "png_read"
        ispaket = len(package.split(".")) > 1
 
        if ispaket:
@@ -473,7 +474,7 @@ def main():
        device = frida.get_local_device() #local linux
 
        if DEBUG:
-           pid_raw = subprocess.run(["pidof", "apache2"], capture_output=True, text=True)
+           pid_raw = subprocess.run(["pidof", "png_read"], capture_output=True, text=True)
            pid_raw = pid_raw.stdout.split("\n")[0]
        else:
            pid_raw = input(">> Chose pid? (1234): ")
@@ -795,7 +796,19 @@ def main():
                     proxy.settofrida_openwindow("tracer_allocator", "Trace buffer input")
                     #proxy.settofrida_func("trace-func", "refresh")
                     while True:
-                        go = input("\nENTER for update/load: ENTER/l? \n")
+                        go = input("\nENTER for update/load/showbuffer/quit: ENTER/l/q/sb? \n")
+
+                        if go == "q":
+                            break
+                        elif go == "sb":
+                            bufaddr = input("Address buffer> ")
+                            bufsize = input("Size buffer> ")
+                            go = {
+                                "cmd": "show_buffer",
+                                "bufaddr": bufaddr,
+                                "bufsize": int(bufsize),
+                            }
+
                         data = script.exports_sync.getbuffertrace(go)
 
                 elif in_symbol == "all-alloc":

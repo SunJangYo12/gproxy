@@ -137,8 +137,12 @@ function resolveBuffer(buf, curProc) {
 }
 
 
-function previewBuffer(ptrBuf, size) {
-    const max = Math.min(size, 32);
+function previewBuffer(ptrBuf, size, printSize=0) {
+    let max = Math.min(size, 32);
+
+    if (printSize > 0) {
+        max = printSize;
+    }
     try {
         const bytes = new Uint8Array(
             Memory.readByteArray(ptrBuf, max)
@@ -155,8 +159,12 @@ function previewBuffer(ptrBuf, size) {
         return "<unreadable>";
     }
 }
-function previewHexBuffer(ptrBuf, size) {
-    const max = Math.min(size, 32);
+function previewHexBuffer(ptrBuf, size, printSize=0) {
+    let max = Math.min(size, 32);
+
+    if (printSize > 0) {
+        max = printSize;
+    }
     try {
         const bytes = new Uint8Array(
             Memory.readByteArray(ptrBuf, max)
@@ -664,6 +672,7 @@ class FuzzerKu
             "libp7zbin.so",
             "libunegg.so"
         ];
+        // APK: whatsapp
         const targetModules = [
             "libskia.so",
             "libmedia.so",
@@ -687,9 +696,9 @@ class FuzzerKu
             "libexif.so",
             "libvlc.so",
             "libpytorch.so",
-            "libwhatsappmerged.so",
-            "libwhatsapp.so",
-            "libfb_sqlite_3500300.so",
+            //"libwhatsappmerged.so",
+            //"libwhatsapp.so",
+            //"libfb_sqlite_3500300.so",
             "libdav1d.so",
             "libwzav1.so",
             "libwzav1_v2.so",
@@ -697,6 +706,25 @@ class FuzzerKu
         const targetModules = [
             "png_read"
         ];
+
+/*
+        const targetModules = [
+            "libskia.so",
+            "libhwui.so",
+            "libjpeg.so",
+            "libpdfium.so",
+            "libimg_utils.so",
+            "libstagefright.so",
+            "libstagefright_foundation.so",
+            "libstagefright_http_support.so",
+            "libpng.so",
+            "libdng_sdk.so",
+            "libstagefright_omx.so",
+            "libstagefright_yuv.so",
+            "libstagefright_enc_common.so",
+            "libstagefright_avc_common.so",
+            "libstagefright_httplive.so",
+        ];*/
 
         const targetRanges = [];
         for (const name of targetModules) {
@@ -1443,6 +1471,19 @@ class FuzzerKu
                 return out_traceheap;
             },
             getbuffertrace: (go) => {
+
+                if (go["cmd"] == "show_buffer") {
+                    try {
+                        console.log("\n====== BUFFER ========")
+                        console.log(previewBuffer(ptr(go["bufaddr"]), go["bufsize"], go["bufsize"] ))
+                        console.log("------------------------")
+                        console.log(previewHexBuffer(ptr(go["bufaddr"]), go["bufsize"], go["bufsize"] ))
+                        console.log("======================\n")
+                    }catch(e) {
+                        console.log(e)
+                    }
+                    return
+                }
 
                 // resolving symbol for score in func hit
                 for (const [addr, score] of func_scores.entries()) {

@@ -179,6 +179,30 @@ function previewHexBuffer(ptrBuf, size, printSize=0) {
     }
 }
 
+
+
+// LOGGING
+// adb logcat | grep FRIDA
+// logcat -s FRIDA
+const log_print = new NativeFunction(
+    Module.findExportByName("liblog.so", "__android_log_print"),
+    "int",
+    ["int", "pointer", "pointer"]
+);
+function syslog(msg) {
+    const tag = Memory.allocUtf8String("FRIDA");
+    const text = Memory.allocUtf8String(msg);
+
+    log_print(
+        4,      // ANDROID_LOG_INFO
+        tag,
+        text
+    );
+}
+
+
+
+
 class FuzzerKu
 {
     constructor() {
@@ -702,12 +726,11 @@ class FuzzerKu
             "libdav1d.so",
             "libwzav1.so",
             "libwzav1_v2.so",
-        ];*/
+        ];
         const targetModules = [
             "png_read"
-        ];
+        ];*/
 
-/*
         const targetModules = [
             "libskia.so",
             "libhwui.so",
@@ -724,7 +747,7 @@ class FuzzerKu
             "libstagefright_enc_common.so",
             "libstagefright_avc_common.so",
             "libstagefright_httplive.so",
-        ];*/
+        ];
 
         const targetRanges = [];
         for (const name of targetModules) {
@@ -966,7 +989,10 @@ class FuzzerKu
                 this.src_addr = args[4].toString();
                 this.addr_len = args[5].toString();
 
-                if (DEBUG) console.log(`[recvfrom] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.sockfd}`);
+                if (DEBUG) {
+                    //console.log(`[recvfrom] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.sockfd}`);
+                    syslog(`[recvfrom] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.sockfd}`);
+                }
             },
             onLeave(retval) {
                 //jika crash comment ini
@@ -1013,7 +1039,10 @@ class FuzzerKu
                 this.buf = args[1].toString();
                 this.size = args[2].toInt32();
                 this.flags = args[3].toInt32();
-                if (DEBUG) console.log(`[recv] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.fd}`);
+                if (DEBUG) {
+                    //console.log(`[recv] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.fd}`);
+                    syslog(`[recv] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.fd}`);
+                }
             },
             onLeave(retval) {
                 alloc_range.set(this.buf, {
@@ -1060,7 +1089,9 @@ class FuzzerKu
                 this.buf = args[1].toString();
                 this.size = args[2].toInt32();
 
-                if (DEBUG) console.log(`[read] buf=${this.buf} size=${this.size} fd=${this.fd}`);
+                if (DEBUG) {
+                    syslog(`[read] buf=${this.buf} size=${this.size} fd=${this.fd}`);
+                }
             },
             onLeave(retval) {
                 alloc_range.set(this.buf, {
@@ -1107,7 +1138,10 @@ class FuzzerKu
                 this.size = args[1].toUInt32();
                 this.nmemb = args[2].toUInt32();
                 this.fd = args[3].toString();
-                if (DEBUG) console.log(`[fread] buf=${this.buf} size=${this.size} nmemb=${this.nmemb} fd=${this.fd}`);
+                if (DEBUG) {
+                    //console.log(`[fread] buf=${this.buf} size=${this.size} nmemb=${this.nmemb} fd=${this.fd}`);
+                    syslog(`[fread] buf=${this.buf} size=${this.size} nmemb=${this.nmemb} fd=${this.fd}`);
+                }
             },
             onLeave(retval) {
                 const elems = retval.toInt32();

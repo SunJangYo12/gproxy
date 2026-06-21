@@ -448,9 +448,8 @@ def main():
        tcpip = "192.168.0.101:5555"
        device = manager.get_device(tcpip)
 
-       #package = input(">> Chose package/process? (com.abc.df/mediaserver): ")
+       package = input(">> Chose package/process? (com.abc.df/mediaserver): ")
        #package = "ru.zdevs.zarchiver"
-       package = "png_read"
        ispaket = len(package.split(".")) > 1
 
        if ispaket:

@@ -183,14 +183,17 @@ function previewHexBuffer(ptrBuf, size, printSize=0) {
 // LOGGING
 // adb logcat | grep FRIDA
 // logcat -s FRIDA
-const is_android = false;
+var is_android = false;
+var log_print = undefined;
 try {
-    const log_print = new NativeFunction(
+    log_print = new NativeFunction(
         Module.findExportByName("liblog.so", "__android_log_print"),
         "int",
         ["int", "pointer", "pointer"]
     );
+    is_android = true;
 } catch(_){}
+
 function syslog(msg) {
     const tag = Memory.allocUtf8String("FRIDA");
     const text = Memory.allocUtf8String(msg);
@@ -733,12 +736,12 @@ class FuzzerKu
             "libdav1d.so",
             "libwzav1.so",
             "libwzav1_v2.so",
-        ];*/
+        ];
         const targetModules = [
             "png_read"
-        ];
+        ];*/
 
-        /* APK: gallery
+        // APK: gallery
         const targetModules = [
             "libskia.so",
             "libhwui.so",
@@ -755,7 +758,7 @@ class FuzzerKu
             "libstagefright_enc_common.so",
             "libstagefright_avc_common.so",
             "libstagefright_httplive.so",
-        ];*/
+        ];
 
         const targetRanges = [];
         for (const name of targetModules) {

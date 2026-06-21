@@ -240,6 +240,7 @@ class DialogTracerCallTree(QDialog):
                         f"Sink: {meta['sink']}\nThread: {meta['threadId']}\n"\
                         f"Caller module: {meta['caller_name']['moduleName']}\n"\
                         f"Size: {meta['size']}\n"\
+                        f"Fd path: {meta['fd_path']}\n"\
                         f"Dump: {pbuff}\nDumpHex: {phbuff}\n"\
                         f"Backtrace: \n{meta['backtrace']}\n"
                     )

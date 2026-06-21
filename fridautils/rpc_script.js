@@ -180,25 +180,32 @@ function previewHexBuffer(ptrBuf, size, printSize=0) {
 }
 
 
-
 // LOGGING
 // adb logcat | grep FRIDA
 // logcat -s FRIDA
-const log_print = new NativeFunction(
-    Module.findExportByName("liblog.so", "__android_log_print"),
-    "int",
-    ["int", "pointer", "pointer"]
-);
+const is_android = false;
+try {
+    const log_print = new NativeFunction(
+        Module.findExportByName("liblog.so", "__android_log_print"),
+        "int",
+        ["int", "pointer", "pointer"]
+    );
+} catch(_){}
 function syslog(msg) {
     const tag = Memory.allocUtf8String("FRIDA");
     const text = Memory.allocUtf8String(msg);
-
-    log_print(
-        4,      // ANDROID_LOG_INFO
-        tag,
-        text
-    );
+    if (is_android) {
+        log_print(
+            4,      // ANDROID_LOG_INFO
+            tag,
+            text
+        );
+    } else {
+        console.log(msg)
+    }
 }
+
+
 
 
 
@@ -726,11 +733,12 @@ class FuzzerKu
             "libdav1d.so",
             "libwzav1.so",
             "libwzav1_v2.so",
-        ];
+        ];*/
         const targetModules = [
             "png_read"
-        ];*/
+        ];
 
+        /* APK: gallery
         const targetModules = [
             "libskia.so",
             "libhwui.so",
@@ -747,7 +755,7 @@ class FuzzerKu
             "libstagefright_enc_common.so",
             "libstagefright_avc_common.so",
             "libstagefright_httplive.so",
-        ];
+        ];*/
 
         const targetRanges = [];
         for (const name of targetModules) {
@@ -803,6 +811,7 @@ class FuzzerKu
                             threadId: this.threadId,
                             size: this.size,
                             caller: this.caller,
+                            fd_path: "",
                             prevbuf: previewBuffer(ptr(child), this.size),
                             prevHexbuf: previewHexBuffer(ptr(child), this.size)
                         });
@@ -977,6 +986,27 @@ class FuzzerKu
         out_tracebuffer = [];
         const DEBUG = true;
 
+        const fileno = new NativeFunction(
+            Module.findExportByName(null, "fileno"),
+            "int",
+            ["pointer"]
+        );
+        const readlink = new NativeFunction(
+            Module.findExportByName(null, "readlink"),
+            "int",
+            ["pointer", "pointer", "int"]
+        );
+        function fdToPath(fd) {
+            const link = Memory.allocUtf8String("/proc/self/fd/" + fd);
+            const buf = Memory.alloc(1024);
+            const len = readlink(link, buf, 1023);
+            if (len > 0) {
+                buf.add(len).writeU8(0);
+                return buf.readCString();
+            }
+            return null;
+        }
+
         Interceptor.attach(Module.findExportByName(null, "recvfrom"), {
             onEnter(args) {
                 this.output = {}
@@ -1014,6 +1044,7 @@ class FuzzerKu
                     size: this.size,
                     context: this.context,
                     threadId: this.threadId,
+                    fd_path: "",
                     prevbuf:    previewBuffer(ptr(this.buf), this.size),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                     caller: this.returnAddress.toString()
@@ -1058,6 +1089,7 @@ class FuzzerKu
                     context: this.context,
                     threadId: this.threadId,
                     caller: this.returnAddress.toString(),
+                    fd_path: "",
                     prevbuf:    previewBuffer(ptr(this.buf), this.size),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                 });
@@ -1108,6 +1140,7 @@ class FuzzerKu
                     context: this.context,
                     threadId: this.threadId,
                     caller: this.returnAddress.toString(),
+                    fd_path: fdToPath(this.fd),
                     prevbuf:    previewBuffer(ptr(this.buf), this.size),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                 });
@@ -1138,6 +1171,8 @@ class FuzzerKu
                 this.size = args[1].toUInt32();
                 this.nmemb = args[2].toUInt32();
                 this.fd = args[3].toString();
+                this.fd_fileno = fileno(args[3]);
+
                 if (DEBUG) {
                     //console.log(`[fread] buf=${this.buf} size=${this.size} nmemb=${this.nmemb} fd=${this.fd}`);
                     syslog(`[fread] buf=${this.buf} size=${this.size} nmemb=${this.nmemb} fd=${this.fd}`);
@@ -1160,6 +1195,7 @@ class FuzzerKu
                     context: this.context,
                     threadId: this.threadId,
                     caller: this.returnAddress.toString(),
+                    fd_path: fdToPath(this.fd_fileno),
                     prevbuf:    previewBuffer(ptr(this.buf), bytesRead),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), bytesRead),
                 });

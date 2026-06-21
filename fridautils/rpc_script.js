@@ -152,7 +152,7 @@ function previewBuffer(ptrBuf, size, printSize=0) {
             if (b >= 0x20 && b <= 0x7e)
                 out += String.fromCharCode(b);
             else
-                out += "\\x" + b.toString(16).padStart(2, "0");
+                out += ".";
         }
         return out;
     } catch (_) {
@@ -1475,9 +1475,9 @@ class FuzzerKu
                 if (go["cmd"] == "show_buffer") {
                     try {
                         console.log("\n====== BUFFER ========")
-                        console.log(previewBuffer(ptr(go["bufaddr"]), go["bufsize"], go["bufsize"] ))
-                        console.log("------------------------")
                         console.log(previewHexBuffer(ptr(go["bufaddr"]), go["bufsize"], go["bufsize"] ))
+                        console.log("________________________")
+                        console.log(previewBuffer(ptr(go["bufaddr"]), go["bufsize"], go["bufsize"] ))
                         console.log("======================\n")
                     }catch(e) {
                         console.log(e)

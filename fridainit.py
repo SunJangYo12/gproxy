@@ -430,7 +430,7 @@ def main():
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB/TcpADB (l/h/u/t): ")
 
-    DEBUG = False
+    DEBUG = True
 
     if target == "h":
        #ahost = input(">> Android host: ")
@@ -453,8 +453,9 @@ def main():
        tcpip = "192.168.0.100:5555"
        device = manager.get_device(tcpip)
 
-       package = input(">> Chose package/process? (com.abc.df/mediaserver): ")
+       #package = input(">> Chose package/process? (com.abc.df/mediaserver): ")
        #package = "ru.zdevs.zarchiver"
+       package = "xloader"
        ispaket = len(package.split(".")) > 1
 
        if ispaket:
@@ -836,17 +837,6 @@ def main():
                                 "bufsize": int(bufsize),
                             }
                         data = script.exports_sync.getbuffertrace(go, "alloc")
-
-                        #go = input("\nENTER for update..\n")
-                        #data = script.exports_sync.getalloctrace()
-                        #for dat in data:
-                        #    mykey = dat["key"]
-                        #    if mykey not in ALL_ALLOC:
-                        #        ALL_ALLOC[mykey] = dat
-
-                        #with open("/tmp/trace-allocator.json", "w") as fd:
-                        #    fd.write(json.dumps(ALL_ALLOC))
-                        #proxy.settofrida_func("0", "hooktree_hit_all")
 
                 elif in_symbol == "all-tree":
                     setup_hook(script, dick_sym, "zzall-tree", None)

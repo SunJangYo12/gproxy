@@ -780,14 +780,17 @@ class FuzzerKu
             return false;
         }
 
-        // copy
+        /*
+         * COPY: copy memory src to dst
+         */
         Interceptor.attach(Module.findExportByName(null, "memcpy"), {
             onEnter(args) {
                 //void *memcpy(void *dest, const void *src, size_t n);
                 this.dst = args[0].toString();
                 this.src = args[1].toString();
                 this.size = args[2].toInt32();
-                this.caller = this.returnAddress.toString();
+                this.ctx = this.context;
+                this.caller = this.returnAddress;
             },
             onLeave(retval) {
                 try {
@@ -802,7 +805,7 @@ class FuzzerKu
                         if (clone_tree.has(child))
                             return;
 
-                        if (!inTargetModules(this.returnAddress))
+                        if (!inTargetModules(this.caller))
                             return;
 
                         alloc_range.set(child, {
@@ -813,10 +816,10 @@ class FuzzerKu
                         clone_tree.set(child, {
                             parent: parent,
                             sink: "memcpy",
-                            context: this.context,
+                            context: this.ctx,
                             threadId: this.threadId,
                             size: this.size,
-                            caller: this.caller,
+                            caller: this.caller.toString(),
                             fd_path: "",
                             prevbuf: previewBuffer(ptr(child), this.size),
                             prevHexbuf: previewHexBuffer(ptr(child), this.size)
@@ -830,23 +833,43 @@ class FuzzerKu
 /*
         Interceptor.attach(Module.findExportByName(null, "strcpy"), {
             onEnter(args) {
-                //char *strcpy(char *dest, const char *src);
+                // char *strcpy(char *dest, const char *src);
                 this.dst = args[0].toString();
                 this.src = args[1].toString();
-                this.caller = this.returnAddress.toString();
+                this.ctx = this.context;
+                this.caller = this.returnAddress;
             },
             onLeave(retval) {
                 try {
                     const cek = findAllocation(ptr(this.src));
 
                     if (cek) {
-                        clone_tree.set(this.dst, {
-                            parent: cek.ptr.toString(),
+                        const parent = cek.ptr.toString();
+                        const child = this.dst;
+
+                        if (child === parent)
+                            return;
+                        if (clone_tree.has(child))
+                            return;
+
+                        if (!inTargetModules(this.caller))
+                            return;
+
+                        alloc_range.set(child, {
+                            ptr: child,
+                            size: 32,
+                            sink: "strcpy"
+                        });
+                        clone_tree.set(child, {
+                            parent: parent,
                             sink: "strcpy",
-                            size: "unkown",
-                            caller: this.caller,
-                            prevbuf: previewBuffer(ptr(this.dst), 5),
-                            prevHexbuf: previewHexBuffer(ptr(this.dst), 5)
+                            context: this.ctx,
+                            threadId: this.threadId,
+                            size: 32,
+                            caller: this.caller.toString(),
+                            fd_path: "",
+                            prevbuf: previewBuffer(ptr(child), 32),
+                            prevHexbuf: previewHexBuffer(ptr(child), 32)
                         });
                         if (DEBUG) console.log(`strcpy(src=${this.src},dst=${this.dst},caller=${this.caller})`);
                     }
@@ -860,20 +883,39 @@ class FuzzerKu
                 this.dst = args[0].toString();
                 this.src = args[1].toString();
                 this.size = args[2].toInt32();
-                this.caller = this.returnAddress.toString();
+                this.ctx = this.context;
+                this.caller = this.returnAddress;
             },
             onLeave(retval) {
                 try {
                     const cek = findAllocation(ptr(this.src));
 
                     if (cek) {
-                        clone_tree.set(this.dst, {
-                            parent: cek.ptr.toString(),
-                            sink: "strncpy",
+                        const parent = cek.ptr.toString();
+                        const child = this.dst;
+                        if (child === parent)
+                            return;
+                        if (clone_tree.has(child))
+                            return;
+
+                        if (!inTargetModules(this.caller))
+                            return;
+
+                        alloc_range.set(child, {
+                            ptr: child,
                             size: this.size,
-                            caller: this.caller,
-                            prevbuf: previewBuffer(ptr(this.dst), this.size),
-                            prevHexbuf: previewHexBuffer(ptr(this.dst), this.size)
+                            sink: "strncpy"
+                        });
+                        clone_tree.set(child, {
+                            parent: parent,
+                            sink: "strncpy",
+                            context: this.ctx,
+                            threadId: this.threadId,
+                            size: this.size,
+                            caller: this.caller.toString(),
+                            fd_path: "",
+                            prevbuf: previewBuffer(ptr(child), this.size),
+                            prevHexbuf: previewHexBuffer(ptr(child), this.size)
                         });
                         if (DEBUG) console.log(`strncpy(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
                     }
@@ -886,20 +928,40 @@ class FuzzerKu
                 this.dst = args[0].toString();
                 this.src = args[1].toString();
                 this.size = args[2].toInt32();
-                this.caller = this.returnAddress.toString();
+                this.ctx = this.context;
+                this.caller = this.returnAddress;
             },
             onLeave(retval) {
                 try {
                     const cek = findAllocation(ptr(this.src));
 
                     if (cek) {
-                        clone_tree.set(this.dst, {
-                            parent: cek.ptr.toString(),
-                            sink: "memmove",
+                        const parent = cek.ptr.toString();
+                        const child = this.dst;
+
+                        if (child === parent)
+                            return;
+                        if (clone_tree.has(child))
+                            return;
+
+                        if (!inTargetModules(this.caller))
+                            return;
+
+                        alloc_range.set(child, {
+                            ptr: child,
                             size: this.size,
-                            caller: this.caller,
-                            prevbuf: previewBuffer(ptr(this.dst), this.size),
-                            prevHexbuf: previewHexBuffer(ptr(this.dst), this.size)
+                            sink: "memmove"
+                        });
+                        clone_tree.set(child, {
+                            parent: parent,
+                            sink: "memmove",
+                            context: this.ctx,
+                            threadId: this.threadId,
+                            size: this.size,
+                            caller: this.caller.toString(),
+                            fd_path: "",
+                            prevbuf: previewBuffer(ptr(child), this.size),
+                            prevHexbuf: previewHexBuffer(ptr(child), this.size)
                         });
                         if (DEBUG) console.log(`memmove(src=${this.src},dst=${this.dst},size=${this.size},caller=${this.caller})`);
                     }
@@ -907,7 +969,9 @@ class FuzzerKu
             }
         });*/
 
-        // Compare only add scoring
+        /*
+         * COMPARE: only add scoring
+         */
         Interceptor.attach(Module.findExportByName(null, "memcmp"), {
             onEnter(args) {
                 //int memcmp(const void *s1, const void *s2, size_t n);
@@ -1024,6 +1088,14 @@ class FuzzerKu
                 this.flags = args[3].toInt32();
                 this.src_addr = args[4].toString();
                 this.addr_len = args[5].toString();
+                this.ctx = this.context;
+                this.caller = this.returnAddress;
+
+                //jika crash comment ini
+                this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");
 
                 if (DEBUG) {
                     //console.log(`[recvfrom] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.sockfd}`);
@@ -1031,12 +1103,6 @@ class FuzzerKu
                 }
             },
             onLeave(retval) {
-                //jika crash comment ini
-                this.output["backtrace"] = Thread.backtrace(
-                    this.context,
-                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                    .join("\n");
-
                 alloc_range.set(this.buf, {
                     ptr: this.buf,
                     size: this.size,
@@ -1048,7 +1114,7 @@ class FuzzerKu
                     parent: null,
                     sink: "recvfrom",
                     size: this.size,
-                    context: this.context,
+                    context: this.ctx,
                     threadId: this.threadId,
                     fd_path: "",
                     prevbuf:    previewBuffer(ptr(this.buf), this.size),
@@ -1056,11 +1122,11 @@ class FuzzerKu
                     caller: this.returnAddress.toString()
                 });
 
-                const caller = this.returnAddress; //DebugSymbol.fromAddress(this.returnAddress);
+                const caller = this.caller; //DebugSymbol.fromAddress(this.caller);
                 this.output["retval"] = retval;
                 this.output["key"] = "recvfrom_"+this.buf;
                 this.output["func_name"] = "recvfrom||caller_"+caller+"||"+this.size;
-                this.output["func_addr"] = this.context.pc; //DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["func_addr"] = this.ctx.pc; //DebugSymbol.fromAddress(this.ctx.pc).addres;
                 this.output["member"] = {};
                 this.output["tainted"] = {};
 
@@ -1076,8 +1142,16 @@ class FuzzerKu
                 this.buf = args[1].toString();
                 this.size = args[2].toInt32();
                 this.flags = args[3].toInt32();
+                this.ctx = this.context;
+                this.caller = this.returnAddress;
+
+                //jika crash comment ini
+                this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");
+
                 if (DEBUG) {
-                    //console.log(`[recv] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.fd}`);
                     syslog(`[recv] buf=${this.buf} size=${this.size} flags=${this.flags} fd=${this.fd}`);
                 }
             },
@@ -1092,25 +1166,19 @@ class FuzzerKu
                     parent: null,
                     sink: "recv",
                     size: this.size,
-                    context: this.context,
+                    context: this.ctx,
                     threadId: this.threadId,
-                    caller: this.returnAddress.toString(),
+                    caller: this.caller.toString(),
                     fd_path: "",
                     prevbuf:    previewBuffer(ptr(this.buf), this.size),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                 });
 
-                //jika crash comment ini
-                this.output["backtrace"] = Thread.backtrace(
-                    this.context,
-                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                    .join("\n");
-
-                const caller = this.returnAddress; //DebugSymbol.fromAddress(this.returnAddress);
+                const caller = this.caller; //DebugSymbol.fromAddress(this.caller);
                 this.output["retval"] = retval;
                 this.output["key"] = "recv_"+this.buf;
                 this.output["func_name"] = "recv||"+caller+"||"+this.size;
-                this.output["func_addr"] = this.context.pc; //DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["func_addr"] = this.ctx.pc; //DebugSymbol.fromAddress(this.ctx.pc).addres;
                 this.output["member"] = {};
                 this.output["tainted"] = {};
 
@@ -1122,10 +1190,17 @@ class FuzzerKu
             onEnter(args) {
                 this.output = {}
                 //ssize_t read(int fd, void *buf, size_t count);
-
                 this.fd = args[0].toInt32();
                 this.buf = args[1].toString();
                 this.size = args[2].toInt32();
+                this.ctx = this.context;
+                this.caller = this.returnAddress;
+
+                //jika crash comment ini
+                this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");
 
                 if (DEBUG) {
                     syslog(`[read] buf=${this.buf} size=${this.size} fd=${this.fd}`);
@@ -1143,13 +1218,37 @@ class FuzzerKu
                     parent: null,
                     sink: "read",
                     size: this.size,
-                    context: this.context,
+                    context: this.ctx,
                     threadId: this.threadId,
-                    caller: this.returnAddress.toString(),
+                    caller: this.caller.toString(),
                     fd_path: fdToPath(this.fd),
                     prevbuf:    previewBuffer(ptr(this.buf), this.size),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                 });
+
+                const caller = this.caller; //DebugSymbol.fromAddress(this.caller);
+                this.output["retval"] = retval;
+                this.output["func_name"] = "read||"+caller+"||"+this.size;
+                this.output["func_addr"] = this.ctx.pc; //DebugSymbol.fromAddress(this.ctx.pc).addres;
+                this.output["member"] = {};
+                this.output["key"] = "read_"+this.buf;
+                this.output["tainted"] = {};
+
+                out_tracebuffer.push(this.output);
+            }
+        });
+
+        Interceptor.attach(Module.findExportByName(null, "pread"), {
+            onEnter(args) {
+                this.output = {}
+                //ssize_t pread(int fd, void *buf, size_t count, off_t offset);
+
+                this.fd = args[0].toInt32();
+                this.buf = args[1].toString();
+                this.size = args[2].toInt32();
+                this.offset = args[3].toString();
+                this.caller = this.returnAddress;
+                this.ctx_pc = this.context.pc;
 
                 //jika crash comment ini
                 this.output["backtrace"] = Thread.backtrace(
@@ -1157,12 +1256,36 @@ class FuzzerKu
                     Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
                     .join("\n");
 
-                const caller = this.returnAddress; //DebugSymbol.fromAddress(this.returnAddress);
+                if (DEBUG) {
+                    syslog(`[pread] buf=${this.buf} size=${this.size} fd=${this.fd}`);
+                }
+            },
+            onLeave(retval) {
+                alloc_range.set(this.buf, {
+                    ptr: this.buf,
+                    size: this.size,
+                    sink: "pread",
+                    clone: new Set(),
+                });
+
+                clone_tree.set(this.buf, {
+                    parent: null,
+                    sink: "pread",
+                    size: this.size,
+                    context: this.context,
+                    threadId: this.threadId,
+                    caller: this.caller.toString(),
+                    fd_path: fdToPath(this.fd),
+                    prevbuf:    previewBuffer(ptr(this.buf), this.size),
+                    prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
+                });
+
+                const caller = DebugSymbol.fromAddress(this.caller);
                 this.output["retval"] = retval;
-                this.output["func_name"] = "read||"+caller+"||"+this.size;
-                this.output["func_addr"] = this.context.pc; //DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["func_name"] = "pread||"+caller+"||"+this.size;
+                this.output["func_addr"] = DebugSymbol.fromAddress(this.ctx_pc).addres;
                 this.output["member"] = {};
-                this.output["key"] = "read_"+this.buf;
+                this.output["key"] = "pread_"+this.buf;
                 this.output["tainted"] = {};
 
                 out_tracebuffer.push(this.output);
@@ -1178,9 +1301,16 @@ class FuzzerKu
                 this.nmemb = args[2].toUInt32();
                 this.fd = args[3].toString();
                 this.fd_fileno = fileno(args[3]);
+                this.ctx = this.context;
+                this.caller = this.returnAddress;
+
+                //jika crash comment ini
+                this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");
 
                 if (DEBUG) {
-                    //console.log(`[fread] buf=${this.buf} size=${this.size} nmemb=${this.nmemb} fd=${this.fd}`);
                     syslog(`[fread] buf=${this.buf} size=${this.size} nmemb=${this.nmemb} fd=${this.fd}`);
                 }
             },
@@ -1198,25 +1328,19 @@ class FuzzerKu
                     parent: null,
                     sink: "fread",
                     size: bytesRead,
-                    context: this.context,
+                    context: this.ctx,
                     threadId: this.threadId,
-                    caller: this.returnAddress.toString(),
+                    caller: this.caller.toString(),
                     fd_path: fdToPath(this.fd_fileno),
                     prevbuf:    previewBuffer(ptr(this.buf), bytesRead),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), bytesRead),
                 });
 
-                //jika crash comment ini
-                this.output["backtrace"] = Thread.backtrace(
-                    this.context,
-                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                    .join("\n");
-
-                const caller = this.returnAddress; //DebugSymbol.fromAddress(this.returnAddress);
+                const caller = DebugSymbol.fromAddress(this.caller);
                 this.output["retval"] = retval;
                 this.output["key"] = "fread_"+this.buf;
                 this.output["func_name"] = "fread||"+caller+"||"+this.nmemb;
-                this.output["func_addr"] = this.context.pc; //DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["func_addr"] = this.ctx.pc; //DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = [];
                 out_tracebuffer.push(this.output);
             }
@@ -1232,6 +1356,14 @@ class FuzzerKu
             onEnter(args) {
                 this.output = {}
                 this.size = args[0].toInt32();
+                this.ctx = this.context;
+                this.caller = this.returnAddress;
+
+                //jika crash comment ini
+                this.output["backtrace"] = Thread.backtrace(
+                    this.context,
+                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
+                    .join("\n");
             },
             onLeave(retval) {
                 alloc_range.set(retval.toString(), {
@@ -1244,33 +1376,26 @@ class FuzzerKu
                     parent: null,
                     sink: "malloc",
                     size: this.size,
-                    context: this.context,
+                    context: this.ctx,
                     threadId: this.threadId,
-                    caller: this.returnAddress.toString(),
+                    caller: this.caller.toString(),
                     fd_path: "",
                     prevbuf:    previewBuffer(ptr(retval.toString()), this.size),
                     prevHexbuf: previewHexBuffer(ptr(retval.toString()), this.size),
                 });
 
-                console.log(
-                    `[malloc] ${retval} size=${this.size}`
-                );
+                syslog(`[malloc] ${retval} size=${this.size}`);
 
-                //jika crash comment ini
-                this.output["backtrace"] = Thread.backtrace(
-                    this.context,
-                    Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
-                    .join("\n");
-                const caller = this.returnAddress;
+                const caller = this.caller;
                 this.output["retval"] = retval;
                 this.output["key"] = "malloc_"+retval;
                 this.output["func_name"] = "malloc||"+caller+"||"+this.size;
-                this.output["func_addr"] = this.context.pc; //DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["func_addr"] = this.ctx.pc; //DebugSymbol.fromAddress(this.ctx.pc).addres;
                 this.output["member"] = [];
 
                 out_traceheap.push(this.output);
             }
-        });
+        });/*
         Interceptor.attach(Module.findExportByName(null, "free"), {
             onEnter(args) {
                 alloc_range.delete(args[0].toString());
@@ -1296,7 +1421,7 @@ class FuzzerKu
                 out_traceheap.push(this.output);
                 addFuncScore(this.returnAddress.toString(), 10);
             }
-        });
+        });*/
     }
 
     onenter_hook2tree(name, addr) {

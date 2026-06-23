@@ -1661,6 +1661,7 @@ class FuzzerKu
                if (fstalking == "allocator") {
                     is_alloctrace = true;
                     this.setup_hookallocator();
+                    this.setup_manipulate_buffer();
                     return;
                }
 

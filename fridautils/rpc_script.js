@@ -736,11 +736,14 @@ class FuzzerKu
             "libdav1d.so",
             "libwzav1.so",
             "libwzav1_v2.so",
-        ];
-        const targetModules = [
-            "png_read"
         ];*/
-
+        const targetModules = [
+            "xloader",
+            "libskia.so",
+            "libhwui.so",
+            "libjpeg.so",
+            "libpng.so",
+        ];/*
         // APK: gallery
         const targetModules = [
             "libskia.so",
@@ -758,7 +761,7 @@ class FuzzerKu
             "libstagefright_enc_common.so",
             "libstagefright_avc_common.so",
             "libstagefright_httplive.so",
-        ];
+        ];*/
 
         const targetRanges = [];
         for (const name of targetModules) {
@@ -1228,20 +1231,25 @@ class FuzzerKu
         Interceptor.attach(Module.findExportByName(null, "malloc"), {
             onEnter(args) {
                 this.output = {}
-
                 this.size = args[0].toInt32();
             },
             onLeave(retval) {
                 alloc_range.set(retval.toString(), {
                     ptr: retval.toString(),
-                    size: this.size
+                    size: this.size,
+                    sink: "malloc",
+                    clone: new Set(),
                 });
-
                 clone_tree.set(retval.toString(), {
                     parent: null,
                     sink: "malloc",
                     size: this.size,
-                    caller: this.returnAddress.toString()
+                    context: this.context,
+                    threadId: this.threadId,
+                    caller: this.returnAddress.toString(),
+                    fd_path: "",
+                    prevbuf:    previewBuffer(ptr(retval.toString()), this.size),
+                    prevHexbuf: previewHexBuffer(ptr(retval.toString()), this.size),
                 });
 
                 console.log(
@@ -1253,16 +1261,14 @@ class FuzzerKu
                     this.context,
                     Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
                     .join("\n");
-
-                const caller = DebugSymbol.fromAddress(this.returnAddress);
+                const caller = this.returnAddress;
                 this.output["retval"] = retval;
                 this.output["key"] = "malloc_"+retval;
                 this.output["func_name"] = "malloc||"+caller+"||"+this.size;
-                this.output["func_addr"] = DebugSymbol.fromAddress(this.context.pc).addres;
+                this.output["func_addr"] = this.context.pc; //DebugSymbol.fromAddress(this.context.pc).addres;
                 this.output["member"] = [];
 
                 out_traceheap.push(this.output);
-                addFuncScore(this.returnAddress.toString(), 10);
             }
         });
         Interceptor.attach(Module.findExportByName(null, "free"), {
@@ -1543,7 +1549,7 @@ class FuzzerKu
             getalloctrace: () => {
                 return out_traceheap;
             },
-            getbuffertrace: (go) => {
+            getbuffertrace: (go, from_sink) => {
 
                 if (go["cmd"] == "show_buffer") {
                     try {
@@ -1591,7 +1597,10 @@ class FuzzerKu
                 }
 
                 //return out_tracebuffer;
-                send({"type": "zhook_hit", "log": out_tracebuffer, "chain": cout, "go": go});
+                if (from_sink == "alloc")
+                    send({"type": "zhook_hit", "log": out_traceheap, "chain": cout, "go": go, "fsink": from_sink});
+                else
+                    send({"type": "zhook_hit", "log": out_tracebuffer, "chain": cout, "go": go, "fsink": from_sink});
             },
             getfuzz: () => {
                 const outfuzz = {

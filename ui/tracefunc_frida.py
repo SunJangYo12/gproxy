@@ -253,7 +253,116 @@ class DialogTracerCallTree(QDialog):
 
                 add_node(item, tainted)
 
+
     def load_tree_allocator(self):
+        self.sw_menu = "trace_alocator"
+        data = self.open_data("/tmp/trace-allocator.json")
+
+        self.tree_widget.clear()
+        self.tree_widget.setHeaderLabels(["Allocator member", "Buffer", "Size", "Caller"])
+
+        tbuff = []
+        tallocs = []
+        taint_item = None
+
+        for key, value in data.items():
+            func_item = QTreeWidgetItem(self.tree_widget)
+
+            raw = value["func_name"].split("||")
+            func = raw[0]
+            caller = raw[1]
+            zlen = raw[2]
+            buffer = value["key"].split("_")[1]
+
+            len_clone = 0
+            if "tainted" in value:
+                tainted = value["tainted"]
+                len_clone = len(tainted["__children__"].values());
+
+
+            len_function = 0
+            if "member" in value:
+                len_function = len(value["member"])
+
+            func_item.setText(0, func+" clone: "+str(len_clone))
+            func_item.setText(1, buffer)
+            func_item.setText(2, zlen)
+            func_item.setText(3, caller)
+
+            func_item.setFont(0, self.font)
+            func_item.setFont(1, self.font)
+            func_item.setFont(2, self.font)
+            func_item.setFont(3, self.font)
+
+            func_item.setData(0, Qt.UserRole, value["key"])
+            self.cekandset_expand(func_item, value["key"])
+
+            ritem = QTreeWidgetItem(func_item)
+            ritem.setText(0, "Function range total: "+str(len_function))
+            ritem.setFont(0, self.font)
+
+            if "member" in value:
+                for child in value["member"]:
+                    skor = value["member"][child]["skor"]
+                    item = QTreeWidgetItem(ritem)
+                    item.setText(0, f"{child} +{skor}")
+                    item.setFont(0, self.font)
+
+                    sink      = value["member"][child]["sink_name"]
+                    sink_args = value["member"][child]["sink_args"]
+                    sink_ptr  = value["member"][child]["sink_ptr"]
+                    item.setToolTip(0,
+                        f"Sink     : {sink}\n"\
+                        f"Sink args: {sink_args}\n"\
+                        f"Sink ptr : {sink_ptr}\n"\
+                    )
+
+            if "backtrace" in value:
+                bt_data = value["backtrace"].split("\n")
+                item = QTreeWidgetItem(func_item)
+                item.setText(0, "Backtrace total: "+str(len(bt_data)))
+                item.setFont(0, self.font)
+                for bt in bt_data:
+                    bt_item = QTreeWidgetItem(item)
+                    bt_item.setText(0, bt)
+                    bt_item.setFont(0, self.font)
+
+            if "tainted" in value:
+                item = QTreeWidgetItem(func_item)
+                item.setText(0, "Cloned by")
+                item.setFont(0, self.font)
+
+                def add_node(parent_item, node):
+                    meta = node["__meta__"]
+                    text = f"{meta['ptr']} [+{meta['caller_skor']}] {meta['caller_name']['name']}"
+                    xitem = QTreeWidgetItem([text])
+                    xitem.setFont(0, self.font)
+
+                    try:
+                        pbuff = meta['prevbuf']
+                        phbuff = meta['prevHexbuf']
+                    except:
+                        pbuff = "-"
+                        phbuff = "-"
+
+                    xitem.setToolTip(0,
+                        f"Sink: {meta['sink']}\nThread: {meta['threadId']}\n"\
+                        f"Caller module: {meta['caller_name']['moduleName']}\n"\
+                        f"Size: {meta['size']}\n"\
+                        f"Fd path: {meta['fd_path']}\n"\
+                        f"Dump: {pbuff}\nDumpHex: {phbuff}\n"\
+                        f"Backtrace: \n{meta['backtrace']}\n"
+                    )
+
+                    #xitem.setData(0, Qt.UserRole, meta["sink"])
+
+                    parent_item.addChild(xitem)
+                    for child in node["__children__"].values():
+                        add_node(xitem, child)
+
+                add_node(item, tainted)
+
+    def xload_tree_allocator(self):
         self.sw_menu = "trace_alocator"
         data = self.open_data("/tmp/trace-allocator.json")
 

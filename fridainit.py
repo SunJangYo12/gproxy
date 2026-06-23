@@ -118,6 +118,7 @@ def on_message(message, data):
         elif message['payload']['type'] == 'zhook_hit':
            data = message['payload']['log']
            go = message['payload']['go']
+           fsink = message['payload']['fsink']
            all_chain = message['payload']['chain']
 
            tchain = []
@@ -137,7 +138,11 @@ def on_message(message, data):
            if go == "l":
                print("\n[+] Load .txt from saved")
            else:
-               with open("/tmp/trace-buffinput.json", "w") as fd:
+               filed = "/tmp/trace-buffinput.json"
+               if fsink == "alloc":
+                   filed = "/tmp/trace-allocator.json"
+
+               with open(filed, "w") as fd:
                    fd.write(json.dumps(ALL_ALLOC))
 
            proxy.settofrida_func("0", "hooktree_hit_all")
@@ -425,7 +430,7 @@ def main():
     print("\t=====================\n")
     target = input(">> Select target? Linux/HostIP/USB/TcpADB (l/h/u/t): ")
 
-    DEBUG = True
+    DEBUG = False
 
     if target == "h":
        #ahost = input(">> Android host: ")
@@ -445,7 +450,7 @@ def main():
        #    print(device.id, device.name, device.type)
 
        #tcpip = input(">> ADB tcpip: ")
-       tcpip = "192.168.0.101:5555"
+       tcpip = "192.168.0.100:5555"
        device = manager.get_device(tcpip)
 
        package = input(">> Chose package/process? (com.abc.df/mediaserver): ")
@@ -807,8 +812,7 @@ def main():
                                 "bufaddr": bufaddr,
                                 "bufsize": int(bufsize),
                             }
-
-                        data = script.exports_sync.getbuffertrace(go)
+                        data = script.exports_sync.getbuffertrace(go, "binput")
 
                 elif in_symbol == "all-alloc":
                     script.exports_sync.setuphook("", "allocator")
@@ -819,19 +823,30 @@ def main():
                     proxy.settofrida_openwindow("tracer_allocator", "Trace Allocator")
                     #proxy.settofrida_func("trace-func", "refresh")
                     while True:
-                        go = input("\nENTER for update..\n")
+                        go = input("\nENTER for update/load/showbuffer/quit: ENTER/l/q/sb? \n")
 
-                        data = script.exports_sync.getalloctrace()
+                        if go == "q":
+                            break
+                        elif go == "sb":
+                            bufaddr = input("Address buffer> ")
+                            bufsize = input("Size buffer> ")
+                            go = {
+                                "cmd": "show_buffer",
+                                "bufaddr": bufaddr,
+                                "bufsize": int(bufsize),
+                            }
+                        data = script.exports_sync.getbuffertrace(go, "alloc")
 
-                        for dat in data:
-                            mykey = dat["key"]
-                            if mykey not in ALL_ALLOC:
-                                ALL_ALLOC[mykey] = dat
+                        #go = input("\nENTER for update..\n")
+                        #data = script.exports_sync.getalloctrace()
+                        #for dat in data:
+                        #    mykey = dat["key"]
+                        #    if mykey not in ALL_ALLOC:
+                        #        ALL_ALLOC[mykey] = dat
 
-                        with open("/tmp/trace-allocator.json", "w") as fd:
-                            fd.write(json.dumps(ALL_ALLOC))
-
-                        proxy.settofrida_func("0", "hooktree_hit_all")
+                        #with open("/tmp/trace-allocator.json", "w") as fd:
+                        #    fd.write(json.dumps(ALL_ALLOC))
+                        #proxy.settofrida_func("0", "hooktree_hit_all")
 
                 elif in_symbol == "all-tree":
                     setup_hook(script, dick_sym, "zzall-tree", None)

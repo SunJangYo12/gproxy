@@ -736,14 +736,8 @@ class FuzzerKu
             "libdav1d.so",
             "libwzav1.so",
             "libwzav1_v2.so",
-        ];*/
-        const targetModules = [
-            "xloader",
-            "libskia.so",
-            "libhwui.so",
-            "libjpeg.so",
-            "libpng.so",
-        ];/*
+        ];*
+        /*
         // APK: gallery
         const targetModules = [
             "libskia.so",
@@ -762,6 +756,12 @@ class FuzzerKu
             "libstagefright_avc_common.so",
             "libstagefright_httplive.so",
         ];*/
+
+        // All module
+        const targetModules = [];
+        new ModuleMap().values().forEach(m => {
+            targetModules.push(m.name);
+        });
 
         const targetRanges = [];
         for (const name of targetModules) {

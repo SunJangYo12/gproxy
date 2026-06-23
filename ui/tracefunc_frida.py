@@ -359,52 +359,7 @@ class DialogTracerCallTree(QDialog):
                     parent_item.addChild(xitem)
                     for child in node["__children__"].values():
                         add_node(xitem, child)
-
                 add_node(item, tainted)
-
-    def xload_tree_allocator(self):
-        self.sw_menu = "trace_alocator"
-        data = self.open_data("/tmp/trace-allocator.json")
-
-        self.tree_widget.clear()
-        self.tree_widget.setHeaderLabels(["Allocator member", "buffer", "size", "caller"])
-
-        for key, value in data.items():
-            func_item = QTreeWidgetItem(self.tree_widget)
-
-            raw = value["func_name"].split("||")
-            func = raw[0]
-            caller = raw[1]
-            zlen = raw[2]
-            buffer = value["key"].split("_")[1]
-
-            func_item.setText(0, func)
-            func_item.setText(1, buffer)
-            func_item.setText(2, zlen)
-            func_item.setText(3, caller)
-
-            func_item.setFont(0, self.font)
-            func_item.setFont(1, self.font)
-            func_item.setFont(2, self.font)
-            func_item.setFont(3, self.font)
-
-            func_item.setData(0, Qt.UserRole, value["key"])
-            self.cekandset_expand(func_item, value["key"])
-            if "member" in value:
-                for child in value["member"]:
-                    item = QTreeWidgetItem(func_item)
-                    item.setText(0, f"{child}")
-                    item.setFont(0, self.font)
-
-            if "backtrace" in value:
-                item = QTreeWidgetItem(func_item)
-                item.setText(0, "Backtrace")
-                item.setFont(0, self.font)
-                for bt in value["backtrace"].split("\n"):
-                    bt_item = QTreeWidgetItem(item)
-                    bt_item.setText(0, bt)
-                    bt_item.setFont(0, self.font)
-
 
     def cekandset_expand(self, tree, id):
         for data in self.expanded_items:

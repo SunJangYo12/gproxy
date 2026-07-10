@@ -566,7 +566,13 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
             QApplication.clipboard().setText(item.text(0))
 
         elif action == "Copy to tree":
-            GLOBAL.angr_states.append(GLOBAL.simgr.stashes[key][index_child])
+            new_state = GLOBAL.simgr.stashes[key][index_child]
+            root = {
+                "isroot": True,
+                "state": new_state.copy(),
+                "children": []
+            }
+            GLOBAL.angr_states = root
             SIGNALS.state_tree_updated.emit()
 
         elif action == "Delete state":

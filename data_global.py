@@ -1,16 +1,12 @@
 from PySide2.QtCore import QObject, Signal
 import time
 
-class StateAngrNode:
-    def __init__(self, state):
-        self.state = state
-        self.children = []
 
 class GlobalState:
     def __init__(self):
         self.simgr = None
         self.angr_project = None
-        self.angr_states = []
+        self.angr_states = {}
         self.gdb_functions = {}
         self.gdb_blocks = {}
         self.gdb_kernelproc = []
@@ -38,8 +34,41 @@ class GlobalState:
         self.window_frida_stalker_title = ""
         self.window_frida_tracer_title = ""
         self.window_angr_title = ""
-
         self.refresh_view = "'0'"
+
+
+    def angr_find_node(self, node, target_state):
+        if node["state"] is target_state:
+            return node
+
+        for child in node["children"]:
+            result = self.angr_find_node(child, target_state)
+            if result is not None:
+                return result
+        return None
+
+    def angr_explore(self, proj, target_state):
+        node = self.angr_find_node(self.angr_states, target_state)
+        if node is None:
+            print("State tidak ditemukan")
+            return
+
+        simgr = proj.factory.simgr(node["state"].copy())
+
+        while len(simgr.active) == 1:
+            simgr.step()
+
+        if not simgr.active:
+            return
+
+        # Kalau ingin replace child lama
+        # node["children"].clear()
+        for s in simgr.active:
+            node["children"].append({
+                "state": s.copy(),
+                "children": []
+            })
+            print("[+] got branch")
 
 
 
@@ -147,5 +176,4 @@ class GlobalSignals(QObject):
     window_angrstate_tree = Signal()
 
 GLOBAL = GlobalState()
-GLOBAL_ANGRSTATE = StateAngrNode()
 SIGNALS = GlobalSignals()

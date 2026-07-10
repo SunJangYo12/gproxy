@@ -22,7 +22,7 @@ from PySide2.QtWidgets import (
      QToolButton, QStyle,
      QProgressDialog
 )
-from ..data_global import SIGNALS, GLOBAL, GLOBAL_ANGRSTATE
+from ..data_global import SIGNALS, GLOBAL
 import base64
 import time
 import json
@@ -37,11 +37,6 @@ from binaryninja import (
 )
 import binaryninja as binja
 import claripy
-
-#class StateNode:
-#    def __init__(self, state):
-#        self.state = state
-#        self.children = []
 
 class DialogAngrTree(QDialog):
     def __init__(self, parent=None, sid=None, data=None):
@@ -64,28 +59,51 @@ class DialogAngrTree(QDialog):
 
         self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree_widget.customContextMenuRequested.connect(self.on_tree_context_menu)
+        self.tree_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
 
         layout = QVBoxLayout()
         layout.addWidget(self.tree_widget)
 
         self.setLayout(layout)
         self.showData()
+        self.bv = data
 
     def showData(self):
+        self.tree_widget.clear()
         mydata = GLOBAL.angr_states
+        try:
+            self.add_node(self.tree_widget, mydata)
+        except:
+            pass
 
         self.tree_widget.headerItem().setText(0, "Total: %s" %len(mydata) )
-        for i in mydata:
-            parent = QTreeWidgetItem(self.tree_widget)
-            parent.setText(0, "%s" %hex(i.addr))
-            parent.setData(0, Qt.UserRole, i)
-            parent.setFont(0, self.font)
+        self.tree_widget.expandAll()
+
+    def add_node(self, parent_item, node):
+        state = node["state"]
+
+        item = QTreeWidgetItem(parent_item)
+        item.setText(0, hex(state.addr))
+        item.setFont(0, self.font)
+        item.setData(0, Qt.UserRole, node)
+
+        for child in node["children"]:
+            self.add_node(item, child)
+
+    def on_item_double_clicked(self, item, column):
+        try:
+            addr = int(item.text(column), 0)
+            print("jump to:", hex(addr))
+            self.bv.offset = addr
+        except Exception as e:
+            print(e)
 
     def on_tree_context_menu(self, position: QPoint):
         item = self.tree_widget.itemAt(position)
         menu = QMenu()
 
         menu.addAction("Show contraints")
+        menu.addAction("Show solver input")
         menu.addAction("Explore")
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
@@ -93,9 +111,16 @@ class DialogAngrTree(QDialog):
             self.handle_tree_action(action.text(), item)
 
     def dialog_process(self):
+        # Jika dialog sudah ada, tutup
+        if hasattr(self, "dlg") and self.dlg is not None:
+            self.dlg.close()
+            self.dlg.deleteLater()
+            self.dlg = None
+            return
+        # Buat dialog baru
         self.dlg = QProgressDialog("Process explore...", None, 0, 0)
         self.dlg.setWindowTitle("Status")
-        self.dlg.setCancelButton(None)      # hilangkan tombol Cancel
+        self.dlg.setCancelButton(None)
         self.dlg.setWindowModality(Qt.ApplicationModal)
         self.dlg.show()
 
@@ -105,37 +130,22 @@ class DialogAngrTree(QDialog):
         if action == "Show contraints":
             print("zz")
 
+        elif action == "Show solver input":
+            new_concrete_state = data["state"]
+            sym_buf = claripy.BVS("buf", 8 * 32)
+            new_concrete_state.memory.store(buf_addr, sym_buf)
+
+            out = new_concrete_state1.solver.eval(sym_buf, cast_to=bytes)
+
         elif action == "Explore":
             self.dialog_process()
-            new_concrete_state = data
+            new_concrete_state = data["state"]
             buf_addr = new_concrete_state.solver.eval(new_concrete_state.regs.rdi)
             sym_buf = claripy.BVS("buf", 8 * 32)
             new_concrete_state.memory.store(buf_addr, sym_buf)
 
-            root = GLOBAL_ANGRSTATE(new_concrete_state)
-            self.expand_node(GLOBAL.angr_project, root)
+            GLOBAL.angr_explore(GLOBAL.angr_project, data["state"])
+            self.dialog_process()
+            self.showData();
 
-            print(len(root.children))
-
-            #GLOBAL.simgr = GLOBAL.angr_project.factory.simgr(new_concrete_state)
-            #while len(GLOBAL.simgr.active) == 1:
-            #    GLOBAL.simgr.step()
-            #    print("[+] explore..")
-
-            #SIGNALS.state_updated.emit()
-
-    def expand_node(self, proj, node):
-        simgr = proj.factory.simgr(node.state.copy())
-
-        # Jalan terus selama hanya ada satu state aktif
-        while len(simgr.active) == 1:
-            simgr.step()
-
-        # Jika tidak ada state lagi (return/crash/deadend)
-        if len(simgr.active) == 0:
-            return
-
-        # Simpan semua branch sebagai anak
-        for s in simgr.active:
-            node.children.append(GLOBAL_ANGRSTATE(s.copy()))
 

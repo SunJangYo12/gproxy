@@ -21,7 +21,7 @@ from PySide2.QtWidgets import (
      QCheckBox
 )
 from ..data_global import SIGNALS, GLOBAL
-from .dialog_angr import DialogAngrTree
+from .dialog_angr import DialogAngrTree, DialogRegisters
 
 class StepThread(QThread):
     done = Signal(object)
@@ -58,134 +58,6 @@ class StepThread(QThread):
             self.run_explore()
         else:
             self.run_branch()
-
-
-class DialogRegisters(QDialog):
-    def __init__(self, title="Input", parent=None, state=None):
-        super().__init__(parent)
-        self.setWindowTitle(title)
-        self.setWindowFlags(
-            Qt.Window |
-            Qt.WindowMinimizeButtonHint |
-            Qt.WindowCloseButtonHint
-        )
-        self.setWindowModality(Qt.NonModal)
-
-        self.state = state
-
-        layout = QVBoxLayout()
-        font = getMonospaceFont(self)
-
-        # Set up register table
-        self.table = QTableWidget()
-        self.table.setColumnCount(2)
-        self.table.setHorizontalHeaderLabels(['Register', 'Value'])
-        self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.verticalHeader().setVisible(False)
-
-        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.table.customContextMenuRequested.connect(self.show_context_menu)
-
-        layout.addWidget(self.table)
-        self.setLayout(layout)
-
-        self.setReg()
-
-        self.reg_value = None
-        self.reg_raw = None
-
-
-    def show_context_menu(self, pos):
-        # Dapatkan posisi global
-        global_pos = self.table.viewport().mapToGlobal(pos)
-
-        # Cek row dan column
-        row = self.table.rowAt(pos.y())
-        col = self.table.columnAt(pos.x())
-        if row < 0 or col < 0:
-            return  # klik di area kosong
-
-        item = self.table.item(row, col)
-
-        # Buat menu
-        menu = QMenu()
-
-        #print(col, row, item.text())
-        if col == 0:
-            menu.addAction("Detail", lambda: self.menu_action(item, "Detail"))
-        elif col == 1:
-            if self.table.item(row, 1).text() == "<symbolic>":
-                menu.addAction("Solving", lambda: self.menu_action(item, "Solving", self.table.item(row, 0).text() ))
-                menu.addAction("Copy", lambda: self.menu_action(item, "Copy"))
-            else:
-                menu.addAction("Copy", lambda: self.menu_action(item, "Copy"))
-
-        menu.exec_(global_pos)
-
-    def menu_action(self, item, aksi=None, solve_reg=None):
-        if aksi == "Copy":
-            QApplication.clipboard().setText(item.text())
-
-        elif aksi == "Detail":
-            reg_name = getattr(self.state.regs, item.text())
-            print(reg_name)
-
-        elif aksi == "Solving":
-            print("[+] solving...")
-            # Coba evaluasi/solving symbolic jadi nilai konkret
-            try:
-                print("[+] register: ", solve_reg)
-                reg_expr = getattr(self.state.regs, solve_reg)
-
-                val = self.state.solver.eval(reg_expr)
-                val_str = hex(val)
-                print("[+] done.")
-            except:
-                # kalau symbolic / gagal
-                val_str = "[+] except solving!"
-            print(val_str)
-
-
-
-    def _makewidget(self, val, center=False):
-        out = QTableWidgetItem(str(val))
-        out.setFlags(Qt.ItemIsEnabled)
-        out.setFont(getMonospaceFont(self))
-
-        if val == "<symbolic>":
-            out.setForeground(QColor("red"))
-
-        if center:
-            out.setTextAlignment(Qt.AlignCenter)
-        return out
-
-    def setReg(self):
-        regs = self.state.arch.register_list
-        self.table.setRowCount(len(regs))
-
-        for i, reg in enumerate(regs):
-            regname = reg.name
-            self.table.setItem(i, 0, self._makewidget(regname))
-
-            # ===============================
-            #   AMBIL NILAI REGISTER
-            # ===============================
-            try:
-                # akses register berdasarkan nama
-                reg_expr = getattr(self.state.regs, regname)
-                reg_symbolic = reg_expr.symbolic
-                if reg_symbolic:
-                    reg_value = "<symbolic>"
-                else:
-                    reg_value = hex(reg_expr.v)
-            except:
-                self.table.setItem(i, 1, self._makewidget("<no-attr>"))
-                continue
-
-
-            self.table.setItem(i, 1, self._makewidget(reg_value))
-
-
 
 class DialogStep(QDialog):
     def __init__(self, title="Input", label="Masukkan data:", parent=None, state=None, bv=None):
@@ -306,6 +178,7 @@ class DialogStep(QDialog):
 
     def show_registers(self):
         self.dlg = DialogRegisters(title="Registers", state=self.state)
+        self.dlg.resize(300, 450) # w,h
         self.dlg.show()
         self.dlg.raise_()
         self.dlg.activateWindow()

@@ -219,12 +219,18 @@ Symbion test server
 >>> new_concrete_state1 = exe.found[0]
 >>> data = new_concrete_state1.solver.eval(sym_buf, cast_to=bytes)
 
-#open window
-GLOBAL.window_angr_title = "zzz"
-SIGNALS.window_angrstate_tree.emit()
 #update data
 SIGNALS.state_tree_updated.emit()
 
+# Tips
+untuk explore state custom di console python
+lihat di dialog_angr.py bagian explore sebagai contoh
+lalu pilih refresh untuk menampilkan hasil explore.
+1. state list
+2. click kanan di state
+3. dialog state tree
+4. copy to tree
+disitu state menarik untuk diexplore
 ```
 
 

@@ -47,7 +47,7 @@ class GlobalState:
                 return result
         return None
 
-    def angr_explore(self, proj, target_state):
+    def angr_explore(self, proj, target_state, sym_buf):
         node = self.angr_find_node(self.angr_states, target_state)
         if node is None:
             print("State tidak ditemukan")
@@ -66,6 +66,7 @@ class GlobalState:
         for s in simgr.active:
             node["children"].append({
                 "state": s.copy(),
+                "solver_bytes": s.solver.eval(sym_buf, cast_to=bytes),
                 "children": []
             })
             print("[+] got branch")

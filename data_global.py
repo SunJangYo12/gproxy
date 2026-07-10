@@ -1,10 +1,16 @@
 from PySide2.QtCore import QObject, Signal
 import time
 
+class StateAngrNode:
+    def __init__(self, state):
+        self.state = state
+        self.children = []
 
 class GlobalState:
     def __init__(self):
         self.simgr = None
+        self.angr_project = None
+        self.angr_states = []
         self.gdb_functions = {}
         self.gdb_blocks = {}
         self.gdb_kernelproc = []
@@ -31,6 +37,7 @@ class GlobalState:
         self.frida_bb_hit = []
         self.window_frida_stalker_title = ""
         self.window_frida_tracer_title = ""
+        self.window_angr_title = ""
 
         self.refresh_view = "'0'"
 
@@ -116,6 +123,7 @@ class GlobalState:
 
 class GlobalSignals(QObject):
     state_updated = Signal()
+    state_tree_updated = Signal()
     gdb_updated = Signal()
     gdb_updated_dprintf = Signal()
     gdb_updated_bb = Signal()
@@ -136,6 +144,8 @@ class GlobalSignals(QObject):
     window_frida_stalker = Signal()
     window_frida_tracer = Signal()
     window_frida_tracer_allocator = Signal()
+    window_angrstate_tree = Signal()
 
 GLOBAL = GlobalState()
+GLOBAL_ANGRSTATE = StateAngrNode()
 SIGNALS = GlobalSignals()

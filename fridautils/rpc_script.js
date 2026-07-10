@@ -1077,6 +1077,21 @@ class FuzzerKu
             return null;
         }
 
+        // ================================ TEST =======================
+        Interceptor.attach(Module.findExportByName("libskia.so", "_Z8sk_qreadP7__sFILEPvmm"), {
+            onEnter(args) {
+                this.fd = args[0].toInt32();
+                this.buf = args[1].toString();
+                this.count = args[2].toInt32();
+                this.offset = args[3].toInt32();
+            },
+            onLeave(retval) {
+                console.log("buf="+this.buf+" ret="+retval );
+            }
+        });
+        // ================================ TEST =======================
+
+
         Interceptor.attach(Module.findExportByName(null, "recvfrom"), {
             onEnter(args) {
                 this.output = {}
@@ -1737,32 +1752,16 @@ class FuzzerKu
                 return outfuzz;
             },
             setfuzz: (target) => {
+                const target_addr = DebugSymbol.fromName('handleClient').address;
 
-                const hook = Interceptor.attach(Module.findExportByName(null, "memcpy"), {
-                //Interceptor.attach(ptr(target), {
+                const fuzzhook = Interceptor.attach(target_addr, {
                     onEnter(args) {
-                            this.dst = args[0].toString();
-                            this.src = args[1].toString();
-                            this.size = args[2].toInt32();
+                        fuzzhook.detach();
 
-                        const goodcaller = DebugSymbol.fromAddress(this.returnAddress).name;
-                        if (goodcaller == "ap_rgetline_core+0x1f4") {
-
-                            const dump = previewBuffer(ptr(this.dst), this.size)
-
-                            if (dump.toLowerCase().includes("user-agent")) {
-                                console.log(dump);
-                            }
-
-
-
-
-                            //hook.detach();
-                        }
+                        console.log("HIT");
                     },
-                    onLeave(retval) {
-                    }
                 });
+
             },
             setuphook: (func_data, fstalking) => {
 

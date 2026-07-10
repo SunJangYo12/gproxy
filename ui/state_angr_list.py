@@ -21,7 +21,7 @@ from PySide2.QtWidgets import (
      QCheckBox
 )
 from ..data_global import SIGNALS, GLOBAL
-
+from .dialog_angr import DialogAngrTree
 
 class StepThread(QThread):
     done = Signal(object)
@@ -406,7 +406,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
 
         SIGNALS.state_updated.connect(self.refresh_from_global)
-
+        SIGNALS.window_angrstate_tree.connect(self.refresh_from_global_owindow)
 
         tree_widget = QTreeWidget()
         self.tree_widget = tree_widget
@@ -434,7 +434,17 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
         self.setLayout(layout)
         self.bv = data
+        self.sw_menu = ""
 
+    def refresh_from_global_owindow(self):
+        self.sw_menu = "tree"
+        title = GLOBAL.window_angr_title
+
+        self.dlg = DialogAngrTree(sid=title, data=self.bv)
+        self.dlg.resize(300, 450) # w,h
+        self.dlg.show()
+        self.dlg.raise_()
+        self.dlg.activateWindow()
 
 
     def refresh_from_global(self):
@@ -497,7 +507,9 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
             menu.addAction("Delete stashes")
         elif item.parent().parent() is None:
             menu.addAction("Copy")
-            menu.addAction("State manager")
+            menu.addAction("Copy to tree")
+            menu.addAction("Dialog State manager")
+            menu.addAction("Dialog State tree")
             menu.addAction("Taint to this")
             menu.addAction("Move to stashed")
             menu.addAction("History bbl_addr")
@@ -553,11 +565,19 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
         if action == "Copy":
             QApplication.clipboard().setText(item.text(0))
 
+        elif action == "Copy to tree":
+            GLOBAL.angr_states.append(GLOBAL.simgr.stashes[key][index_child])
+            SIGNALS.state_tree_updated.emit()
+
         elif action == "Delete state":
             GLOBAL.simgr.stashes[key].pop(index_child)
             print("[+] State removed, please refresh UI ")
 
-        elif action == "State manager":
+        elif action == "Dialog State tree":
+            GLOBAL.window_angr_title = "Angr simbolic"
+            SIGNALS.window_angrstate_tree.emit()
+
+        elif action == "Dialog State manager":
             self.dlg = DialogStep(title="State Manager", label="Break after any branch", state=state[index_child], bv=self.bv)
             self.dlg.show()
             self.dlg.raise_()

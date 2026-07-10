@@ -144,8 +144,9 @@ entry_state.options.add(angr.options.SYMBION_SYNC_CLE)
 entry_state.options.add(angr.options.SYMBION_KEEP_STUBS_ON_SYNC)
 simgr = p.factory.simgr(entry_state)
 
-GLOBAL.simgr = simgr
-SIGNALS.state_updated.emit()
+def UPD():
+    GLOBAL.simgr = simgr
+    SIGNALS.state_updated.emit()
 
 simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x85b853]))
 exploration = simgr.run()
@@ -170,6 +171,63 @@ simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x400cd6]) )
 exploration = simgr.run()
 GLOBAL.simgr = simgr
 SIGNALS.state_updated.emit()
+
+
+Symbion test server
+```
+>>> import angr
+>>> bv.file.filename
+'/media/jin/4abb279b-6d65-4663-97c2-26987f64673a/home/yuna/Tools/Python-env/frizzer/tests/simple_binary/test'
+>>> import avatar2 as avatar2
+>>> from angr_targets import AvatarGDBConcreteTarget
+>>> 
+>>> binary_x64 = bv.file.filename
+>>> binary_x64
+'/media/jin/4abb279b-6d65-4663-97c2-26987f64673a/home/yuna/Tools/Python-env/frizzer/tests/simple_binary/test'
+>>> avatar_gdb = AvatarGDBConcreteTarget(avatar2.archs.X86_64, "127.0.0.1", 1234) #gdbserver --attach :1234 297795
+>>> 
+>>> p = angr.Project(binary_x64, concrete_target=avatar_gdb, use_sim_procedures=True)
+>>> 
+>>> entry_state = p.factory.entry_state()
+>>> 
+>>> entry_state.options.add(angr.options.SYMBION_SYNC_CLE)
+>>> entry_state.options.add(angr.options.SYMBION_KEEP_STUBS_ON_SYNC)
+>>> 
+>>> p.entry
+4198832
+>>> hex(p.entry)
+'0x4011b0'
+>>> simgr = p.factory.simgr(entry_state)
+>>> 
+>>> simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x40131a])) #addr handleState
+>>> 
+>>> exploration = simgr.run()
+>>> 
+>>> new_concrete_state = exploration.stashes['found'][0]
+>>> 
+>>> buf_addr = new_concrete_state.solver.eval(new_concrete_state.regs.rdi)
+>>> sym_buf = claripy.BVS("buf", 8 * 32)
+>>> 
+>>> new_concrete_state.memory.store(buf_addr, sym_buf)
+>>> 
+>>> simgr = p.factory.simgr(new_concrete_state)
+>>> 
+>>> while len(simgr.active) == 1:
+...    simgr.step()
+
+>>> exe = simgr.explore(find=0x4013ec)
+>>> new_concrete_state1 = exe.found[0]
+>>> data = new_concrete_state1.solver.eval(sym_buf, cast_to=bytes)
+
+#open window
+GLOBAL.window_angr_title = "zzz"
+SIGNALS.window_angrstate_tree.emit()
+#update data
+SIGNALS.state_tree_updated.emit()
+
+```
+
+
 
 # kode yang dikaburkan
 

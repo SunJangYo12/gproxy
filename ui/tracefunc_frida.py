@@ -216,6 +216,7 @@ class DialogTracerCallTree(QDialog):
                 for bt in bt_data:
                     bt_item = QTreeWidgetItem(item)
                     bt_item.setText(0, bt)
+                    bt_item.setData(0, Qt.UserRole, bt)
                     bt_item.setFont(0, self.font)
 
             if "tainted" in value:
@@ -325,6 +326,7 @@ class DialogTracerCallTree(QDialog):
                 for bt in bt_data:
                     bt_item = QTreeWidgetItem(item)
                     bt_item.setText(0, bt)
+                    bt_item.setData(0, Qt.UserRole, bt)
                     bt_item.setFont(0, self.font)
 
             if "tainted" in value:
@@ -389,7 +391,9 @@ class DialogTracerCallTree(QDialog):
             menu.addAction("Coloring All")
             menu.addAction("Remove All Color")
         elif self.sw_menu == "trace_alocator":
-            menu.addAction("Show backtrace")
+            menu.addAction("Copy")
+        elif self.sw_menu == "trace_binput":
+            menu.addAction("Copy")
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
         if action:
@@ -402,8 +406,9 @@ class DialogTracerCallTree(QDialog):
         if action == "Address":
             print(raw[1])
 
-        elif action == "Show backtrace":
+        elif action == "Copy":
             print(data)
+            QApplication.clipboard().setText(data)
 
         elif action == "Jump":
             addr = raw[1]

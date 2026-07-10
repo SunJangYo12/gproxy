@@ -453,11 +453,12 @@ def main():
        tcpip = "192.168.0.100:5555"
        device = manager.get_device(tcpip)
 
-       #package = input(">> Chose package/process? (com.abc.df/mediaserver): ")
-       #package = "ru.zdevs.zarchiver"
-       package = "xloader"
-       ispaket = len(package.split(".")) > 1
+       if DEBUG:
+           package = "xloader"
+       else:
+           package = input(">> Chose package/process? (com.abc.df/mediaserver): ")
 
+       ispaket = len(package.split(".")) > 1
        if ispaket:
            pid = device.spawn([package])
            device.resume(pid)
@@ -479,7 +480,7 @@ def main():
        device = frida.get_local_device() #local linux
 
        if DEBUG:
-           pid_raw = subprocess.run(["pidof", "png_read"], capture_output=True, text=True)
+           pid_raw = subprocess.run(["pidof", "test"], capture_output=True, text=True)
            pid_raw = pid_raw.stdout.split("\n")[0]
        else:
            pid_raw = input(">> Chose pid? (1234): ")
@@ -535,10 +536,7 @@ def main():
     loop_menu = True
 
     while loop_menu:
-        if DEBUG:
-            pshell = "tr"
-        else:
-            pshell = input("\n>> ")
+        pshell = input("\n>> ")
 
         if pshell == "em":
             script.exports_sync.enummodules()
@@ -693,18 +691,12 @@ def main():
 
         elif pshell == "tr":
             script.exports_sync.enummodules()
-            if DEBUG:
-                in_module = "apache2"
-            else:
-                in_module = input("\n>> Module> ")
+            in_module = input("\n>> Module> ")
 
             if in_module == "back":
                 continue
 
-            if DEBUG:
-                in_swsym = "frida"
-            else:
-                in_swsym = input("\n>> Dump symbol address? frida/bn/r2:> ")
+            in_swsym = input("\n>> Dump symbol address? frida/bn/r2:> ")
 
             while True:
                 isbn = 0
@@ -713,10 +705,7 @@ def main():
 
                 if in_swsym == "frida":
                     print("[+] Using frida symbol.")
-                    if DEBUG:
-                        sw_frida = "s"
-                    else:
-                        sw_frida = input(">> Symbol/Import/Export? s/i/e: ")
+                    sw_frida = input(">> Symbol/Import/Export? s/i/e: ")
 
                     dick_sym = script.exports_sync.enumsymbolstrace(in_module, sw_frida)
 
@@ -777,10 +766,7 @@ def main():
                 else:
                     proxy.settofrida_func(dick_sym, "init")
 
-                if DEBUG:
-                    in_symbol = "all-binput"
-                else:
-                    in_symbol = input(f"\n>> {in_module}> symbol> ")
+                in_symbol = input(f"\n>> {in_module}> symbol> ")
 
                 if in_symbol == "back":
                     script.exports_sync.setuphook("", "detach-all")

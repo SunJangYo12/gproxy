@@ -38,6 +38,76 @@ from binaryninja import (
 import binaryninja as binja
 import claripy
 
+class DialogAngrHook(QDialog):
+    def __init__(self, parent=None, sid=None, data=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"Angr hook({sid})")
+        self.setWindowFlags(
+            Qt.Window |
+            Qt.WindowMinimizeButtonHint |
+            Qt.WindowCloseButtonHint
+        )
+
+        SIGNALS.angrhook_updated.connect(self.showData)
+
+        self.setWindowModality(Qt.NonModal)
+        self.font = getMonospaceFont(self)
+
+        self.tree_widget = QTreeWidget()
+        self.tree_widget.setColumnCount(0)
+        self.tree_widget.expandToDepth(1)
+
+        self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree_widget.customContextMenuRequested.connect(self.on_tree_context_menu)
+        self.tree_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.tree_widget)
+
+        self.setLayout(layout)
+        self.showData()
+        self.bv = data
+
+    def showData(self):
+        self.tree_widget.clear()
+        mydata = GLOBAL.angr_hooks
+
+        self.tree_widget.headerItem().setText(0, "Total: %s" %len(mydata) )
+
+        for i in mydata:
+            item = QTreeWidgetItem(self.tree_widget)
+            item.setText(0, i["name"])
+            item.setFont(0, self.font)
+            item.setData(0, Qt.UserRole, i)
+
+    def on_item_double_clicked(self, item, column):
+        try:
+            addr = int(item.text(column), 0)
+            print("jump to:", hex(addr))
+            self.bv.offset = addr
+        except Exception as e:
+            print(e)
+
+    def on_tree_context_menu(self, position: QPoint):
+        item = self.tree_widget.itemAt(position)
+        menu = QMenu()
+
+        menu.addAction("zzz")
+        menu.addAction("Refresh data")
+
+        action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
+        if action:
+            self.handle_tree_action(action.text(), item)
+
+    def handle_tree_action(self, action, item):
+        data = item.data(0, Qt.UserRole)
+
+        if action == "zzz":
+            print("sd")
+        elif action == "Refresh data":
+            self.showData();
+
+
 class DialogAngrTree(QDialog):
     def __init__(self, parent=None, sid=None, data=None):
         super().__init__(parent)
@@ -105,6 +175,8 @@ class DialogAngrTree(QDialog):
         menu.addAction("Show contraints")
         menu.addAction("Show solver input")
         menu.addAction("Show registers")
+        menu.addAction("Show hooks")
+        menu.addAction("Temporary state")
         menu.addAction("Explore")
         menu.addAction("Refresh data")
 
@@ -114,17 +186,18 @@ class DialogAngrTree(QDialog):
 
     def dialog_process(self):
         # Jika dialog sudah ada, tutup
-        if hasattr(self, "dlg") and self.dlg is not None:
-            self.dlg.close()
-            self.dlg.deleteLater()
-            self.dlg = None
+        if hasattr(self, "pdlg") and self.pdlg is not None:
+            self.pdlg.close()
+            self.pdlg.deleteLater()
+            self.pdlg = None
             return
         # Buat dialog baru
-        self.dlg = QProgressDialog("Process explore...", None, 0, 0)
-        self.dlg.setWindowTitle("Process")
-        self.dlg.setCancelButton(None)
-        self.dlg.setWindowModality(Qt.ApplicationModal)
-        self.dlg.show()
+        self.pdlg = QProgressDialog("Process explore...", None, 0, 0)
+        self.pdlg.setWindowTitle("Process")
+        self.pdlg.setCancelButton(None)
+        self.pdlg.setWindowModality(Qt.ApplicationModal)
+        QApplication.processEvents()
+        self.pdlg.show()
 
     def handle_tree_action(self, action, item):
         data = item.data(0, Qt.UserRole)
@@ -139,14 +212,39 @@ class DialogAngrTree(QDialog):
         elif action == "Show solver input":
             solver_bytes = data["solver_bytes"]
             print(solver_bytes)
+            show_message_box(
+                "G-proxy",
+                solver_bytes,
+                MessageBoxButtonSet.OKButtonSet,
+                MessageBoxIcon.InformationIcon
+            )
+
+
+        elif action == "Show hooks":
+            state = data["state"]
+            self.hdlg = DialogAngrHook(sid="myhook", data=self.bv)
+            self.hdlg.resize(300, 450) # w,h
+            self.hdlg.show()
+            self.hdlg.raise_()
+            self.hdlg.activateWindow()
 
         elif action == "Show registers":
             state = data["state"]
-            self.dlg = DialogRegisters(title="Registers", state=state)
-            self.dlg.resize(300, 450) # w,h
-            self.dlg.show()
-            self.dlg.raise_()
-            self.dlg.activateWindow()
+            self.drdlg = DialogRegisters(title="Registers", state=state)
+            self.drdlg.resize(300, 450) # w,h
+            self.drdlg.show()
+            self.drdlg.raise_()
+            self.drdlg.activateWindow()
+
+        elif action == "Temporary state":
+            GLOBAL.angr_state = data["state"]
+            show_message_box(
+                "G-proxy",
+                "Copy to global, access with GLOBAL.angr_state",
+                MessageBoxButtonSet.OKButtonSet,
+                MessageBoxIcon.InformationIcon
+            )
+
 
         elif action == "Explore":
             self.dialog_process()

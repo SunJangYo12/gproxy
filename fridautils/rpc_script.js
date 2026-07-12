@@ -1078,7 +1078,7 @@ class FuzzerKu
         }
 
         // ================================ TEST =======================
-        Interceptor.attach(Module.findExportByName("libskia.so", "_Z8sk_qreadP7__sFILEPvmm"), {
+/*        Interceptor.attach(Module.findExportByName("libskia.so", "_Z8sk_qreadP7__sFILEPvmm"), {
             onEnter(args) {
                 this.fd = args[0].toInt32();
                 this.buf = args[1].toString();
@@ -1088,7 +1088,7 @@ class FuzzerKu
             onLeave(retval) {
                 console.log("buf="+this.buf+" ret="+retval );
             }
-        });
+        });*/
         // ================================ TEST =======================
 
 

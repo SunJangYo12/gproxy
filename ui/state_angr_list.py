@@ -21,7 +21,7 @@ from PySide2.QtWidgets import (
      QCheckBox
 )
 from ..data_global import SIGNALS, GLOBAL
-from .dialog_angr import DialogAngrTree, DialogRegisters
+from .dialog_angr import DialogAngrTree, DialogRegisters, DialogAngrHook
 
 class StepThread(QThread):
     done = Signal(object)
@@ -177,11 +177,11 @@ class DialogStep(QDialog):
 
 
     def show_registers(self):
-        self.dlg = DialogRegisters(title="Registers", state=self.state)
-        self.dlg.resize(300, 450) # w,h
-        self.dlg.show()
-        self.dlg.raise_()
-        self.dlg.activateWindow()
+        self.rdlg = DialogRegisters(title="Registers", state=self.state)
+        self.rdlg.resize(300, 450) # w,h
+        self.rdlg.show()
+        self.rdlg.raise_()
+        self.rdlg.activateWindow()
 
 
     # Fungsi untuk ambil teks
@@ -280,6 +280,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
 
         SIGNALS.state_updated.connect(self.refresh_from_global)
         SIGNALS.window_angrstate_tree.connect(self.refresh_from_global_owindow)
+        SIGNALS.window_angrhook.connect(self.refresh_from_global_owindow_hook)
 
         tree_widget = QTreeWidget()
         self.tree_widget = tree_widget
@@ -309,15 +310,25 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
         self.bv = data
         self.sw_menu = ""
 
+    def refresh_from_global_owindow_hook(self):
+        self.sw_menu = "hook"
+        title = GLOBAL.window_angr_title
+
+        self.hdlg = DialogAngrHook(sid=title, data=self.bv)
+        self.hdlg.resize(300, 450) # w,h
+        self.hdlg.show()
+        self.hdlg.raise_()
+        self.hdlg.activateWindow()
+
     def refresh_from_global_owindow(self):
         self.sw_menu = "tree"
         title = GLOBAL.window_angr_title
 
-        self.dlg = DialogAngrTree(sid=title, data=self.bv)
-        self.dlg.resize(300, 450) # w,h
-        self.dlg.show()
-        self.dlg.raise_()
-        self.dlg.activateWindow()
+        self.tdlg = DialogAngrTree(sid=title, data=self.bv)
+        self.tdlg.resize(300, 450) # w,h
+        self.tdlg.show()
+        self.tdlg.raise_()
+        self.tdlg.activateWindow()
 
 
     def refresh_from_global(self):
@@ -457,10 +468,10 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
             SIGNALS.window_angrstate_tree.emit()
 
         elif action == "Dialog State manager":
-            self.dlg = DialogStep(title="State Manager", label="Break after any branch", state=state[index_child], bv=self.bv)
-            self.dlg.show()
-            self.dlg.raise_()
-            self.dlg.activateWindow()
+            self.smdlg = DialogStep(title="State Manager", label="Break after any branch", state=state[index_child], bv=self.bv)
+            self.smdlg.show()
+            self.smdlg.raise_()
+            self.smdlg.activateWindow()
 
         elif action == "Taint to this":
             print("Taint Wait...")

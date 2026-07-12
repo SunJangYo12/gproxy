@@ -222,6 +222,11 @@ Symbion test server
 #update data
 SIGNALS.state_tree_updated.emit()
 
+#open window hook BUG reopen with state tree, Alternatif in righ click state tree
+GLOBAL.window_angr_title = "myhook"
+SIGNALS.window_angrhook.emit()
+SIGNALS.angrhook_updated.emit()
+
 # Tips
 untuk explore state custom di console python
 lihat di dialog_angr.py bagian explore sebagai contoh
@@ -231,6 +236,10 @@ lalu pilih refresh untuk menampilkan hasil explore.
 3. dialog state tree
 4. copy to tree
 disitu state menarik untuk diexplore
+
+Jika pakai program target besar misal apache2 saat pakai AvatarGDBConcreteTarget
+dan error, coba hardcoded timeout di lib/python3.8/site-packages/avatar2/protocols/gdb.py
+response = self._communicator.get_sync_response(token, timeout=100)
 ```
 
 
@@ -707,4 +716,10 @@ dan list yang tidak terwarnai adalah thread baru
 2. untuk update antara ui binja pertama triger fitur program target alias
    hook mulai mengumpulkan data tekan ENTER di console ini dan window
    binja "trace buffer" akan muncul lalu ENTER lagi untuk menampilkan data di UI.
+
+#TIPS
+1. saat debug fread pakai gdb dan mencari isi buffer, pertama breakpoint sebelum
+   fread dan "set $buf = $rdi" lalu pasang breakpoint setelah fread, setelah
+   continue $buf sudah terisi data.
+
 ```

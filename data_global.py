@@ -6,7 +6,9 @@ class GlobalState:
     def __init__(self):
         self.simgr = None
         self.angr_project = None
-        self.angr_states = {}
+        self.angr_states = {}     #all states here
+        self.angr_state = None    #temporary state for console
+        self.angr_hooks = []      #hook with {name.., metadata}
         self.gdb_functions = {}
         self.gdb_blocks = {}
         self.gdb_kernelproc = []
@@ -58,6 +60,8 @@ class GlobalState:
         while len(simgr.active) == 1:
             simgr.step()
 
+        self.simgr = simgr
+
         if not simgr.active:
             return
 
@@ -69,7 +73,7 @@ class GlobalState:
                 "solver_bytes": s.solver.eval(sym_buf, cast_to=bytes),
                 "children": []
             })
-            print("[+] got branch")
+            print("[+] got branch ", hex(s.addr))
 
 
 
@@ -152,6 +156,7 @@ class GlobalState:
 
 
 class GlobalSignals(QObject):
+    angrhook_updated = Signal()
     state_updated = Signal()
     state_tree_updated = Signal()
     gdb_updated = Signal()
@@ -175,6 +180,7 @@ class GlobalSignals(QObject):
     window_frida_tracer = Signal()
     window_frida_tracer_allocator = Signal()
     window_angrstate_tree = Signal()
+    window_angrhook = Signal()
 
 GLOBAL = GlobalState()
 SIGNALS = GlobalSignals()

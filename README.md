@@ -227,6 +227,21 @@ GLOBAL.window_angr_title = "myhook"
 SIGNALS.window_angrhook.emit()
 SIGNALS.angrhook_updated.emit()
 
+#angr symbion step concrete di fread, untuk lanjut step
+#kayanya hook simprocedure tidak berfungsi di symbion
+1. di dialog tree klik kanan state> temprary state
+
+GLOBAL.angr_state.options.add(angr.options.SYMBION_SYNC_CLE)
+GLOBAL.angr_state.options.add(angr.options.SYMBION_KEEP_STUBS_ON_SYNC)
+simgr = p.factory.simgr(GLOBAL.angr_state)
+simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x7f51f24e5516])) #alamat setelah fread
+exploration = simgr.run()
+GLOBAL.angr_state = exploration.found[0]
+GLOBAL.angr_step(GLOBAL.angr_state)
+SIGNALS.state_tree_updated.emit()
+
+3. Maka dialog state tree akan muncul state baru
+
 # Tips
 untuk explore state custom di console python
 lihat di dialog_angr.py bagian explore sebagai contoh

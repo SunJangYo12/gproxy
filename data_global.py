@@ -75,6 +75,18 @@ class GlobalState:
             })
             print("[+] got branch ", hex(s.addr))
 
+    def angr_step(self, state):
+        GLOBAL.simgr = GLOBAL.angr_project.factory.simgr(state)
+        GLOBAL.simgr.step()
+        new_state = GLOBAL.simgr.active
+
+        for s in new_state:
+            root = {
+                "isroot": True,
+                "state": s.copy(),
+                "children": []
+            }
+            self.angr_states.append(root)
 
 
     def config_dynamic(self, sw, func_name):

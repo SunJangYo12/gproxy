@@ -247,16 +247,7 @@ class DialogAngrTree(QDialog):
             )
 
         elif action == "Step":
-            GLOBAL.angr_state = data["state"]
-            GLOBAL.simgr = GLOBAL.angr_project.factory.simgr(GLOBAL.angr_state)
-            GLOBAL.simgr.step()
-            new_state = GLOBAL.simgr.active[0]
-            root = {
-                "isroot": True,
-                "state": new_state.copy(),
-                "children": []
-            }
-            GLOBAL.angr_states.append(root)
+            GLOBAL.angr_step(data["state"])
             SIGNALS.state_tree_updated.emit()
 
 

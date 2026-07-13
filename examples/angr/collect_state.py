@@ -16,7 +16,7 @@ p = angr.Project(
     concrete_target=avatar_gdb,
     use_sim_procedures=True,
     main_opts={
-        'base_addr': 0x7fd84fc66000
+        'base_addr': 0x7fe13ef9b000
     },
 )
 #p.loader.dynamic_load("/usr/lib/x86_64-linux-gnu/libc-2.31.so")
@@ -27,7 +27,7 @@ entry_state.options.add(angr.options.SYMBION_KEEP_STUBS_ON_SYNC)
 
 print("[+] now triger breakpoint")
 simgr = p.factory.simgr(entry_state)
-simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x7fd84fc7d511]))
+simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x7fe13efb2511]))
 
 exploration = simgr.run()
 new_concrete_state = exploration.stashes['found'][0]

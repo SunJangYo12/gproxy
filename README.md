@@ -242,6 +242,16 @@ SIGNALS.state_tree_updated.emit()
 
 3. Maka dialog state tree akan muncul state baru
 
+#explore dari console
+1. klik kanan state > temporary state
+    buf_addr = GLOBAL.angr_state.solver.eval(GLOBAL.angr_state.regs.rdi)
+    buf_size = GLOBAL.angr_state.solver.eval(GLOBAL.angr_state.regs.rax)
+    sym_buf = claripy.BVS("buf", 8*size)
+    GLOBAL.angr_state.memory.store(buf_addr, sym_buf)
+
+    GLOBAL.angr_explore(GLOBAL.angr_project, GLOBAL.angr_state, sym_buf)
+    SIGNALS.state_tree_updated.emit()
+
 # Tips
 untuk explore state custom di console python
 lihat di dialog_angr.py bagian explore sebagai contoh

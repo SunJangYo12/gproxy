@@ -12,13 +12,18 @@ import claripy
 avatar_gdb = AvatarGDBConcreteTarget(avatar2.archs.X86_64, "127.0.0.1", 1234)
 
 p = angr.Project(
-    "/usr/lib/x86_64-linux-gnu/libexif.so.12.3.3",
+    "/media/jin/4abb279b-6d65-4663-97c2-26987f64673a/home/yuna/Tools/Python-env/frizzer/tests/simple_binary/test",
     concrete_target=avatar_gdb,
-    use_sim_procedures=True,
-    main_opts={
-        'base_addr': 0x7fe13ef9b000
-    },
+    use_sim_procedures=True
 )
+#p = angr.Project(
+#    "/usr/lib/x86_64-linux-gnu/libexif.so.12.3.3",
+#    concrete_target=avatar_gdb,
+#    use_sim_procedures=True,
+#    main_opts={
+#        'base_addr': 0x7fd975d87000
+#    },
+#)
 #p.loader.dynamic_load("/usr/lib/x86_64-linux-gnu/libc-2.31.so")
 
 entry_state = p.factory.entry_state()
@@ -27,7 +32,7 @@ entry_state.options.add(angr.options.SYMBION_KEEP_STUBS_ON_SYNC)
 
 print("[+] now triger breakpoint")
 simgr = p.factory.simgr(entry_state)
-simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x7fe13efb2511]))
+simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x40131a]))
 
 exploration = simgr.run()
 new_concrete_state = exploration.stashes['found'][0]

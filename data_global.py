@@ -6,7 +6,7 @@ class GlobalState:
     def __init__(self):
         self.simgr = None
         self.angr_project = None
-        self.angr_states = {}     #all states here
+        self.angr_states = []     #all states here
         self.angr_state = None    #temporary state for console
         self.angr_hooks = []      #hook with {name.., metadata}
         self.gdb_functions = {}

@@ -14,14 +14,12 @@ avatar_gdb = AvatarGDBConcreteTarget(avatar2.archs.X86_64, "127.0.0.1", 1234)
 p = angr.Project(
     "/usr/lib/x86_64-linux-gnu/libexif.so.12.3.3",
     concrete_target=avatar_gdb,
-    auto_load_libs=False,
     use_sim_procedures=True,
     main_opts={
-        'base_addr': 0x7f99f2f59000
+        'base_addr': 0x7fd84fc66000
     },
 )
-
-
+#p.loader.dynamic_load("/usr/lib/x86_64-linux-gnu/libc-2.31.so")
 
 entry_state = p.factory.entry_state()
 entry_state.options.add(angr.options.SYMBION_SYNC_CLE)
@@ -29,7 +27,7 @@ entry_state.options.add(angr.options.SYMBION_KEEP_STUBS_ON_SYNC)
 
 print("[+] now triger breakpoint")
 simgr = p.factory.simgr(entry_state)
-simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x7f99f2f70511]))
+simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x7fd84fc7d511]))
 
 exploration = simgr.run()
 new_concrete_state = exploration.stashes['found'][0]

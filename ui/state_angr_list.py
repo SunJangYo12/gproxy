@@ -456,7 +456,7 @@ class StateAngrListDockWidget(QWidget, DockContextHandler):
                 "state": new_state.copy(),
                 "children": []
             }
-            GLOBAL.angr_states = root
+            GLOBAL.angr_states.append(root)
             SIGNALS.state_tree_updated.emit()
 
         elif action == "Delete state":

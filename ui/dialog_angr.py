@@ -142,7 +142,8 @@ class DialogAngrTree(QDialog):
         self.tree_widget.clear()
         mydata = GLOBAL.angr_states
         try:
-            self.add_node(self.tree_widget, mydata)
+            for i in mydata:
+                self.add_node(self.tree_widget, i)
         except:
             pass
 
@@ -177,6 +178,7 @@ class DialogAngrTree(QDialog):
         menu.addAction("Show registers")
         menu.addAction("Show hooks")
         menu.addAction("Temporary state")
+        menu.addAction("Step")
         menu.addAction("Explore")
         menu.addAction("Refresh data")
 
@@ -219,7 +221,6 @@ class DialogAngrTree(QDialog):
                 MessageBoxIcon.InformationIcon
             )
 
-
         elif action == "Show hooks":
             state = data["state"]
             self.hdlg = DialogAngrHook(sid="myhook", data=self.bv)
@@ -244,6 +245,19 @@ class DialogAngrTree(QDialog):
                 MessageBoxButtonSet.OKButtonSet,
                 MessageBoxIcon.InformationIcon
             )
+
+        elif action == "Step":
+            GLOBAL.angr_state = data["state"]
+            GLOBAL.simgr = GLOBAL.angr_project.factory.simgr(GLOBAL.angr_state)
+            GLOBAL.simgr.step()
+            new_state = GLOBAL.simgr.active[0]
+            root = {
+                "isroot": True,
+                "state": new_state.copy(),
+                "children": []
+            }
+            GLOBAL.angr_states.append(root)
+            SIGNALS.state_tree_updated.emit()
 
 
         elif action == "Explore":

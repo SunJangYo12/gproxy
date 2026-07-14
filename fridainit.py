@@ -456,14 +456,14 @@ def main():
        if DEBUG:
            package = "xloader"
        else:
-           package = input(">> Chose package/process? (com.abc.df/mediaserver): ")
+           package = input(">> Chose package/process/pid? (com.abc.df/mediaserver): ")
 
        ispaket = len(package.split(".")) > 1
        if ispaket:
            pid = device.spawn([package])
            device.resume(pid)
        else:
-           pid = package
+           pid = int(package)
 
        #for p in device.enumerate_processes():
        #    print(f"{p.pid:6} {p.name}")
@@ -896,7 +896,7 @@ def main():
 
         elif pshell == "tr-java":
             while True:
-                in_class = input("\n>> Class> ")
+                in_class = input("\n>> PackageClass/Package> ")
 
                 proxy.settofrida_func("refresh-java", "refresh")
 

@@ -38,7 +38,6 @@ class GlobalState:
         self.window_angr_title = ""
         self.refresh_view = "'0'"
 
-
     def angr_find_node(self, node, target_state):
         if node["state"] is target_state:
             return node
@@ -49,7 +48,7 @@ class GlobalState:
                 return result
         return None
 
-    def angr_explore(self, proj, target_state, sym_buf):
+    def angr_explore(self, proj, target_state, sym_buf, nav=None):
         for angr_states in self.angr_states:
             node = self.angr_find_node(angr_states, target_state)
             if node is None:
@@ -60,9 +59,15 @@ class GlobalState:
 
         while len(simgr.active) == 1:
             simgr.step()
+            if nav:
+                try:
+                    print(hex(simgr.active[0].addr))
+                    time.sleep(1)
+                    nav.offset = simgr.active[0].addr
+                except:
+                    pass
 
         self.simgr = simgr
-
         if not simgr.active:
             return
 
@@ -77,9 +82,9 @@ class GlobalState:
             print("[+] got branch ", hex(s.addr))
 
     def angr_step(self, state):
-        GLOBAL.simgr = GLOBAL.angr_project.factory.simgr(state)
-        GLOBAL.simgr.step()
-        new_state = GLOBAL.simgr.active
+        simgr = self.angr_project.factory.simgr(state)
+        simgr.step()
+        new_state = simgr.active
 
         for s in new_state:
             root = {
@@ -88,6 +93,14 @@ class GlobalState:
                 "children": []
             }
             self.angr_states.append(root)
+
+    def angr_addstates(self, state):
+        root = {
+            "isroot": True,
+            "state": state.copy(),
+            "children": []
+        }
+        self.angr_states.append(root)
 
 
     def config_dynamic(self, sw, func_name):
@@ -169,6 +182,7 @@ class GlobalState:
 
 
 class GlobalSignals(QObject):
+    angrhistory_updated = Signal()
     angrhook_updated = Signal()
     state_updated = Signal()
     state_tree_updated = Signal()

@@ -38,6 +38,116 @@ from binaryninja import (
 import binaryninja as binja
 import claripy
 
+class DialogAngrHistory(QDialog):
+    def __init__(self, parent=None, sid=None, data=None, bv=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"Angr history({sid})")
+        self.setWindowFlags(
+            Qt.Window |
+            Qt.WindowMinimizeButtonHint |
+            Qt.WindowCloseButtonHint
+        )
+
+        self.setWindowModality(Qt.NonModal)
+        self.font = getMonospaceFont(self)
+
+        self.tree_widget = QTreeWidget()
+        self.tree_widget.setColumnCount(0)
+        self.tree_widget.expandToDepth(1)
+
+        self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tree_widget.customContextMenuRequested.connect(self.on_tree_context_menu)
+        self.tree_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.tree_widget)
+
+        self.setLayout(layout)
+        self.state = data
+        self.bv = bv
+        self.showData()
+        SIGNALS.angrhistory_updated.connect(self.showData)
+
+    def showData(self):
+        self.tree_widget.clear()
+
+        mydata = []
+        h = self.state.history
+        while h is not None:
+            mydata.append(h)
+            h = h.parent
+        # Karena dimulai dari state terbaru, balik agar urut dari awal
+        mydata.reverse()
+
+        self.tree_widget.headerItem().setText(0, "Total: %s" %len(mydata) )
+
+        for h in mydata:
+            try:
+                title = hex(h.addr)
+            except:
+                title = "Unknown"
+            item = QTreeWidgetItem(self.tree_widget)
+            item.setText(0, f"{title}")
+            item.setFont(0, self.font)
+            item.setData(0, Qt.UserRole, h)
+            item.setToolTip(0,
+                f"Guard  : {h.jump_guard}\n"\
+                f"Target : {h.jump_target}\n"\
+                f"Kind   : {h.jumpkind}\n"\
+            )
+
+
+    def on_item_double_clicked(self, item, column):
+        try:
+            addr = int(item.text(column), 0)
+            print("jump to:", hex(addr))
+            self.bv.offset = addr
+        except Exception as e:
+            print(e)
+
+    def on_tree_context_menu(self, position: QPoint):
+        item = self.tree_widget.itemAt(position)
+        menu = QMenu()
+
+        menu.addAction("Actions")
+        menu.addAction("Events")
+        menu.addAction("Recent actions")
+        menu.addAction("Recent events")
+        menu.addAction("Refresh data")
+
+        action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
+        if action:
+            self.handle_tree_action(action.text(), item)
+
+    def handle_tree_action(self, action, item):
+        data = item.data(0, Qt.UserRole)
+        if action == "Events":
+            print(vars(data.events))
+            for i in data.events:
+                print("\n")
+                print(vars(i))
+
+        elif action == "Actions":
+            print(vars(data.actions))
+            for i in data.actions:
+                print("\n")
+                print(vars(i))
+
+        elif action == "Recent actions":
+            for i in data.recent_actions:
+                print("\n")
+                print(vars(i))
+
+        elif action == "Recent events":
+            for i in data.recent_events:
+                print("\n")
+                print(vars(i))
+
+        elif action == "Refresh data":
+            self.showData();
+
+
+
 class DialogAngrHook(QDialog):
     def __init__(self, parent=None, sid=None, data=None):
         super().__init__(parent)
@@ -157,6 +267,11 @@ class DialogAngrTree(QDialog):
         item.setText(0, hex(state.addr))
         item.setFont(0, self.font)
         item.setData(0, Qt.UserRole, node)
+        try:
+            msg = state.info
+            item.setToolTip(0, msg)
+        except:
+            pass
 
         for child in node["children"]:
             self.add_node(item, child)
@@ -177,6 +292,7 @@ class DialogAngrTree(QDialog):
         menu.addAction("Show solver input")
         menu.addAction("Show registers")
         menu.addAction("Show hooks")
+        menu.addAction("Show history")
         menu.addAction("Temporary state")
         menu.addAction("Step")
         menu.addAction("Explore")
@@ -221,9 +337,17 @@ class DialogAngrTree(QDialog):
                 MessageBoxIcon.InformationIcon
             )
 
+        elif action == "Show history":
+            state = data["state"]
+            self.hidlg = DialogAngrHistory(sid=hex(state.addr), data=state, bv=self.bv)
+            self.hidlg.resize(300, 450) # w,h
+            self.hidlg.show()
+            self.hidlg.raise_()
+            self.hidlg.activateWindow()
+
         elif action == "Show hooks":
             state = data["state"]
-            self.hdlg = DialogAngrHook(sid="myhook", data=self.bv)
+            self.hdlg = DialogAngrHook(sid="myhook", data=state)
             self.hdlg.resize(300, 450) # w,h
             self.hdlg.show()
             self.hdlg.raise_()
@@ -254,10 +378,12 @@ class DialogAngrTree(QDialog):
         elif action == "Explore":
             self.dialog_process()
 
+            #============= this dummy ==================
             new_concrete_state = data["state"]
             buf_addr = new_concrete_state.solver.eval(new_concrete_state.regs.rdi)
             sym_buf = claripy.BVS("buf", 8 * 32)
             new_concrete_state.memory.store(buf_addr, sym_buf)
+            #============= this dummy ==================
 
             GLOBAL.angr_explore(GLOBAL.angr_project, data["state"], sym_buf)
             self.dialog_process()

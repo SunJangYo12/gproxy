@@ -1,3 +1,8 @@
+#/usr/lib/x86_64-linux-gnu/libexif.so.12.3.3
+#exif_loader_write_file+0x76
+#    => 0x69
+#    => base offset: 0x174a0
+#    => pas call fread: 0x71
 
 
 import avatar2 as avatar2
@@ -12,18 +17,13 @@ import claripy
 avatar_gdb = AvatarGDBConcreteTarget(avatar2.archs.X86_64, "127.0.0.1", 1234)
 
 p = angr.Project(
-    "/media/jin/4abb279b-6d65-4663-97c2-26987f64673a/home/yuna/Tools/Python-env/frizzer/tests/simple_binary/test",
+    "/usr/lib/x86_64-linux-gnu/libexif.so.12.3.3",
     concrete_target=avatar_gdb,
-    use_sim_procedures=True
+    use_sim_procedures=True,
+    main_opts={
+        'base_addr': 0x7f6b73ba0000
+    },
 )
-#p = angr.Project(
-#    "/usr/lib/x86_64-linux-gnu/libexif.so.12.3.3",
-#    concrete_target=avatar_gdb,
-#    use_sim_procedures=True,
-#    main_opts={
-#        'base_addr': 0x7fd975d87000
-#    },
-#)
 #p.loader.dynamic_load("/usr/lib/x86_64-linux-gnu/libc-2.31.so")
 
 entry_state = p.factory.entry_state()
@@ -32,7 +32,7 @@ entry_state.options.add(angr.options.SYMBION_KEEP_STUBS_ON_SYNC)
 
 print("[+] now triger breakpoint")
 simgr = p.factory.simgr(entry_state)
-simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x40131a]))
+simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x7f6b73bb7511]))
 
 exploration = simgr.run()
 new_concrete_state = exploration.stashes['found'][0]
@@ -78,6 +78,12 @@ class MyFread(angr.SimProcedure):
         return nmemb
 
 p.hook_symbol("fread", MyFread())
+
+
+#hook plt@GOT
+p.hook(0x7fac48627e60, angr.SIM_PROCEDURES["libc"]["fread"]())
+
+
 
 #sample step
 state = GLOBAL.angr_state

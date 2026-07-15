@@ -51,9 +51,12 @@ class GlobalState:
     def angr_explore(self, proj, target_state, sym_buf, nav=None):
         for angr_states in self.angr_states:
             node = self.angr_find_node(angr_states, target_state)
-            if node is None:
-                print("State tidak ditemukan")
-                return
+            if node:
+                break
+
+        if node is None:
+            print("State tidak ditemukan")
+            return
 
         simgr = proj.factory.simgr(node["state"].copy())
 

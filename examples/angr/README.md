@@ -179,7 +179,7 @@ GLOBAL.angr_state.options.add(angr.options.SYMBION_KEEP_STUBS_ON_SYNC)
 simgr = p.factory.simgr(GLOBAL.angr_state)
 simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x7f51f24e5516])) #alamat setelah fread
 exploration = simgr.run()
-z = GLOBAL.simgr
+z = exploration
 GLOBAL.simgr = simgr
 
 solusi:
@@ -204,6 +204,38 @@ SIGNALS.state_tree_updated.emit()
 NOTE: buffer symbolik diwarisi ke child tree, dengan hanya copy ke temporary state
 di child tree lalu GLOBAL.angr_explore(GLOBAL.angr_project, GLOBAL.angr_state, sym_buf)
 
+
+
+# Add GLOBAL.angr_states
+saat GLOBAL.simgr berisi stash errored alias
+<SimulationManager with all stashes empty (1 errored)>
+===========
+GLOBAL.angr_addstates(GLOBAL.simgr.errored[0].state)
+SIGNALS.state_tree_updated.emit()
+===========
+
+
+# Add message in state
+1. Klik kanan state > temporary state
+=========
+GLOBAL.angr_state.info = "my message"
+=========
+2. akan tampil di tooltip alias sorot mouse
+NOTE: ini tidak ikut tercopy jika state.copy()
+
+# Tips
+untuk explore state custom di console python
+lihat di dialog_angr.py bagian explore sebagai contoh
+lalu pilih refresh untuk menampilkan hasil explore.
+1. state list
+2. click kanan di state
+3. dialog state tree
+4. copy to tree
+disitu state menarik untuk diexplore
+
+Jika pakai program target besar misal apache2 saat pakai AvatarGDBConcreteTarget
+dan error, coba hardcoded timeout di lib/python3.8/site-packages/avatar2/protocols/gdb.py
+response = self._communicator.get_sync_response(token, timeout=100)
 
 
 # History berisi data bermanfaat dan recent_events dll akan berisi data
@@ -331,39 +363,6 @@ Ini jauh lebih berguna untuk analisis data flow.
 events = kejadian tingkat tinggi selama eksekusi (berbagai jenis event).
 actions = operasi konkret yang dilakukan state (read, write, register,
 constraint, jump, dll.).
-
-
-
-# Add GLOBAL.angr_states
-saat GLOBAL.simgr berisi stash errored alias
-<SimulationManager with all stashes empty (1 errored)>
-===========
-GLOBAL.angr_addstates(GLOBAL.simgr.errored[0].state)
-SIGNALS.state_tree_updated.emit()
-===========
-
-
-# Add message in state
-1. Klik kanan state > temporary state
-=========
-GLOBAL.angr_state.info = "my message"
-=========
-2. akan tampil di tooltip alias sorot mouse
-NOTE: ini tidak ikut tercopy jika state.copy()
-
-# Tips
-untuk explore state custom di console python
-lihat di dialog_angr.py bagian explore sebagai contoh
-lalu pilih refresh untuk menampilkan hasil explore.
-1. state list
-2. click kanan di state
-3. dialog state tree
-4. copy to tree
-disitu state menarik untuk diexplore
-
-Jika pakai program target besar misal apache2 saat pakai AvatarGDBConcreteTarget
-dan error, coba hardcoded timeout di lib/python3.8/site-packages/avatar2/protocols/gdb.py
-response = self._communicator.get_sync_response(token, timeout=100)
 ```
 
 kode yang dikaburkan

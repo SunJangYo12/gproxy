@@ -214,11 +214,21 @@ GLOBAL.angr_addstates(GLOBAL.simgr.errored[0].state)
 SIGNALS.state_tree_updated.emit()
 ===========
 
+# Manipulate state.history
+1. klik kanan di dialog angr history > Copy angr temporary
+2. di console
+===========
+for i in GLOBAL.angr_temporary.actions:
+    if i.type == 'mem':
+        print(hex(i.bbl_addr))
+===========
+
 
 # Add message in state
 1. Klik kanan state > temporary state
 =========
 GLOBAL.angr_state.info = "my message"
+klik kanan > refresh data
 =========
 2. akan tampil di tooltip alias sorot mouse
 NOTE: ini tidak ikut tercopy jika state.copy()
@@ -239,9 +249,13 @@ response = self._communicator.get_sync_response(token, timeout=100)
 
 
 # History berisi data bermanfaat dan recent_events dll akan berisi data
+# alternatifnya pakai inspect track buffer, lebih cepat tanpa menelusui history
+1. klik kanan di state tree > temporary state
+================
 GLOBAL.angr_state.options.add(angr.options.TRACK_MEMORY_ACTIONS)
 GLOBAL.angr_state.options.add(angr.options.TRACK_REGISTER_ACTIONS)
 GLOBAL.angr_state.options.add(angr.options.TRACK_JMP_ACTIONS)
+================
 
 ChatGPT:
 1. History
@@ -363,6 +377,7 @@ Ini jauh lebih berguna untuk analisis data flow.
 events = kejadian tingkat tinggi selama eksekusi (berbagai jenis event).
 actions = operasi konkret yang dilakukan state (read, write, register,
 constraint, jump, dll.).
+NOTE: kadang datanya sama jadi lebih penting pakai actions
 ```
 
 kode yang dikaburkan

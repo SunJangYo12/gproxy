@@ -59,12 +59,18 @@ class DialogAngrHistory(QDialog):
         self.tree_widget.customContextMenuRequested.connect(self.on_tree_context_menu)
         self.tree_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
 
+        self.lineEdit = QLineEdit()
+        self.lineEdit.setObjectName(u"lineEdit")
+        self.lineEdit.textChanged.connect(self.on_lineedit_callback);
+
         layout = QVBoxLayout()
         layout.addWidget(self.tree_widget)
+        layout.addWidget(self.lineEdit)
 
         self.setLayout(layout)
         self.state = data
         self.bv = bv
+        self.inEdit = ""
         self.showData()
         SIGNALS.angrhistory_updated.connect(self.showData)
 
@@ -86,16 +92,21 @@ class DialogAngrHistory(QDialog):
                 title = hex(h.addr)
             except:
                 title = "Unknown"
-            item = QTreeWidgetItem(self.tree_widget)
-            item.setText(0, f"{title}")
-            item.setFont(0, self.font)
-            item.setData(0, Qt.UserRole, h)
-            item.setToolTip(0,
-                f"Guard  : {h.jump_guard}\n"\
-                f"Target : {h.jump_target}\n"\
-                f"Kind   : {h.jumpkind}\n"\
-            )
 
+            if self.inEdit in title or self.inEdit == "":
+                item = QTreeWidgetItem(self.tree_widget)
+                item.setText(0, f"{title}")
+                item.setFont(0, self.font)
+                item.setData(0, Qt.UserRole, h)
+                item.setToolTip(0,
+                    f"Guard  : {h.jump_guard}\n"\
+                    f"Target : {h.jump_target}\n"\
+                    f"Kind   : {h.jumpkind}\n"\
+                )
+
+    def on_lineedit_callback(self, text):
+        self.inEdit = text
+        self.showData()
 
     def on_item_double_clicked(self, item, column):
         try:
@@ -111,6 +122,7 @@ class DialogAngrHistory(QDialog):
 
         menu.addAction("Actions")
         menu.addAction("Events")
+        menu.addAction("Copy angr temporary")
         menu.addAction("Recent actions")
         menu.addAction("Recent events")
         menu.addAction("Refresh data")
@@ -126,6 +138,9 @@ class DialogAngrHistory(QDialog):
             for i in data.events:
                 print("\n")
                 print(vars(i))
+
+        elif action == "Copy angr temporary":
+            GLOBAL.angr_temporary = data
 
         elif action == "Actions":
             print(vars(data.actions))

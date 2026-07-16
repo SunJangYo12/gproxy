@@ -8,6 +8,7 @@ class GlobalState:
         self.angr_project = None
         self.angr_states = []     #all states here
         self.angr_state = None    #temporary state for console
+        self.angr_temporary = None #same
         self.angr_hooks = []      #hook with {name.., metadata}
         self.gdb_functions = {}
         self.gdb_blocks = {}

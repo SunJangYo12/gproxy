@@ -36,7 +36,11 @@ from binaryninja import (
     MessageBoxIcon
 )
 import binaryninja as binja
-import claripy
+try:
+    import claripy
+except:
+    print("error import claripy, skiping angr analyses")
+    pass
 
 class DialogAngrHistory(QDialog):
     def __init__(self, parent=None, sid=None, data=None, bv=None):

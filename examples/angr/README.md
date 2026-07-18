@@ -181,6 +181,8 @@ simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x7f51f24e5516])) 
 exploration = simgr.run()
 z = exploration
 GLOBAL.simgr = simgr
+UPD()
+GLOBAL.angr_states = []
 
 solusi:
 p.hook(0x7fac4870b0b0, angr.SIM_PROCEDURES["libc"]["memcpy"]())

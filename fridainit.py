@@ -435,7 +435,7 @@ def main():
     if target == "h":
        #ahost = input(">> Android host: ")
        #device = frida.get_device_manager().add_remote_device(ahost)
-       device = frida.get_device_manager().add_remote_device("192.168.0.101")
+       device = frida.get_device_manager().add_remote_device("192.168.0.100")
        pid_raw = input(">> Chose pid? (1234): ")
        pid = int(pid_raw)
        device.resume(pid)
@@ -472,9 +472,18 @@ def main():
        manager = frida.get_device_manager()
 
        device = frida.get_usb_device()
-       package = input(">> Chose package? (com.abc): ")
-       pid = device.spawn([package])
-       device.resume(pid)
+
+       if DEBUG:
+           package = "xloader"
+       else:
+           package = input(">> Chose package/pid? (com.abc.df/pid): ")
+
+       ispaket = len(package.split(".")) > 1
+       if ispaket:
+           pid = device.spawn([package])
+           device.resume(pid)
+       else:
+           pid = int(package)
 
     elif target == "l":
        device = frida.get_local_device() #local linux

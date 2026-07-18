@@ -21,7 +21,7 @@ p = angr.Project(
     concrete_target=avatar_gdb,
     use_sim_procedures=True,
     main_opts={
-        'base_addr': 0x7f9caf75b000
+        'base_addr': 0x7f05f8983000
     },
 )
 #p.loader.dynamic_load("/usr/lib/x86_64-linux-gnu/libc-2.31.so")
@@ -32,7 +32,7 @@ entry_state.options.add(angr.options.SYMBION_KEEP_STUBS_ON_SYNC)
 
 print("[+] now triger breakpoint")
 simgr = p.factory.simgr(entry_state)
-simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x7f9caf772511]))
+simgr.use_technique(angr.exploration_techniques.Symbion(find=[0x7f05f899a511]))
 
 exploration = simgr.run()
 new_concrete_state = exploration.stashes['found'][0]
@@ -76,11 +76,11 @@ class MyFread(angr.SimProcedure):
         self.state.memory.store(ptr, sym)
 
         return nmemb
+
 class GetTextHook(angr.SimProcedure):
     def run(self, msgid):
         s = self.state.mem[msgid].string.concrete
         print("gettext:", s)
-
         # gettext biasanya mengembalikan pointer ke string hasil translasi.
         # Untuk stub, cukup kembalikan pointer asli.
         return msgid
@@ -124,9 +124,7 @@ buf_size = 0x100
 def check_mem_write(state):
     if state.inspect.mem_write_address is None:
         return
-
     addr = state.solver.eval(state.inspect.mem_write_address)
-
     # Panjang write (bisa None pada beberapa kasus)
     length = state.inspect.mem_write_length
     if length is not None:
@@ -134,22 +132,21 @@ def check_mem_write(state):
             length = state.solver.eval(length)
         except Exception:
             pass
-
+    # Data yang akan ditulis
+    data = state.inspect.mem_write_expr
+    print(f"Instruction : {state.addr:#x}")
+    print(f"Write addr  : {addr:#x}")
+    print(f"Length      : {length}")
+    print(f"Data        : {data}")
     # Contoh filter jika hanya ingin write ke buffer tertentu
     if buf_addr <= addr < buf_addr + buf_size:
-        # Data yang akan ditulis
-        data = state.inspect.mem_write_expr
+        print(">>> Menulis ke buffer target")
+    print("\n")
 
-        print(f"Instruction : {state.addr:#x}")
-        print(f"Write addr  : {addr:#x}")
-        print(f"Length      : {length}")
-        print(f"Data        : {data}")
-        print(f"Instruction {state.addr:#x} menulis buffer {addr:#x}")
-
-state.inspect.b(
+GLOBAL.angr_state.inspect.b(
     "mem_write",
     when=angr.BP_BEFORE,
-    action=check_mem,
+    action=check_mem_write,
 )
 
 
@@ -160,7 +157,7 @@ def check_mem(state):
     if buf_addr <= addr < buf_addr + buf_size:
         print(f"Instruction {state.addr:#x} membaca buffer {addr:#x}")
 
-state.inspect.b(
+GLOBAL.angr_state.inspect.b(
     "mem_read",
     when=angr.BP_BEFORE,
     action=check_mem,

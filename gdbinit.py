@@ -175,6 +175,7 @@ class TraceBreakpoint(gdb.Breakpoint):
         self.addr = addr
         self.bn = bn
         self.hook = hook
+        self.inf = gdb.selected_inferior()
 
         if bb:
             proxy.set_global("")
@@ -182,7 +183,6 @@ class TraceBreakpoint(gdb.Breakpoint):
     def get_registers(self):
         out = gdb.execute("info registers", to_string=True)
         regs = []
-
         # regex ambil nama reg di awal baris
         for line in out.splitlines():
             m = re.match(r"^([a-zA-Z0-9]+)\s+", line)
@@ -202,6 +202,15 @@ class TraceBreakpoint(gdb.Breakpoint):
         aa =  detect_struct.runn(arg, in_gdb=False)
         return aa
 
+    def buffer_trace(self):
+        for r in self.get_registers():
+            val = gdb.parse_and_eval("$" + r)
+            if r == "rdi":
+                mem_content = self.inf.read_memory(val, 100).tobytes()
+                print(f"trace: {r}={val}")
+                print(mem_content)
+                print("============")
+
     def read_dynamic_config(self, sw):
         out = ""
         try:
@@ -215,8 +224,6 @@ class TraceBreakpoint(gdb.Breakpoint):
         except:
             pass
         return out
-
-
 
     def stop(self):
         gdb_memregs = ""
@@ -278,19 +285,14 @@ class TraceBreakpoint(gdb.Breakpoint):
 
                 gdb_stack = "".join(result)
 
-
         if self.read_dynamic_config("read_registers") != "":
             func_name = self.read_dynamic_config("read_registers")
-
             if self.func_name == func_name:
                 print(f"show regs => {func_name}")
-
                 arch = ArchType()
                 arch.get_ptr()
-
                 addrHuman = AddressHuman()
                 result = []
-
                 for reg in addrHuman.collect_registers():
                     val = reg.split("=")
                     addr = int(val[1], 0)
@@ -301,32 +303,26 @@ class TraceBreakpoint(gdb.Breakpoint):
 
                     val_reg = StackHuman().get_value(addrHuman, arch, addr)
                     #print(f"{val[0]} = {arch.format_address(addr)} {label}  {val_reg}")
-
                     val_reg = val_reg.encode().hex()
-
                     result.append(f"{val[0]}={arch.format_address(addr)}{label} {val_reg}\n")
-
                 gdb_memregs = "".join(result)
-
-
 
         if self.func_name:
             print(f"[TRACE] Hit {self.func_name}  => {self.addr}")
+
+            self.buffer_trace()
 
             if self.bn:
                 output = f"{self.addr}|||{self.func_name}T_T{gdb_memregs}T_T{gdb_memstruct}T_T{gdb_stack}"
                 output = base64.b64encode(output.encode()).decode()
                 proxy.settogdb(output)
-
             # Custom hook
             if self.hook:
                 kernel_cmd.hook(self.func_name, proxy)
-
         else:
             print(f"[TRACE] Hit {self.addr}")
             if self.bn:
                 proxy.settogdb(self.addr)
-
             if self.hook:
                 kernel_cmd.hook(self.addr)
 
@@ -528,7 +524,6 @@ class LoadTrace(gdb.Command):
             dprintf = True
             t = threading.Thread(target=reporter, daemon=True)
             t.start()
-
             proxy.settofrida_func("gdb_func_dprintf", "refresh")
 
 

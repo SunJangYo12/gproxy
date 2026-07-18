@@ -194,6 +194,7 @@ try {
     is_android = true;
 } catch(_){}
 
+//$ logcat | grep FRIDA
 function syslog(msg) {
     const tag = Memory.allocUtf8String("FRIDA");
     const text = Memory.allocUtf8String(msg);
@@ -757,11 +758,13 @@ class FuzzerKu
             "libstagefright_httplive.so",
         ];*/
 
+        const targetModules = ["libmonochrome.so"];
+
         // All module
-        const targetModules = [];
+        /*const targetModules = [];
         new ModuleMap().values().forEach(m => {
             targetModules.push(m.name);
-        });
+        });*/
 
         const targetRanges = [];
         for (const name of targetModules) {
@@ -1091,7 +1094,7 @@ class FuzzerKu
         });*/
         // ================================ TEST =======================
 
-
+        console.log("[+] Hooking recvfrom");
         Interceptor.attach(Module.findExportByName(null, "recvfrom"), {
             onEnter(args) {
                 this.output = {}
@@ -1149,6 +1152,7 @@ class FuzzerKu
             }
         });
 
+        console.log("[+] Hooking recv");
         Interceptor.attach(Module.findExportByName(null, "recv"), {
             onEnter(args) {
                 this.output = {}
@@ -1201,6 +1205,7 @@ class FuzzerKu
             }
         });
 
+        console.log("[+] Hooking read");
         Interceptor.attach(Module.findExportByName(null, "read"), {
             onEnter(args) {
                 this.output = {}
@@ -1253,6 +1258,7 @@ class FuzzerKu
             }
         });
 
+        console.log("[+] Hooking pread");
         Interceptor.attach(Module.findExportByName(null, "pread"), {
             onEnter(args) {
                 this.output = {}
@@ -1307,6 +1313,7 @@ class FuzzerKu
             }
         });
 
+        console.log("[+] Hooking fread");
         Interceptor.attach(Module.findExportByName(null, "fread"), {
             onEnter(args) {
                 this.output = {}
@@ -1776,8 +1783,10 @@ class FuzzerKu
                // Setup hook input sink buffer
                if (fstalking == "buffinput") {
                     is_buffinput = true;
-                    this.setup_sink_buffinput();
-                    this.setup_manipulate_buffer();
+                    try {
+                        this.setup_sink_buffinput();
+                        //this.setup_manipulate_buffer();
+                    }catch(e){}
                     return;
                }
 

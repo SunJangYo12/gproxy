@@ -1,4 +1,4 @@
-const threadTrees = new Map();
+var threadTrees = new Map();
 const threadsHook = {};
 
 /* bantuan untuk hook tree */
@@ -500,14 +500,20 @@ class FuzzerKu
             end:  m.base.add(m.size)
           };
         });
+
         function inTargetRanges(addr) {
           for (const r of TARGET_RANGES) {
-            if (addr.compare(r.base) >= 0 && addr.compare(r.end) < 0)
-              return r;
+            /*console.log("cek: "+addr+
+                        " base="+r.base+
+                        " end="+r.end,
+                        DebugSymbol.fromAddress(addr)
+            );*/
+            if (addr.compare(r.base) >= 0 && addr.compare(r.end) < 0) {
+                return r;
+            }
           }
           return null;
         }
-
 
         //stalker
         const stalked = new Set();
@@ -523,21 +529,18 @@ class FuzzerKu
            };
         }
 
-
         function stalkAllThreads(tid) {
           if (stalked.has(tid))
             return;
 
           stalked.add(tid);
-          //console.log("[+] Stalking thread ", tid);
+          console.log("[+] Stalking thread ", tid);
 
-          const tree = {
-             tid: tid,
-             root: [],
-             stack: []
-          };
-          threadTrees.set(tid, tree);
-
+          threadTrees.set(tid, {
+              tid: tid,
+              root: [],
+              stack: []
+          });
 
           Stalker.follow(tid, {
             events: { call: true, ret: true },
@@ -546,18 +549,19 @@ class FuzzerKu
               const parsed = Stalker.parse(events);
 
               parsed.forEach(ev => {
-                if (ev[0] === "call") {
+                var tree = threadTrees.get(tid)
 
+                if (ev[0] === "call") {
                   const to = ptr(ev[2]);
                   const range = inTargetRanges(to);
-
                   const node = makeNode(to);
 
                   if (range) {
-                     if (tree.stack.length === 0)
+                     if (tree.stack.length === 0) {
                          tree.root.push(node);
-                     else
+                     } else {
                          tree.stack[tree.stack.length-1].children.push(node);
+                     }
                   }
                   tree.stack.push(node);
                 }
@@ -567,13 +571,11 @@ class FuzzerKu
                 }
               });
             }
-
           });
         }
 
         setInterval(() => {
            //console.log("====");
-
            Process.enumerateThreads({
               onMatch(thread) {
                  stalkAllThreads(thread.id);
@@ -581,9 +583,7 @@ class FuzzerKu
               onComplete() {}
            });
            //const arr = Array.from(threadTrees);
-
            //send({"type": "stalker-data", "data": "sd" });
-
 
           //DEBUG
           /*threadTrees.forEach((z) => {
@@ -1591,10 +1591,9 @@ class FuzzerKu
                   threadTrees.clear();
                   return
                }
+
                let out = []
-
                threadTrees.forEach((z) => {
-
                   if (tid_func == z.tid) {
                      const data = {
                         "tid": z.tid,
@@ -1611,7 +1610,6 @@ class FuzzerKu
                      };
                      out.push(data);
                   }
-
                   //out.push("tid: "+z.tid+" root:"+z.root.length);
                });
 

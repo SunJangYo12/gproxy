@@ -582,8 +582,6 @@ def main():
 
                 while True:
                     script.exports_sync.idthreads()
-
-
                     tid_func = MyUtils.read_dynamic_config("stalker-ct-module")
                     try:
                         tid_func = int(tid_func)
@@ -612,7 +610,6 @@ def main():
                         }
                         noroot.append(nout)
                         yesroot.append(out)
-
                     proxy.settofrida_enum(noroot, "stalker-ct-module")
 
                     if len(yesroot) != 0:

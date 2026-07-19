@@ -70,6 +70,22 @@ var is_buffnetwork = false;
 var is_buffinput = false;
 var out_tracebuffer = [];
 
+// call count sink
+var data_sinkcc = new Map();
+function get_sinkcc(id) {
+    var val = data_sinkcc.get(id)
+    if (val != undefined) {
+        val += 1
+        data_sinkcc.set(id, val)
+    } else {
+        data_sinkcc.set(id, 1)
+        val = 1
+    }
+    //console.log(id+": "+val)
+    return val
+}
+
+
 
 // function score
 const func_score_resolve = new Map();
@@ -103,7 +119,7 @@ function resolveBuffer(buf, curProc) {
         let caller_name = null;
         let caller_skor = 0;
 
-        // jika lambat ubah ini ke zz HOTs
+        // jika lambat ubah ini ke zz (HOTs)
         const backtrace = "zz"; /*Thread.backtrace(
             meta.context,
             Backtracer.ACCURATE).map(DebugSymbol.fromAddress)
@@ -119,7 +135,7 @@ function resolveBuffer(buf, curProc) {
                 if (!caller_skor) {
                     caller_skor = 0;
                 }
-                console.log("["+curProc+"/"+alloc_range.size+"] buffer resove: "+caller_skor+"  "+sym);
+                console.log("["+curProc+"/"+alloc_range.size+"] buffer resove: skor="+caller_skor+"  "+sym);
             } catch (e) {}
         }
         chain.push({
@@ -758,13 +774,11 @@ class FuzzerKu
             "libstagefright_httplive.so",
         ];*/
 
-        const targetModules = ["libmonochrome.so"];
-
         // All module
-        /*const targetModules = [];
+        const targetModules = [];
         new ModuleMap().values().forEach(m => {
             targetModules.push(m.name);
-        });*/
+        });
 
         const targetRanges = [];
         for (const name of targetModules) {
@@ -786,6 +800,7 @@ class FuzzerKu
         /*
          * COPY: copy memory src to dst
          */
+        console.log("[+] Hooking memcpy")
         Interceptor.attach(Module.findExportByName(null, "memcpy"), {
             onEnter(args) {
                 //void *memcpy(void *dest, const void *src, size_t n);
@@ -823,6 +838,7 @@ class FuzzerKu
                             threadId: this.threadId,
                             size: this.size,
                             caller: this.caller.toString(),
+                            call_count: get_sinkcc("memcpy_"+child),
                             fd_path: "",
                             prevbuf: previewBuffer(ptr(child), this.size),
                             prevHexbuf: previewHexBuffer(ptr(child), this.size)
@@ -1135,6 +1151,7 @@ class FuzzerKu
                     context: this.ctx,
                     threadId: this.threadId,
                     fd_path: "",
+                    call_count: get_sinkcc("recvfrom_"+this.buf),
                     prevbuf:    previewBuffer(ptr(this.buf), this.size),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                     caller: this.returnAddress.toString()
@@ -1189,6 +1206,7 @@ class FuzzerKu
                     threadId: this.threadId,
                     caller: this.caller.toString(),
                     fd_path: "",
+                    call_count: get_sinkcc("recv_"+this.buf),
                     prevbuf:    previewBuffer(ptr(this.buf), this.size),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                 });
@@ -1242,6 +1260,7 @@ class FuzzerKu
                     threadId: this.threadId,
                     caller: this.caller.toString(),
                     fd_path: fdToPath(this.fd),
+                    call_count: get_sinkcc("read_"+this.buf),
                     prevbuf:    previewBuffer(ptr(this.buf), this.size),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                 });
@@ -1297,6 +1316,7 @@ class FuzzerKu
                     threadId: this.threadId,
                     caller: this.caller.toString(),
                     fd_path: fdToPath(this.fd),
+                    call_count: get_sinkcc("pread_"+this.buf),
                     prevbuf:    previewBuffer(ptr(this.buf), this.size),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), this.size),
                 });
@@ -1354,6 +1374,7 @@ class FuzzerKu
                     threadId: this.threadId,
                     caller: this.caller.toString(),
                     fd_path: fdToPath(this.fd_fileno),
+                    call_count: get_sinkcc("fread_"+this.buf),
                     prevbuf:    previewBuffer(ptr(this.buf), bytesRead),
                     prevHexbuf: previewHexBuffer(ptr(this.buf), bytesRead),
                 });
@@ -1769,7 +1790,6 @@ class FuzzerKu
 
             },
             setuphook: (func_data, fstalking) => {
-
                if (fstalking == "detach-all") {
                    is_alloctrace = false;
                    is_buffinput = false;
@@ -1783,7 +1803,7 @@ class FuzzerKu
                     is_buffinput = true;
                     try {
                         this.setup_sink_buffinput();
-                        //this.setup_manipulate_buffer();
+                        this.setup_manipulate_buffer();
                     }catch(e){}
                     return;
                }

@@ -175,7 +175,7 @@ class DialogTracerCallTree(QDialog):
             if "member" in value:
                 len_function = len(value["member"])
 
-            func_item.setText(0, func+" clone: "+str(len_clone))
+            func_item.setText(0, func+" clone="+str(len_clone))
             func_item.setText(1, buffer)
             func_item.setText(2, zlen)
             func_item.setText(3, caller)
@@ -233,14 +233,17 @@ class DialogTracerCallTree(QDialog):
                     try:
                         pbuff = meta['prevbuf']
                         phbuff = meta['prevHexbuf']
+                        cc = meta['call_count']
                     except:
                         pbuff = "-"
                         phbuff = "-"
+                        cc = "-"
 
                     xitem.setToolTip(0,
                         f"Sink: {meta['sink']}\nThread: {meta['threadId']}\n"\
                         f"Caller module: {meta['caller_name']['moduleName']}\n"\
                         f"Size: {meta['size']}\n"\
+                        f"Callcount: {cc}\n"\
                         f"Fd path: {meta['fd_path']}\n"\
                         f"Dump: {pbuff}\nDumpHex: {phbuff}\n"\
                         f"Backtrace: \n{meta['backtrace']}\n"

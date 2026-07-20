@@ -706,79 +706,25 @@ class FuzzerKu
     }
 
     // for score function parsing
-    setup_manipulate_buffer() {
+    setup_manipulate_buffer(filter_modules) {
         const subthis = this;
         const DEBUG = false;
-
-        /*
-        //APK: zarchiver, WARNING: lib load secara lazy
-        const targetModules = [
-            "libcontrol.so",
-            "libhandler.so",
-            "libmime.so",
-            "libp7zip.so",
-            "libunrar.so",
-            "libcoreutils.so",
-            "libiconv.so",
-            "libp7zbin.so",
-            "libunegg.so"
-        ];
-        // APK: whatsapp
-        const targetModules = [
-            "libskia.so",
-            "libmedia.so",
-            "libjpeg.so",
-            "libpdfium.so",
-            "libimg_utils.so",
-            "libstagefright.so",
-            "libstagefright_foundation.so",
-            "libstagefright_http_support.so",
-            "libpng.so",
-            "libdng_sdk.so",
-            "libstagefright_omx.so",
-            "libstagefright_yuv.so",
-            "libstagefright_enc_common.so",
-            "libstagefright_avc_common.so",
-            "libstagefright_httplive.so",
-            "libtiff_directory.so",
-            "libmediaplayerservice.so",
-            "libdashplayer.so",
-            "libdiag.so",
-            "libexif.so",
-            "libvlc.so",
-            "libpytorch.so",
-            //"libwhatsappmerged.so",
-            //"libwhatsapp.so",
-            //"libfb_sqlite_3500300.so",
-            "libdav1d.so",
-            "libwzav1.so",
-            "libwzav1_v2.so",
-        ];*
-        /*
-        // APK: gallery
-        const targetModules = [
-            "libskia.so",
-            "libhwui.so",
-            "libjpeg.so",
-            "libpdfium.so",
-            "libimg_utils.so",
-            "libstagefright.so",
-            "libstagefright_foundation.so",
-            "libstagefright_http_support.so",
-            "libpng.so",
-            "libdng_sdk.so",
-            "libstagefright_omx.so",
-            "libstagefright_yuv.so",
-            "libstagefright_enc_common.so",
-            "libstagefright_avc_common.so",
-            "libstagefright_httplive.so",
-        ];*/
+        var targetModules = [];
 
         // All module
-        const targetModules = [];
-        new ModuleMap().values().forEach(m => {
-            targetModules.push(m.name);
+        if (filter_modules.length == 0) {
+            new ModuleMap().values().forEach(m => {
+                targetModules.push(m.name);
+            });
+        } else {
+            targetModules = filter_modules
+        }
+        console.log("========================")
+        console.log("===== Target module ====")
+        targetModules.forEach(mod => {
+            console.log(mod)
         });
+        console.log("========================")
 
         const targetRanges = [];
         for (const name of targetModules) {
@@ -1802,17 +1748,21 @@ class FuzzerKu
                if (fstalking == "buffinput") {
                     is_buffinput = true;
                     try {
+                        const filter_modules = func_data //array string
                         this.setup_sink_buffinput();
-                        this.setup_manipulate_buffer();
-                    }catch(e){}
+                        this.setup_manipulate_buffer(filter_modules);
+                    }catch(e){
+                        console.log(e)
+                    }
                     return;
                }
 
                // Setup allocator hook
                if (fstalking == "allocator") {
                     is_alloctrace = true;
+                    const filter_modules = func_data //array string
                     this.setup_hookallocator();
-                    this.setup_manipulate_buffer();
+                    this.setup_manipulate_buffer(filter_modules);
                     return;
                }
 

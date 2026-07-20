@@ -785,7 +785,13 @@ def main():
                     break
 
                 elif in_symbol == "all-binput":
-                    script.exports_sync.setuphook("", "buffinput")
+                    in_mod = input(f">> Range module (png_read,libc.so/all): ")
+                    if in_mod == "all":
+                        mod_target = []
+                    else:
+                        mod_target = in_mod.split(",")
+
+                    script.exports_sync.setuphook(mod_target, "buffinput") #default all
                     time.sleep(1)
 
                     setup_hook(script, dick_sym, None, None)

@@ -82,8 +82,35 @@ class DialogFuncScores(QDialog):
         self.setLayout(layout)
         self.showData()
         self.bv = data
+        self.sw = ""
+
+    def saveFile(self):
+        myfile = self.bv.file.filename+".scores"
+        with open(myfile, "w") as out:
+            json.dump(GLOBAL.binja_scores, out, indent=2)
+        print(f"saved to {myfile}")
+
+    def open_data(self):
+        myfile = self.bv.file.filename+".scores"
+
+        with open(myfile) as f:
+            data = json.load(f)
+        GLOBAL.binja_scores = data
+        self.showData()
+
+    def showSkip(self):
+        self.sw = "skip"
+        self.tree_widget.clear()
+        mydata = GLOBAL.binja_scores_skip
+
+        for val in mydata:
+            item = QTreeWidgetItem(self.tree_widget)
+            item.setText(0, val['name'])
+            item.setFont(0, self.font)
+            item.setData(0, Qt.UserRole, val['addr'])
 
     def showData(self):
+        self.sw = "analyses"
         self.tree_widget.clear()
         mydata = GLOBAL.binja_scores
         func_total = 0
@@ -93,6 +120,7 @@ class DialogFuncScores(QDialog):
             item = QTreeWidgetItem(self.tree_widget)
             item.setText(0, idx)
             item.setFont(0, self.font)
+            item.setData(0, Qt.UserRole, val['addr'])
 
             item.setText(1, str(val['scores']))
             item.setFont(1, self.font)
@@ -100,8 +128,9 @@ class DialogFuncScores(QDialog):
             item.setText(2, str(val['fuzz_friendly']))
             item.setFont(2, self.font)
 
-            item.setText(3, str(val['risky_sinks']))
+            item.setText(3, str(val['risky_sinks']["skor"]))
             item.setFont(3, self.font)
+            item.setToolTip(3, "".join(val['risky_sinks']['tooltip']))
 
             item.setText(4, str(val['natural_loops']))
             item.setFont(4, self.font)
@@ -116,8 +145,9 @@ class DialogFuncScores(QDialog):
 
 
     def on_item_double_clicked(self, item, column):
+        data = item.data(column, Qt.UserRole)
         try:
-            addr = int(item.text(column), 0)
+            addr = data
             print("jump to:", hex(addr))
             self.bv.offset = addr
         except Exception as e:
@@ -128,7 +158,12 @@ class DialogFuncScores(QDialog):
         menu = QMenu()
 
         menu.addAction("Clear all")
-        menu.addAction("Refresh data")
+        menu.addAction("Save to file")
+        menu.addAction("Load from file")
+        if self.sw == "analyses":
+            menu.addAction("Show skiped")
+        else:
+            menu.addAction("Show analyses")
 
         action = menu.exec_(self.tree_widget.viewport().mapToGlobal(position))
         if action:
@@ -140,6 +175,11 @@ class DialogFuncScores(QDialog):
         if action == "Clear all":
             GLOBAL.binja_scores = {}
             SIGNALS.binja_score_updated.emit()
-
-        elif action == "Refresh data":
+        elif action == "Load from file":
+            self.open_data()
+        elif action == "Save to file":
+            self.saveFile()
+        elif action == "Show skiped":
+            self.showSkip()
+        elif action == "Show analyses":
             self.showData();

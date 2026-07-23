@@ -36,6 +36,7 @@ class GlobalState:
         self.frida_bb_hit = []
 
         self.binja_scores = {}
+        self.binja_scores_skip = []
         self.window_frida_stalker_title = ""
         self.window_frida_tracer_title = ""
         self.window_angr_title = ""

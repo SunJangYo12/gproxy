@@ -48,6 +48,15 @@ INTERESTING_PATTERNS: t.List[str] = [
     "url",
 ]
 
+RISKY_GLIBC_CALL_PATTERNS: t.List[str] = [
+    "cmp",
+    "cpy",
+    "alloc",
+    "read",
+    "write",
+    "open",
+    "create",
+]
 
 class SkoringFuncs(BackgroundTaskThread):
     def __init__(self, bv):
@@ -73,6 +82,10 @@ class SkoringFuncs(BackgroundTaskThread):
 
             if self.skip_analysis(func):
                 print(f"[+] Skiping: {name}")
+                GLOBAL.binja_scores_skip.append({
+                    "name": name,
+                    "addr": func.start
+                })
                 continue
 
             print(f"[+] Analyses: {name}")
@@ -80,10 +93,14 @@ class SkoringFuncs(BackgroundTaskThread):
             SIGNALS.binja_score_updated.emit()
             time.sleep(1)
 
+        #TODO
+        #load from file by dialog
+        #tooltip for all table
+
         print("[+] Done.")
 
     def analyze_call(self, name, func, func_total):
-        addr = hex(func.start)
+        addr = func.start
         stripped = "sub_" in name
 
         fuzz_friendly = 0
@@ -96,7 +113,7 @@ class SkoringFuncs(BackgroundTaskThread):
         natural_loops = self.natural_loops(func)
         coverage_depth = self.get_coverage_depth(func)
         cyclomatic_complexity = self.get_cyclomatic_complexity(func)
-        total =  fuzz_friendly + risky_sinks + natural_loops + coverage_depth + cyclomatic_complexity
+        total =  fuzz_friendly + risky_sinks["skor"] + natural_loops + coverage_depth + cyclomatic_complexity
 
         GLOBAL.binja_scores[name] = {
             "fuzz_friendly": fuzz_friendly,
@@ -110,7 +127,45 @@ class SkoringFuncs(BackgroundTaskThread):
         }
 
     def risky_sinks(self, func) -> int:
-        return 0
+        out = {
+            "skor": 0,
+            "tooltip": []
+        }
+        for block in func.mlil:
+            for insn in block:
+                if insn.operation != MediumLevelILOperation.MLIL_CALL:
+                    continue
+
+                target = insn.dest
+                if target.operation == MediumLevelILOperation.MLIL_CONST_PTR:
+                    sym = self.bv.get_function_at(target.constant)
+                    if not sym:
+                        continue
+
+                    for arg in sym.parameter_vars:
+                        if str(arg.type) == "char*":
+                            out["skor"] += 2
+                            out["tooltip"].append("arg: char*\n")
+                        elif str(arg.type) == "void*":
+                            out["skor"] += 2
+                            out["tooltip"].append("arg: void*\n")
+                        elif str(arg.type) == "int32_t*":
+                            out["skor"] += 1
+                            out["tooltip"].append("arg: int32_t*\n")
+                        elif str(arg.type) == "int32_t":
+                            out["skor"] += 1
+                            out["tooltip"].append("arg: int32_t\n")
+                        elif str(arg.type) == "char**":
+                            out["skor"] += 1
+                            out["tooltip"].append("arg: char**\n")
+
+                    #if any([pattern in sym.name.lower() for pattern in RISKY_GLIBC_CALL_PATTERNS]):
+                    #    skor += 2
+                    for pattern in RISKY_GLIBC_CALL_PATTERNS:
+                        if pattern in sym.name.lower():
+                            out["skor"] += 2
+                            out["tooltip"].append("Sink: "+sym.name+"\n")
+        return out
 
 
     def skip_analysis(self, func) -> bool:
@@ -163,7 +218,7 @@ class SkoringFuncs(BackgroundTaskThread):
                 if child.name not in self.visited:
                     callstack += [child]
 
-            #self.visited += [func.name]
+            self.visited += [func.name]
 
         return depth
 

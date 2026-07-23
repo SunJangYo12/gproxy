@@ -491,10 +491,8 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         self.actionHandler = UIActionHandler()
         self.actionHandler.setupActionHandler(self)
 
-
         SIGNALS.gdb_updated.connect(self.refresh_from_global)
         SIGNALS.gdb_updated_dprintf.connect(self.refresh_from_global_dprintf)
-
 
         tree_widget = QTreeWidget()
         self.tree_widget = tree_widget
@@ -535,28 +533,21 @@ class FuncListDockWidget(QWidget, DockContextHandler):
             data = json.load(f)
 
         self.tree_widget.headerItem().setText(0, "Function List dprintf  %d" %len(data) )
-
         for addr, content in data.items():
             parent = QTreeWidgetItem(self.tree_widget)
-
             parent.setText(0, "%s  %s" % (content["count"], content["name"]) )
             parent.setFont(0, self.font)
             parent.setData(0, Qt.UserRole, addr )
-
-
-
 
     def refresh_from_global(self):
         self.tree_widget.clear()
         self.tree_widget.headerItem().setText(0, "Function List  %d" %len(GLOBAL.gdb_functions) )
 
-
         for (raw_func, data) in GLOBAL.gdb_functions.items():
             parent = QTreeWidgetItem(self.tree_widget)
-
             s = raw_func.split("|||")
-
             func_addr = s[0]
+
             try:
                 func_name = s[1]
             except:
@@ -564,7 +555,6 @@ class FuncListDockWidget(QWidget, DockContextHandler):
 
             self.func_name = func_name
             self.func_addr = func_addr
-
 
             if len(data['block']) > 0:
                 GLOBAL.gdb_blocks[func_name] = {

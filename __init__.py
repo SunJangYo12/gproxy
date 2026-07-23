@@ -32,7 +32,8 @@ from .gproxy import (
     Gproxy,
     BinjaGefRequestHandler,
 )
-
+from gproxy.data_global import GLOBAL, SIGNALS
+from .analyses.binja import SkoringFuncs
 
 
 __service_thread = None
@@ -128,3 +129,14 @@ PluginCommand.register(
     gef_stop,
     is_valid = lambda view: is_service_started()
 )
+
+
+def analysesSkor(bv):
+    SIGNALS.window_binja_score.emit()
+    scanner = SkoringFuncs(bv)
+    scanner.start()
+
+PluginCommand.register(
+    "Gproxy\\Start analyses",
+    "untuk mengumpulkan skor", analysesSkor)
+

@@ -22,6 +22,8 @@ from PySide2.QtWidgets import (
      QToolButton, QStyle
 )
 from ..data_global import SIGNALS, GLOBAL
+from .dialog_binja import DialogFuncScores
+
 import base64
 import time
 import json
@@ -899,6 +901,9 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
         self.actionHandler = UIActionHandler()
         self.actionHandler.setupActionHandler(self)
 
+        # NUMPANG
+        # hanya dibuka dari console
+        SIGNALS.window_binja_score.connect(self.refresh_from_global_binja_score)
 
         SIGNALS.frida_updated.connect(self.refresh_from_global)
         SIGNALS.frida_updatedsym.connect(self.refresh_from_global_sym)
@@ -954,6 +959,14 @@ class FridaFuncListDockWidget(QWidget, DockContextHandler):
             size /= 1024
             index += 1
         return f'{size:.1f}{units[index]}'
+
+    def refresh_from_global_binja_score(self):
+        self.bsdlg = DialogFuncScores(sid="", data=self.bv)
+        self.bsdlg.resize(340, 550) # w,h
+        self.bsdlg.show()
+        self.bsdlg.raise_()
+        self.bsdlg.activateWindow()
+
 
 
     def refresh_from_global_owindow_tracer_allocator(self):

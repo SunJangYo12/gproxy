@@ -478,6 +478,7 @@ dan list yang tidak terwarnai adalah thread baru
 [+] Agent @ Getting symbols to hook...
 
 >> zzz> symbol> all-binput
+>> Range module (png_read,libc.so/all): libmonochrome.so,libc.s
 
 #NOTE
 1. untuk Module tidak wajib, berguna jika tracing cepat hanya buffer terkait
@@ -492,4 +493,9 @@ dan list yang tidak terwarnai adalah thread baru
    fread dan "set $buf = $rdi" lalu pasang breakpoint setelah fread, setelah
    continue $buf sudah terisi data.
 
+```
+
+# Func candidate for fuzzing score
+```
+1.) Tools > gproxy > Start analyses
 ```

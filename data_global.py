@@ -34,6 +34,8 @@ class GlobalState:
         self.frida_stalkers_ct = []
         self.frida_stalkers_ct_module = []
         self.frida_bb_hit = []
+
+        self.binja_scores = {}
         self.window_frida_stalker_title = ""
         self.window_frida_tracer_title = ""
         self.window_angr_title = ""
@@ -207,11 +209,13 @@ class GlobalSignals(QObject):
     frida_stalker = Signal()
     frida_stalker_ct = Signal()
     frida_stalker_ct_module = Signal()
+    binja_score_updated = Signal()
     window_frida_stalker = Signal()
     window_frida_tracer = Signal()
     window_frida_tracer_allocator = Signal()
     window_angrstate_tree = Signal()
     window_angrhook = Signal()
+    window_binja_score = Signal()
 
 GLOBAL = GlobalState()
 SIGNALS = GlobalSignals()

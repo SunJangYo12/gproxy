@@ -75,6 +75,8 @@ class SkoringFuncs(BackgroundTaskThread):
 
     def run(self):
         funcs = self.bv.functions
+        count = 0
+        total = len(funcs)
         for func in funcs:
             if self.cancelled:
                 break
@@ -88,15 +90,17 @@ class SkoringFuncs(BackgroundTaskThread):
                 })
                 continue
 
-            print(f"[+] Analyses: {name}")
-            score = self.analyze_call(name, func, len(funcs))
-            SIGNALS.binja_score_updated.emit()
-            time.sleep(1)
+            print(f"[+] Analyses: {count}/{total} {name}")
+            score = self.analyze_call(name, func, total)
+            count += 1
+            #SIGNALS.binja_score_updated.emit()
+            #time.sleep(1)
 
         #TODO
         #load from file by dialog
         #tooltip for all table
 
+        SIGNALS.binja_score_updated.emit()
         print("[+] Done.")
 
     def analyze_call(self, name, func, func_total):

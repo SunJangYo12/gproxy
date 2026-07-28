@@ -26,6 +26,7 @@ from ..data_global import SIGNALS, GLOBAL
 import base64
 import time
 import json
+import os
 import subprocess
 from binaryninja import (
     core_version,
@@ -85,13 +86,13 @@ class DialogFuncScores(QDialog):
         self.sw = ""
 
     def saveFile(self):
-        myfile = self.bv.file.filename+".scores"
+        myfile = "/home/jin/Desktop/xx.score.json" #self.bv.file.filename+".scores.json"
         with open(myfile, "w") as out:
             json.dump(GLOBAL.binja_scores, out, indent=2)
         print(f"saved to {myfile}")
 
     def open_data(self):
-        myfile = self.bv.file.filename+".scores"
+        myfile = self.bv.file.filename+".scores.json"
 
         with open(myfile) as f:
             data = json.load(f)

@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(MYFILE))
 
 from settings import Settings
 
+import trace_buffer
 import trace_memory
 import kernel_cmd
 import detect_struct
@@ -202,63 +203,6 @@ class TraceBreakpoint(gdb.Breakpoint):
         aa =  detect_struct.runn(arg, in_gdb=False)
         return aa
 
-    def buffer_trace(self, func): # Only 32bit
-        if func == "recvmsg":
-            inferior = gdb.selected_inferior()
-
-            esp = None
-            for r in self.get_registers():
-                val = gdb.parse_and_eval("$" + r)
-                if r == "esp":
-                    esp = int(val)
-            sockfd = struct.unpack("<I", inferior.read_memory(esp + 4, 4).tobytes())[0]
-            msghdr_addr = struct.unpack("<I", inferior.read_memory(esp + 8, 4).tobytes())[0]
-            ret_addr = struct.unpack("<I", inferior.read_memory(esp, 4).tobytes())[0] # [esp] = return address
-            print(f"[+] recvmsg fd={sockfd} msghdr=0x{msghdr_addr:x} retaddr=0x{ret_addr:x}")
-
-            ptr_size = 4
-            mem = inferior.read_memory(msghdr_addr, 0x40).tobytes()
-
-            msg_name = struct.unpack("<I", mem[0x00:0x04])[0]
-            msg_namelen = struct.unpack("<I", mem[0x04:0x08])[0]
-
-            msg_iov = struct.unpack("<I", mem[0x08:0x0C])[0]
-            msg_iovlen = struct.unpack("<I", mem[0x0C:0x10])[0]
-
-            print(f"    msg_name={msg_name} msg_len={msg_namelen} msg_iov=0x{msg_iov:x} iov_len={msg_iovlen}")
-
-            if msg_iovlen > 0 and msg_iov!= 0:
-                iov_mem = inferior.read_memory(msg_iov, ptr_size*2).tobytes()
-                buf = struct.unpack("<I", iov_mem[0:4])[0]
-                length = struct.unpack("<I", iov_mem[4:8])[0]
-                print(f"        iov_buf=0x{buf:x} len={length}")
-
-
-        elif func == "recv":
-            buf_addr = None #self.inf.read_register("rsi") # arg2 recv di x64 = buffer
-            length   = None #int(self.inf.read_register("rdx")) # arg3 = len
-            esp = None
-
-            for r in self.get_registers():
-                val = gdb.parse_and_eval("$" + r)
-                if r == "esp":
-                    esp = int(val)
-
-            sockfd = self.inf.read_memory(esp + 4, 4).tobytes()
-            print(sockfd)
-            #sockfd = int(self.inf.read_memory(esp + 4, 4).tobytes(), 16) # arg1
-            #buf_addr = int(self.inf.read_memory(esp + 8, 4).tobytes(), 16) # arg2
-            #length = int(self.inf.read_memory(esp + 12, 4).tobytes(), 16) # arg3
-
-            #print(f"[+] {self.func_name} caller. buf={buf_addr} len={length}")
-
-            #print(f"[+] {self.func_name} called. buf=0x{int(buf_addr):x} len={length}")
-            #    if r == "rdi":
-            #        mem_content = self.inf.read_memory(val, 100).tobytes()
-            #        print(f"trace: {r}={val}")
-            #        print(mem_content)
-            #        print("============")
-
     def read_dynamic_config(self, sw):
         out = ""
         try:
@@ -358,7 +302,7 @@ class TraceBreakpoint(gdb.Breakpoint):
         if self.func_name:
             print(f"[TRACE] Hit {self.func_name}  => {self.addr}")
 
-            self.buffer_trace(self.func_name)
+            trace_buffer.buffer_trace(self.func_name)
 
             if self.bn:
                 output = f"{self.addr}|||{self.func_name}T_T{gdb_memregs}T_T{gdb_memstruct}T_T{gdb_stack}"

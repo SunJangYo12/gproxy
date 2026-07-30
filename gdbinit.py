@@ -11,10 +11,12 @@ MYFILE = os.path.abspath(os.path.expanduser(__file__))
 if os.path.islink(MYFILE):
     MYFILE = os.readlink(MYFILE)
 sys.path.insert(0, os.path.dirname(MYFILE) + "/gdbutils")
+sys.path.insert(0, os.path.dirname(MYFILE) + "/examples/mikrotik")
 sys.path.insert(0, os.path.dirname(MYFILE))
 
 from settings import Settings
 
+import sniff_m2 # optional for RE mikrotik protocol
 import trace_buffer
 import trace_memory
 import kernel_cmd
@@ -302,7 +304,8 @@ class TraceBreakpoint(gdb.Breakpoint):
         if self.func_name:
             print(f"[TRACE] Hit {self.func_name}  => {self.addr}")
 
-            trace_buffer.buffer_trace(self.func_name)
+            #trace_buffer.buffer_trace(self.func_name)
+            sniff_m2.buffer_trace(self.func_name)
 
             if self.bn:
                 output = f"{self.addr}|||{self.func_name}T_T{gdb_memregs}T_T{gdb_memstruct}T_T{gdb_stack}"

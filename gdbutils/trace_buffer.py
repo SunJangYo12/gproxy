@@ -37,15 +37,13 @@ def dump_buffer(inferior, addr, length, max_dump=256):
 
     length = min(length, max_dump) # batasi biar ga spam
     mem = inferior.read_memory(addr, length).tobytes()
-
-    print(f" -> Dump {length} byte dari 0x{addr:x}:")
     for i in range(0, length, 16):
         chunk = mem[i:i+16]
         hex_part = ' '.join(f"{b:02x}" for b in chunk)
         ascii_part = ''.join(chr(b) if 32 <= b < 127 else '.' for b in chunk)
         print(f" 0x{addr+i:08x}: {hex_part:<48} |{ascii_part}|")
 
-
+# Normalnya buffer terisi setelah akhir fungsi, tapi recvmsg kayanya gak
 def buffer_trace(func):
     if func == "recvmsg":
         inf = gdb.selected_inferior()
@@ -74,7 +72,7 @@ def buffer_trace(func):
             control, controllen = struct.unpack(fmt, h[16:20])[0], struct.unpack(fmt, h[20:24])[0]
             flags = struct.unpack(fmt, h[24:28])[0]
 
-        print(f" -> recvmsg fd={sockfd} msg=0x{msg_addr:x} iovlen={iovlen} ctrllen={controllen} flags=0x{flags:x}")
+        print(f" -> recvmsg fd={sockfd} msg_addr=0x{msg_addr:x} iovlen={iovlen} ctrllen={controllen} flags=0x{flags:x}")
 
         # 1. Ekstrak buffer data dari iovec
         if iovlen > 0:

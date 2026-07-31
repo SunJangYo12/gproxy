@@ -271,6 +271,8 @@ class Gproxy:
         elif finit == "refresh":
             rui_task = RefreshUiTask(self.view, data)
             rui_task.start()
+        elif finit == "update_gdb_mikrotik":
+            SIGNALS.gdb_updated_mikrotik_sniff.emit()
 
         elif finit == "java_hit":
             classMethod = data["classMethod"]

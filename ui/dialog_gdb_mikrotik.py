@@ -78,6 +78,7 @@ class DialogMikrotikSniff(QDialog):
     def showData(self):
         self.tree_widget.clear()
         mydata = self.open_json("/tmp/mikrotik-sniff.json")
+        mydata.reverse() #balik terakhir diatas (terbaru)
 
         self.tree_widget.headerItem().setText(0, "Buffer iov Total: %s" %len(mydata) )
 
@@ -88,60 +89,17 @@ class DialogMikrotikSniff(QDialog):
             item.setFont(0, self.font)
             item.setData(0, Qt.UserRole, i)
 
-            fd_item = QTreeWidgetItem(item)
-            fd_item.setText(0, f"FD: {i['fd']}")
-            fd_item.setFont(0, self.font)
-
-            ma_item = QTreeWidgetItem(item)
-            ma_item.setText(0, f"Message address: {hex(i['msg_addr'])}")
-            ma_item.setFont(0, self.font)
-
-            iov_item = QTreeWidgetItem(item)
-            iov_item.setText(0, f"Iov address: {hex(i['iov'])}  len: {i['iovlen']}")
-            iov_item.setFont(0, self.font)
-
-            ct_item = QTreeWidgetItem(item)
-            ct_item.setText(0, f"Control address: {hex(i['control'])}  len: {i['controllen']}")
-            ct_item.setFont(0, self.font)
-
-            fg_item = QTreeWidgetItem(item)
-            fg_item.setText(0, f"Flags: {i['flags']}")
-            fg_item.setFont(0, self.font)
-
-            om2_item = QTreeWidgetItem(item)
-            om2_item.setText(0, f"Out M2 total: {len(i['out_m2']['m2_data'])}")
-            om2_item.setFont(0, self.font)
-
-            pl_item = QTreeWidgetItem(om2_item)
-            pl_item.setText(0, f"Packet length: {i['out_m2']['packet_length']}")
-            pl_item.setFont(0, self.font)
-
-            sec_item = QTreeWidgetItem(om2_item)
-            sec_item.setText(0, f"Security mode: {i['out_m2']['security_mode']}")
-            sec_item.setFont(0, self.font)
-
-            msl_item = QTreeWidgetItem(om2_item)
-            msl_item.setText(0, f"Message length: {i['out_m2']['msg_length']}")
-            msl_item.setFont(0, self.font)
-
-            mgc_item = QTreeWidgetItem(om2_item)
-            mgc_item.setText(0, f"Magic: {i['out_m2']['magic']}")
-            mgc_item.setFont(0, self.font)
-
-            mdat_item = QTreeWidgetItem(om2_item)
-            mdat_item.setText(0, f"M2 data: {len(i['out_m2']['m2_data'])}")
-            mdat_item.setFont(0, self.font)
             for z in i["out_m2"]["m2_data"]:
-                mid_item = QTreeWidgetItem(mdat_item)
+                mid_item = QTreeWidgetItem(item)
                 mid_item.setText(0, f"ID: {z['id']}")
                 mid_item.setFont(0, self.font)
 
-                mty_item = QTreeWidgetItem(mdat_item)
+                mty_item = QTreeWidgetItem(item)
                 mty_item.setText(0, f"Type: {z['type']}")
                 mty_item.setFont(0, self.font)
 
                 if isinstance(z['value'], list):
-                    mval_item = QTreeWidgetItem(mdat_item)
+                    mval_item = QTreeWidgetItem(item)
                     mval_item.setText(0, f"Value: {len(z['value'])}")
                     mval_item.setFont(0, self.font)
                     for ival in z['value']:
@@ -149,7 +107,7 @@ class DialogMikrotikSniff(QDialog):
                         mival_item.setText(0, f"{ival}")
                         mival_item.setFont(0, self.font)
                 else:
-                    mval_item = QTreeWidgetItem(mdat_item)
+                    mval_item = QTreeWidgetItem(item)
                     mval_item.setText(0, f"Value: {z['value']}")
                     mval_item.setFont(0, self.font)
 
@@ -171,6 +129,8 @@ class DialogMikrotikSniff(QDialog):
         item = self.tree_widget.itemAt(position)
         menu = QMenu()
 
+        menu.addAction("Info recvmsg structure")
+        menu.addAction("Info header M2 data (iov buffer)")
         menu.addAction("Dump hex (print)")
         menu.addAction("Refresh data")
 
@@ -180,8 +140,44 @@ class DialogMikrotikSniff(QDialog):
 
     def handle_tree_action(self, action, item):
         if action == "Dump hex (print)":
-            data = item.data(0, Qt.UserRole)
-            print(data["out_m2"]["dump"])
+            try:
+                data = item.data(0, Qt.UserRole)
+                print(data["out_m2"]["dump"])
+            except:
+                pass
+
+        elif action == "Info recvmsg structure":
+            try:
+                data = item.data(0, Qt.UserRole)
+                fd = data["fd"]
+                msg_addr = hex(data["msg_addr"])
+                iov, iovlen = hex(data["iov"]), data["iovlen"]
+                control, controllen = hex(data["control"]), data["controllen"]
+                flags = data["flags"]
+                print(f"Fd              : {fd}")
+                print(f"Message address : {msg_addr}")
+                print(f"Iov address     : {iov}  len: {iovlen}")
+                print(f"Control address : {control}  len: {controllen}")
+                print(f"Flags           : {flags}")
+            except:
+                pass
+
+
+        elif action == "Info header M2 data (iov buffer)":
+            try:
+                data = item.data(0, Qt.UserRole)
+                packet_length = data["out_m2"]["packet_length"]
+                security_mode = data["out_m2"]["security_mode"]
+                msg_length = data["out_m2"]["msg_length"]
+                magic = data["out_m2"]["magic"]
+
+                print(f"Packat length   : {packet_length}")
+                print(f"Security mode   : {security_mode}")
+                print(f"Message length  : {msg_length}")
+                print(f"Magic           : {magic}")
+            except:
+                pass
+
 
         elif action == "Refresh data":
             #self.showData();

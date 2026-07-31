@@ -316,6 +316,7 @@ class TraceBreakpoint(gdb.Breakpoint):
                 with open(self.pmikrotik_sniff, "w") as fd:
                     #fd.write(json.dumps(mikrotik_data))
                     json.dump(self.mikrotik_sniff, fd, indent=2)
+                proxy.settofrida_func("", "update_gdb_mikrotik")
 
             elif self.target == "zzzzzzz":
                 trace_buffer.buffer_trace(self.func_name)

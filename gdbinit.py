@@ -169,7 +169,7 @@ class StepSync:
 
 
 class TraceBreakpoint(gdb.Breakpoint):
-    def __init__(self, addr, func_name=None, bn=None, hook=None, bb=False):
+    def __init__(self, addr, func_name=None, bn=None, hook=None, bb=False, target=None):
         super(TraceBreakpoint, self).__init__("*{}".format(addr),
                                               gdb.BP_BREAKPOINT,
                                               internal=False)
@@ -179,6 +179,11 @@ class TraceBreakpoint(gdb.Breakpoint):
         self.bn = bn
         self.hook = hook
         self.inf = gdb.selected_inferior()
+        self.target = target
+
+        if self.target == "mikrotik":
+            self.mikrotik_sniff = []
+            self.pmikrotik_sniff = "/tmp/mikrotik-sniff.json"
 
         if bb:
             proxy.set_global("")
@@ -304,8 +309,16 @@ class TraceBreakpoint(gdb.Breakpoint):
         if self.func_name:
             print(f"[TRACE] Hit {self.func_name}  => {self.addr}")
 
-            #trace_buffer.buffer_trace(self.func_name)
-            sniff_m2.buffer_trace(self.func_name)
+            if self.target == "mikrotik":
+                mikrotik_data = sniff_m2.buffer_trace(self.func_name)
+                self.mikrotik_sniff.append(mikrotik_data)
+
+                with open(self.pmikrotik_sniff, "w") as fd:
+                    #fd.write(json.dumps(mikrotik_data))
+                    json.dump(self.mikrotik_sniff, fd, indent=2)
+
+            elif self.target == "zzzzzzz":
+                trace_buffer.buffer_trace(self.func_name)
 
             if self.bn:
                 output = f"{self.addr}|||{self.func_name}T_T{gdb_memregs}T_T{gdb_memstruct}T_T{gdb_stack}"
@@ -440,19 +453,13 @@ class CountBP(gdb.Breakpoint):
                 fd.write("".join(result))
 
     def stop(self):
-
         settings = Settings()
-
         for name_base64 in settings.get("show_reg"):
             self.gen_registers(name_base64)
-
         for name_base64 in settings.get("show_stack"):
             self.gen_stacks(name_base64)
-
         for name_base64 in settings.get("show_heap"):
             self.gen_heaps(name_base64, settings)
-
-
 
         key = self.addr
         if key not in count_stats:
@@ -460,7 +467,6 @@ class CountBP(gdb.Breakpoint):
                 "name": self.name,
                 "count": 0
             }
-
         count_stats[key]["count"] += 1
         return False
 
@@ -490,15 +496,21 @@ class LoadTrace(gdb.Command):
         hook = False
         bblock = False
         dprintf = False
+        target = ""
 
         if arg == "run":
             print("[+] starting traces..")
+
+        elif arg == "run-mikrotik":
+            target = "mikrotik"
+            bn = True
+            proxy.settofrida_func("gdb_func", "refresh")
+            proxy.settofrida_openwindow("gdb_mikrotik_sniff", "")
 
         elif arg == "run-bn":
             print("[+] starting traces..")
             proxy.settofrida_func("gdb_func", "refresh")
             bn = True
-
         elif arg == "run-bn-block":
             print("[+] starting traces..")
             bn = True
@@ -537,6 +549,7 @@ class LoadTrace(gdb.Command):
             print("Usage: cmdtracefunc run <= setup breakpoint, continue for start")
             print("Usage: cmdtracefunc run-bn")
             print("          setup breakpoint, continue for start, with send to binaryninja")
+            print("Usage: cmdtracefunc run-mikrotik <= custom function hook in binary mikrotik for sniff M2 message protocol")
 
             print("Usage: cmdtracefunc run-bn-block")
             print("          setup breakpoint, continue for start, with send to binaryninja")
@@ -552,8 +565,6 @@ class LoadTrace(gdb.Command):
         path = "/tmp/funcs.txt"
         if bblock:
             path = "/tmp/blocks.txt"
-
-
         try:
             with open(path) as f:
                 for line in f:
@@ -574,7 +585,7 @@ class LoadTrace(gdb.Command):
                         CountBP(addr, name)
 
                     else:
-                        TraceBreakpoint(addr, name, bn, hook)
+                        TraceBreakpoint(addr, name, bn, hook, target=target)
 
                     if name:
                         print(f"[+] Tracepoint at {addr} ({name})")

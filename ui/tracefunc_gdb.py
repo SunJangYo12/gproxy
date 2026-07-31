@@ -27,6 +27,7 @@ from ..settings import Settings
 from .dialog_gdb_register import DialogRegistersDprintf
 from .dialog_gdb_stack import DialogStacksDprintf
 from .dialog_gdb_heap import DialogHeapsDprintf
+from .dialog_gdb_mikrotik import DialogMikrotikSniff
 
 import base64
 import time
@@ -493,6 +494,7 @@ class FuncListDockWidget(QWidget, DockContextHandler):
 
         SIGNALS.gdb_updated.connect(self.refresh_from_global)
         SIGNALS.gdb_updated_dprintf.connect(self.refresh_from_global_dprintf)
+        SIGNALS.window_gdb_mikrotiksniff.connect(self.refresh_from_global_owindow_mikrotikSniff)
 
         tree_widget = QTreeWidget()
         self.tree_widget = tree_widget
@@ -523,6 +525,16 @@ class FuncListDockWidget(QWidget, DockContextHandler):
         f.setStyleHint(QFont.Monospace)
         f.setBold(True)
         #self.font = f
+
+    def refresh_from_global_owindow_mikrotikSniff(self):
+        self.sw_menu = "mikrotik_sniff"
+
+        self.msdlg = DialogMikrotikSniff(sid="Sniff", data=self.bv)
+        self.msdlg.resize(300, 450) # w,h
+        self.msdlg.show()
+        self.msdlg.raise_()
+        self.msdlg.activateWindow()
+
 
     def refresh_from_global_dprintf(self):
         self.tree_widget.clear()
@@ -812,7 +824,6 @@ class BasicBlockDockWidget(QWidget, DockContextHandler):
             if find == phit[0]:
                 out.append(find)
         return out
-
 
     def refresh_from_global(self):
         self.tree_widget.clear()

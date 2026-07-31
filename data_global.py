@@ -198,6 +198,7 @@ class GlobalSignals(QObject):
     gdb_updated_bb = Signal()
     gdb_updated_regs = Signal()
     gdb_updated_stacks = Signal()
+    gdb_updated_mikrotik_sniff = Signal()
     frida_updated = Signal()
     frida_updatedhook = Signal()
     frida_updatedsym = Signal()
@@ -216,6 +217,7 @@ class GlobalSignals(QObject):
     window_frida_tracer_allocator = Signal()
     window_angrstate_tree = Signal()
     window_angrhook = Signal()
+    window_gdb_mikrotiksniff = Signal()
     window_binja_score = Signal()
 
 GLOBAL = GlobalState()

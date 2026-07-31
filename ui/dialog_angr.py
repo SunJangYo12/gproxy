@@ -267,6 +267,13 @@ class DialogAngrTree(QDialog):
         self.showData()
         self.bv = data
 
+    def open_data(self, filename):
+        with open(filename) as f:
+            data = json.load(f)
+
+        return data
+
+
     def showData(self):
         self.tree_widget.clear()
         mydata = GLOBAL.angr_states

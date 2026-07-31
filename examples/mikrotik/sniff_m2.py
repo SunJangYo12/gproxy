@@ -1,5 +1,7 @@
 import gdb
 import struct
+import traceback
+import json
 
 def dump_buffer(inferior, addr, length, max_dump=256):
     """Dump buffer ke hex + ascii. Mirip x/100bx"""
@@ -39,7 +41,8 @@ def parse_m2_attribute(data):
     while offset < len(data):
         output = None
 
-        cek_id = hex(data[offset+2])
+        cek_id = data[offset:offset+2]
+
         if cek_id == "0xff" or cek_id == "0xfe":
             id = hex(int.from_bytes(data[offset:offset+3], "little"))
             type = data[offset+3:offset+4]
@@ -59,19 +62,21 @@ def parse_m2_attribute(data):
         elif type == TYPE_MAP["ipv6"]:
             type = f"{hex(type)} ipv6"
             output = data[offset+4:offset+20]
+            output = f"{output} => {hex(int.from_bytes(output, 'little'))}"
             offset += 20
 
         elif type == TYPE_MAP["string-1"]:
             slen = data[offset+4:offset+5]
             slen = int.from_bytes(slen, "little")
             output = data[offset+5:offset+5+slen]
+            output = f"{output} => {hex(int.from_bytes(output, 'little'))}"
             type = f"{hex(type)} string len(1-byte) slen: {hex(slen)}({slen})"
             offset += 5+slen  # 5 = id(3) + type(1) + size(1)
 
         elif type == TYPE_MAP["message[]"]:
             type = f"{hex(type)} message[]"
             key = data[offset+4:offset+7]
-            output = f"key: {key} TODO"
+            output = f"{key} TODO"
             offset += 45
 
         elif type == TYPE_MAP["int32[]"]:
@@ -79,15 +84,16 @@ def parse_m2_attribute(data):
             arrlen = data[offset+4:offset+6]
             arrlen = int.from_bytes(arrlen, "little")
 
-            output = []
+            arr_out = []
             sdata = offset + 6
             tcount = 4 * arrlen     #type count
 
             b = data[sdata:sdata+tcount]
             for i in range(0, len(b), 4):
                 val = b[i:i+4]
-                val = int.from_bytes(val, "little")
-                output.append(val)
+                val = f"{val} => {hex(int.from_bytes(val, 'little'))}"
+                arr_out.append(val)
+            output = arr_out
             offset += tcount + 6  # 6 = id(3) + tipe(1) + len(2) byte
 
         elif type == TYPE_MAP["int32-4"]:
@@ -100,7 +106,9 @@ def parse_m2_attribute(data):
             type = f"{hex(type)} u32"
             offset += 5 # 5 = id(3) + tipe(1) + val(1)
             output = data[offset-1:offset]
+            output = f"{output} => {hex(int.from_bytes(output, 'little'))}"
         else:
+            output = "Parse M2 failed, please cek again!"
             print("Parse M2 failed, please cek again!")
             break
 
@@ -118,10 +126,16 @@ def parse_m2_packet(data, buf_addr):
         print(" -> Data terlalu pendek < 6 byte")
         return
 
+    attr_M2 = {}
     pkt_len = data[0]
     sec_mode = data[1]
     total_len = struct.unpack("<H", data[2:4])[0] # 2 bytes LE
     magic = data[4:6]
+
+    attr_M2["packet_length"] = pkt_len
+    attr_M2["security_mode"] = sec_mode
+    attr_M2["msg_length"]    = total_len
+    attr_M2["magic"]         = magic.hex()
 
     print(f" -> M2 PACKET HEADER => {hex(buf_addr)}")
     print(f" Packet Length    : 0x{pkt_len:02x} ({pkt_len})")
@@ -130,16 +144,30 @@ def parse_m2_packet(data, buf_addr):
     print(f" Magic            : {magic} = 0x{magic.hex()}")
 
     # Dump attribute
-    for i in parse_m2_attribute(data[0:pkt_len]):
-        print(i)
+    if magic == b"M2":
+        try:
+            m2_data = parse_m2_attribute(data[0:pkt_len+50])
+            attr_M2["m2_data"] = m2_data
+
+            for i in m2_data:
+                print(i)
+        except Exception as e:
+            traceback.print_exc()
+    else:
+        attr_M2["m2_data"] = "Not M2 packet"
+        print("Not M2 packet")
 
     # Dump hex + ascii
-    for i in range(0, pkt_len+32, 16):
+    outdump = []
+    for i in range(0, pkt_len+50, 16):
         chunk = data[i:i+16]
         hex_part = ' '.join(f"{b:02x}" for b in chunk)
         ascii_part = ''.join(chr(b) if 32 <= b < 127 else '.' for b in chunk)
         print(f" 0x{i:04x}: {hex_part:<48} |{ascii_part}|")
+        outdump.append(f" 0x{i:04x}: {hex_part:<48} |{ascii_part}|\n")
 
+    attr_M2["dump"] = "".join(outdump)
+    return attr_M2
 
 # Normalnya buffer terisi setelah akhir fungsi, tapi recvmsg kayanya gak
 def buffer_trace(func):
@@ -173,12 +201,24 @@ def buffer_trace(func):
         print(f" -> recvmsg fd={sockfd} msg_addr=0x{msg_addr:x} iovlen={iovlen} ctrllen={controllen} flags=0x{flags:x}")
 
         # 1. Ekstrak buffer data dari iovec
+        out_m2 = None
         if iovlen > 0:
             iov0 = inf.read_memory(iov, ptr_size*2).tobytes()
-            buf, length = struct.unpack(fmt, iov0[0:ptr_size])[0], struct.unpack(fmt, iov0[ptr_size:ptr_size*2])[0]
-            print(f" -> iov_buf=0x{buf:x} len={length}")
+            buf_addr, length = struct.unpack(fmt, iov0[0:ptr_size])[0], struct.unpack(fmt, iov0[ptr_size:ptr_size*2])[0]
+            print(f" -> iov_buf=0x{buf_addr:x} len={length}")
 
             length = min(length, 512)
-            data = inf.read_memory(buf, length).tobytes()
-            parse_m2_packet(data, buf)
+            data = inf.read_memory(buf_addr, length).tobytes()
+            out_m2 = parse_m2_packet(data, buf_addr)
 
+        output = {
+            "fd": sockfd,
+            "msg_addr": msg_addr,
+            "iov": iov,
+            "iovlen": iovlen,
+            "control": control,
+            "controllen": controllen,
+            "flags": flags,
+            "out_m2": out_m2
+        }
+        return output

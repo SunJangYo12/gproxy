@@ -347,6 +347,8 @@ class Gproxy:
         elif type == "tracer_allocator":
             GLOBAL.window_frida_tracer_title = data
             SIGNALS.window_frida_tracer_allocator.emit()
+        elif type == "gdb_mikrotik_sniff":
+            SIGNALS.window_gdb_mikrotiksniff.emit()
 
 
 

@@ -81,8 +81,28 @@ user,0,0,0,0,0,0,0,0
 modprobed,1
 [6/79] telser
 [7/79] licupgr
+```
+
+# GDB & binja mikrotik binary IPC sniffing protocol (M2)
+Saat binary mikrotik berkomunikasi melalui ipc, alat ini bisa sniffing
+protocol M2 dan extrack datanya lalu divisualisasikan ke binaryninja 
+```
+1.) open nova/bin/loader in binja
+    - Tools > Gproxy > start service
+2.) attach
+    $ ./rw/disk/gdbserver.i686 --attach 192.168.43.1:443 `pidof loader`
+3.) remote attach
+    $ gdb ./loader
+    (gdb) cmdtracefunc generate => edit /tmp/funcs.txt sisakan recvmsg
+    (gdb) target remote 192.168.43.1:8243
+    (gdb) cmdtracefunc run-mikrotik
+NOTE: otomatis ada ui baru (Gdb mikrotik).
+port 443 asal pakai karena ngangur di pengaturan qemu dan bisa diakses
+diluar jaringan dengan port 8243. kita bisa mencocokan data dengan dump
+hex dari klik kanan > Dump hex
 
 ```
+
 
 # Trace function basic block
 ```

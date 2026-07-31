@@ -57,13 +57,17 @@ class DialogMikrotikSniff(QDialog):
         self.tree_widget.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tree_widget.customContextMenuRequested.connect(self.on_tree_context_menu)
         self.tree_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
+        self.tree_widget.itemExpanded.connect(self.click_expand)
+        self.tree_widget.itemCollapsed.connect(self.click_collap)
+
 
         layout = QVBoxLayout()
         layout.addWidget(self.tree_widget)
 
         self.setLayout(layout)
-        self.showData()
         self.bv = data
+        self.expanded_items = set()
+        self.showData()
         SIGNALS.gdb_updated_mikrotik_sniff.connect(self.showData)
 
     def open_json(self, pf):
@@ -74,6 +78,19 @@ class DialogMikrotikSniff(QDialog):
         except:
             pass
         return data
+
+    def cekandset_expand(self, tree, id):
+        for data in self.expanded_items:
+            if data == id:
+                tree.setExpanded(True)
+
+    def click_expand(self, item):
+        data = item.data(0, Qt.UserRole)
+        self.expanded_items.add(data["time"])
+
+    def click_collap(self, item):
+        data = item.data(0, Qt.UserRole)
+        self.expanded_items.remove(data["time"])
 
     def showData(self):
         self.tree_widget.clear()
@@ -88,28 +105,31 @@ class DialogMikrotikSniff(QDialog):
             item.setText(0, title)
             item.setFont(0, self.font)
             item.setData(0, Qt.UserRole, i)
+            self.cekandset_expand(item, i['time'])
 
             for z in i["out_m2"]["m2_data"]:
                 mid_item = QTreeWidgetItem(item)
-                mid_item.setText(0, f"ID: {z['id']}")
+                mid_item.setText(0, f"{z['id']} ({z['type']})")
                 mid_item.setFont(0, self.font)
-
-                mty_item = QTreeWidgetItem(item)
-                mty_item.setText(0, f"Type: {z['type']}")
-                mty_item.setFont(0, self.font)
+                mid_item.setData(0, Qt.UserRole, i)
 
                 if isinstance(z['value'], list):
-                    mval_item = QTreeWidgetItem(item)
+                    mval_item = QTreeWidgetItem(mid_item)
                     mval_item.setText(0, f"Value: {len(z['value'])}")
                     mval_item.setFont(0, self.font)
+                    mval_item.setData(0, Qt.UserRole, i)
+
                     for ival in z['value']:
                         mival_item = QTreeWidgetItem(mval_item)
                         mival_item.setText(0, f"{ival}")
                         mival_item.setFont(0, self.font)
+                        mival_item.setToolTip(0, f"{ival}")
+                        mival_item.setData(0, Qt.UserRole, i)
                 else:
-                    mval_item = QTreeWidgetItem(item)
+                    mval_item = QTreeWidgetItem(mid_item)
                     mval_item.setText(0, f"Value: {z['value']}")
                     mval_item.setFont(0, self.font)
+                    mval_item.setToolTip(0, f"{z['value']}")
 
             ttip = []
             for z in i["out_m2"]["m2_data"]:

@@ -2,6 +2,7 @@ import gdb
 import struct
 import traceback
 import json
+import time
 
 def dump_buffer(inferior, addr, length, max_dump=256):
     """Dump buffer ke hex + ascii. Mirip x/100bx"""
@@ -211,7 +212,9 @@ def buffer_trace(func):
             data = inf.read_memory(buf_addr, length).tobytes()
             out_m2 = parse_m2_packet(data, buf_addr)
 
+        ts = int(time.time() * 1000)
         output = {
+            "time": ts,
             "fd": sockfd,
             "msg_addr": msg_addr,
             "iov": iov,

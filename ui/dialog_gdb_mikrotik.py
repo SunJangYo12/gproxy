@@ -70,6 +70,26 @@ class DialogMikrotikSniff(QDialog):
         self.showData()
         SIGNALS.gdb_updated_mikrotik_sniff.connect(self.showData)
 
+    def cekandset_expand(self, tree, id):
+        for data in self.expanded_items:
+            if data == id:
+                tree.setExpanded(True)
+
+    def click_expand(self, item):
+        try:
+            data = item.data(0, Qt.UserRole)
+            self.expanded_items.add(data["time"])
+        except:
+            pass
+
+    def click_collap(self, item):
+        try:
+            data = item.data(0, Qt.UserRole)
+            self.expanded_items.remove(data["time"])
+        except:
+            pass
+
+
     def open_json(self, pf):
         data = []
         try:
@@ -78,19 +98,6 @@ class DialogMikrotikSniff(QDialog):
         except:
             pass
         return data
-
-    def cekandset_expand(self, tree, id):
-        for data in self.expanded_items:
-            if data == id:
-                tree.setExpanded(True)
-
-    def click_expand(self, item):
-        data = item.data(0, Qt.UserRole)
-        self.expanded_items.add(data["time"])
-
-    def click_collap(self, item):
-        data = item.data(0, Qt.UserRole)
-        self.expanded_items.remove(data["time"])
 
     def showData(self):
         self.tree_widget.clear()
@@ -111,13 +118,11 @@ class DialogMikrotikSniff(QDialog):
                 mid_item = QTreeWidgetItem(item)
                 mid_item.setText(0, f"{z['id']} ({z['type']})")
                 mid_item.setFont(0, self.font)
-                mid_item.setData(0, Qt.UserRole, i)
 
                 if isinstance(z['value'], list):
                     mval_item = QTreeWidgetItem(mid_item)
                     mval_item.setText(0, f"Value: {len(z['value'])}")
                     mval_item.setFont(0, self.font)
-                    mval_item.setData(0, Qt.UserRole, i)
 
                     for ival in z['value']:
                         mival_item = QTreeWidgetItem(mval_item)
@@ -129,7 +134,6 @@ class DialogMikrotikSniff(QDialog):
                         mival_item.setText(0, f"{isi}")
                         mival_item.setFont(0, self.font)
                         mival_item.setToolTip(0, f"{ival}")
-                        mival_item.setData(0, Qt.UserRole, i)
                 else:
                     mval_item = QTreeWidgetItem(mid_item)
                     mval_item.setText(0, f"Value: {z['value']}")

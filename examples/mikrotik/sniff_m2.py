@@ -155,7 +155,8 @@ def parse_m2_packet(data, buf_addr):
         except Exception as e:
             traceback.print_exc()
     else:
-        attr_M2["m2_data"] = "Not M2 packet"
+        attr_M2["m2_data"] = []
+        attr_M2["eroor"] = "Not M2 packet"
         print("Not M2 packet")
 
     # Dump hex + ascii

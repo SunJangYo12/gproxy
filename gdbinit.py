@@ -24,6 +24,7 @@ import detect_struct
 import fuzzer_ptrace
 from address_human import AddressHuman, StackHuman, ArchType
 import struct
+from collections import deque
 
 proxy = xmlrpc.client.ServerProxy("http://127.0.0.1:1337", allow_none=True)
 
@@ -182,7 +183,7 @@ class TraceBreakpoint(gdb.Breakpoint):
         self.target = target
 
         if self.target == "mikrotik":
-            self.mikrotik_sniff = []
+            self.mikrotik_sniff = deque([], maxlen=20)
             self.pmikrotik_sniff = "/tmp/mikrotik-sniff.json"
 
         if bb:
@@ -315,7 +316,7 @@ class TraceBreakpoint(gdb.Breakpoint):
 
                 with open(self.pmikrotik_sniff, "w") as fd:
                     #fd.write(json.dumps(mikrotik_data))
-                    json.dump(self.mikrotik_sniff, fd, indent=2)
+                    json.dump(list(self.mikrotik_sniff), fd, indent=2)
                 proxy.settofrida_func("", "update_gdb_mikrotik")
 
             elif self.target == "zzzzzzz":

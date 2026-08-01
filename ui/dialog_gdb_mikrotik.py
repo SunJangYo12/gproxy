@@ -121,7 +121,12 @@ class DialogMikrotikSniff(QDialog):
 
                     for ival in z['value']:
                         mival_item = QTreeWidgetItem(mval_item)
-                        mival_item.setText(0, f"{ival}")
+                        try:
+                            isi = ival.split("=>")
+                            isi = int(isi[1], 0)
+                        except:
+                            isi = ival
+                        mival_item.setText(0, f"{isi}")
                         mival_item.setFont(0, self.font)
                         mival_item.setToolTip(0, f"{ival}")
                         mival_item.setData(0, Qt.UserRole, i)

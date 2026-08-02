@@ -4,6 +4,8 @@ import time
 
 class GlobalState:
     def __init__(self):
+        self.graph_attr = {}      #readme
+        self.graph_nodes = []
         self.simgr = None
         self.angr_project = None
         self.angr_states = []     #all states here
@@ -12,7 +14,6 @@ class GlobalState:
         self.angr_hooks = []      #hook with {name.., metadata}
         self.gdb_functions = {}
         self.gdb_blocks = {}
-        self.gdb_kernelproc = []
         self.gdb_hookstop = ""
         self.gdb_hookname = ""
         self.gdb_hookstructname = ""

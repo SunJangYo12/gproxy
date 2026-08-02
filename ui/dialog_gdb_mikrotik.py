@@ -27,15 +27,29 @@ import base64
 import time
 import json
 import subprocess
-from binaryninja import (
-    core_version,
-    log_info,
-    highlight,
-    show_message_box,
-    MessageBoxButtonSet,
-    MessageBoxIcon
-)
+from binaryninja import *
 import binaryninja as binja
+
+M2_OPRATION = {
+    '0xff0001': 'sys_to',
+    '0xff0002': 'sys_from',
+    '0xff0003': 'sys_type',
+    '0xff0004': 'sys_status',
+    '0xff0005': 'sys_reply_expected',
+    '0xff0006': 'sys_request_id',
+    '0xff0007': 'sys_cmd',
+    '0xff0008': 'sys_error_code',
+    '0xff0009': 'sys_error',
+    '0xff000A': 'sys_user',
+    '0xff000B': 'sys_perm',
+    '0xff000D': 'sys_ctrl',
+    '0xff000F': 'sys_ctrl_arg',
+    '0xff0010': 'sys_user_id',
+    '0xff0011': 'sys_notifycmd',
+    '0xff0012': 'sys_originator',
+    '0xff0013': 'sys_addr',
+    '0xff0016': 'sys_dreason',
+}
 
 class DialogMikrotikSniff(QDialog):
     def __init__(self, parent=None, sid=None, data=None):
@@ -67,6 +81,7 @@ class DialogMikrotikSniff(QDialog):
         self.setLayout(layout)
         self.bv = data
         self.expanded_items = set()
+        self.viz = {}
         self.showData()
         SIGNALS.gdb_updated_mikrotik_sniff.connect(self.showData)
 
@@ -99,6 +114,23 @@ class DialogMikrotikSniff(QDialog):
             pass
         return data
 
+    def updateGraph(self, who):
+        x = f"{hex(who['iov'])} {who['out_m2']['packet_length']}"
+        print(f"[+] vizual: {x}")
+        print(self.viz)
+
+        # sys_to == [0xff0002, 1,2,3,] #multicast
+        # sys_to == [0xff0001] #broadcast
+
+        # add color
+        #GLOBAL.graph_attr = {
+        #    "n_color": HighlightStandardColor.GreenHighlightColor,
+        #    "e_color": BranchType.FalseBranch,
+        #    "node_color": ["loader", "www"],
+        #    "edge_color": ["loader", "www"]
+        #}
+        #self.bv.offset = 0x401260 # change this
+
     def showData(self):
         self.tree_widget.clear()
         mydata = self.open_json("/tmp/mikrotik-sniff.json")
@@ -106,7 +138,10 @@ class DialogMikrotikSniff(QDialog):
 
         self.tree_widget.headerItem().setText(0, "Buffer iov Total: %s" %len(mydata) )
 
+        zz = 0
+        self.viz = {}
         for i in mydata:
+            zz += 1
             title = f"{hex(i['iov'])} {i['out_m2']['packet_length']}"
             item = QTreeWidgetItem(self.tree_widget)
             item.setText(0, title)
@@ -117,7 +152,17 @@ class DialogMikrotikSniff(QDialog):
             for z in i["out_m2"]["m2_data"]:
                 mid_item = QTreeWidgetItem(item)
                 mid_item.setText(0, f"{z['id']} ({z['type']})")
+
+                op_key = None
+                for key, op in M2_OPRATION.items():
+                    if z['id'] == key:
+                        mid_item.setText(0, f"{z['id']} ({op.upper()})")
+                        op_key = op
+                        if zz == 1:
+                            self.viz[op_key] = []
+
                 mid_item.setFont(0, self.font)
+                mid_item.setToolTip(0, f"Type: {z['type']}")
 
                 if isinstance(z['value'], list):
                     mval_item = QTreeWidgetItem(mid_item)
@@ -129,6 +174,13 @@ class DialogMikrotikSniff(QDialog):
                         try:
                             isi = ival.split("=>")
                             isi = int(isi[1], 0)
+
+                            if op_key:
+                                for x3 in GLOBAL.graph_nodes:
+                                    if x3["x3_id"] == f"{isi}":
+                                        isi = f'{isi} {x3["binary"]}'
+                                        if zz == 1:
+                                            self.viz[op_key].append(x3['binary'])
                         except:
                             isi = ival
                         mival_item.setText(0, f"{isi}")
@@ -143,8 +195,9 @@ class DialogMikrotikSniff(QDialog):
             ttip = []
             for z in i["out_m2"]["m2_data"]:
                 ttip.append(f'{z["id"]} ({z["type"]})\n')
-
             item.setToolTip(0, "".join(ttip))
+
+        self.updateGraph(mydata[0])
 
     def on_item_double_clicked(self, item, column):
         try:
@@ -158,6 +211,7 @@ class DialogMikrotikSniff(QDialog):
         item = self.tree_widget.itemAt(position)
         menu = QMenu()
 
+        menu.addAction("Visual in graph")
         menu.addAction("Info recvmsg structure")
         menu.addAction("Info header M2 data (iov buffer)")
         menu.addAction("Dump hex (print)")
@@ -174,6 +228,9 @@ class DialogMikrotikSniff(QDialog):
                 print(data["out_m2"]["dump"])
             except:
                 pass
+
+        elif action == "Visual in graph":
+            self.updateGraph()
 
         elif action == "Info recvmsg structure":
             try:

@@ -253,7 +253,7 @@ class Gproxy:
         """
         log_info("[+] New proc: %s" %data)
 
-        GLOBAL.gdb_kernelproc.append(data)
+        GLOBAL.graph_nodes.append(data)
 
         return True
 
@@ -350,6 +350,7 @@ class Gproxy:
             GLOBAL.window_frida_tracer_title = data
             SIGNALS.window_frida_tracer_allocator.emit()
         elif type == "gdb_mikrotik_sniff":
+            GLOBAL.graph_nodes = data
             SIGNALS.window_gdb_mikrotiksniff.emit()
 
 

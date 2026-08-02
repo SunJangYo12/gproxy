@@ -7,29 +7,48 @@ from binaryninja import *
 
 from ..data_global import SIGNALS, GLOBAL
 
-
 class ProcessRun(FlowGraph):
     def __init__(self):
         super(ProcessRun, self).__init__()
         self.node_map = {}
 
     def populate_nodes(self):
-        items = GLOBAL.gdb_kernelproc
+        try:
+            node_color = GLOBAL.graph_attr["node_color"] #this array, node pembeda (bergerak)
+            edge_color = GLOBAL.graph_attr["edge_color"] #this array, edge pembeda (bergerak)
+            items = GLOBAL.graph_attr["node_members"]
+        except:
+            node_color = []
+            edge_color = []
+            items = []
 
         if len(items) == 0:
             return
 
-        root_item = items[0]
-        self.add_node(root_item)
+        root_item = GLOBAL.graph_attr["node_root"] #this string
+
+        #root_item = items[0]
+        if root_item in node_color:
+            self.add_node(root_item, True)
+        else:
+            self.add_node(root_item, False)
 
         for item in items[1:]:
-            self.add_node(item)
+            if item in node_color:
+                self.add_node(item, True)
+            else:
+                self.add_node(item, False)
 
-            self.connect_node(root_item, item)
+            if item in edge_color:
+                self.connect_node(root_item, item, True)
+            else:
+                self.connect_node(root_item, item, False)
 
-
-    def add_node(self, name):
+    def add_node(self, name, is_color):
         node = FlowGraphNode(self)
+        if is_color:
+            node.highlight = GLOBAL.graph_attr["n_color"]
+
         node.name = name
         node.lines = [
             DisassemblyTextLine([
@@ -42,18 +61,20 @@ class ProcessRun(FlowGraph):
         self.append(node)
         self.node_map[name] = node
 
-    def connect_node(self, src, dst):
+    def connect_node(self, src, dst, is_color):
         src = self.node_map[src]
         dst = self.node_map[dst]
 
-        src.add_outgoing_edge(
-            BranchType.UnconditionalBranch,
-            dst
-        )
-
-
-
-
+        if is_color:
+            src.add_outgoing_edge(
+                GLOBAL.graph_attr['e_color'],
+                dst
+            )
+        else:
+            src.add_outgoing_edge(
+                BranchType.UnconditionalBranch,
+                dst
+            )
 
 class ProcessCreate(FlowGraphWidget):
     def __init__(self, parent, data):
@@ -88,7 +109,7 @@ class ProcessCreate(FlowGraphWidget):
 # View type for the new view
 class ProcessInit(ViewType):
     def __init__(self):
-        super(ProcessInit, self).__init__("Kernel Process GDB", "Gproxy - Process List")
+        super(ProcessInit, self).__init__("Gproxy Graph", "Gproxy - Graph")
 
     def getPriority(self, data, filename):
         if data.executable:

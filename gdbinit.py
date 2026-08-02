@@ -507,7 +507,15 @@ class LoadTrace(gdb.Command):
             target = "mikrotik"
             bn = True
             proxy.settofrida_func("gdb_func", "refresh")
-            proxy.settofrida_openwindow("gdb_mikrotik_sniff", "")
+
+            bipc_out = []
+            for bipc in sniff_m2.x3_system:
+                dat = bipc.split(",")
+                bipc_out.append({
+                    "binary": dat[0],
+                    "x3_id": dat[1]
+                })
+            proxy.settofrida_openwindow("gdb_mikrotik_sniff", bipc_out)
 
         elif arg == "run-bn":
             print("[+] starting traces..")

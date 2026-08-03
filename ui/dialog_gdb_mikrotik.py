@@ -134,6 +134,8 @@ class DialogMikrotikSniff(QDialog):
     def showData(self):
         self.tree_widget.clear()
         mydata = self.open_json("/tmp/mikrotik-sniff.json")
+        if len(mydata) == 0:
+            return
         mydata.reverse() #balik terakhir diatas (terbaru)
 
         self.tree_widget.headerItem().setText(0, "Buffer iov Total: %s" %len(mydata) )
@@ -142,7 +144,7 @@ class DialogMikrotikSniff(QDialog):
         self.viz = {}
         for i in mydata:
             zz += 1
-            title = f"{hex(i['iov'])} {i['out_m2']['packet_length']}"
+            title = f"{i['sink']} {hex(i['iov'])} {i['out_m2']['packet_length']}"
             item = QTreeWidgetItem(self.tree_widget)
             item.setText(0, title)
             item.setFont(0, self.font)

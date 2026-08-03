@@ -6,7 +6,6 @@ import time
 
 #version 6.46
 x3_system = [
-    '/nova/bin/loader,1', #?
     '/nova/bin/log,3',
     '/nova/bin/radius,5',
     '/nova/bin/moduler,6',
@@ -183,7 +182,7 @@ def parse_m2_attribute(data):
             output = f"{output} => {hex(int.from_bytes(output, 'little'))}"
         else:
             output = "Parse M2 failed, please cek again!"
-            print("Parse M2 failed, please cek again!")
+            print(f"Parse M2 failed, please cek again! {type}")
             break
 
         out.append({
@@ -211,11 +210,11 @@ def parse_m2_packet(data, buf_addr):
     attr_M2["msg_length"]    = total_len
     attr_M2["magic"]         = magic.hex()
 
-    print(f" -> M2 PACKET HEADER => {hex(buf_addr)}")
-    print(f" Packet Length    : 0x{pkt_len:02x} ({pkt_len})")
-    print(f" Security Mode    : 0x{sec_mode:02x} ({sec_mode})")
-    print(f" Total Msg Length : 0x{total_len:04x} ({total_len})")
-    print(f" Magic            : {magic} = 0x{magic.hex()}")
+#    print(f" -> M2 PACKET HEADER => {hex(buf_addr)}")
+#    print(f" Packet Length    : 0x{pkt_len:02x} ({pkt_len})")
+#    print(f" Security Mode    : 0x{sec_mode:02x} ({sec_mode})")
+#    print(f" Total Msg Length : 0x{total_len:04x} ({total_len})")
+#    print(f" Magic            : {magic} = 0x{magic.hex()}")
 
     # Dump attribute
     if magic == b"M2":
@@ -223,8 +222,8 @@ def parse_m2_packet(data, buf_addr):
             m2_data = parse_m2_attribute(data[0:pkt_len+50])
             attr_M2["m2_data"] = m2_data
 
-            for i in m2_data:
-                print(i)
+            #for i in m2_data:
+            #    print(i)
         except Exception as e:
             traceback.print_exc()
     else:
@@ -238,7 +237,7 @@ def parse_m2_packet(data, buf_addr):
         chunk = data[i:i+16]
         hex_part = ' '.join(f"{b:02x}" for b in chunk)
         ascii_part = ''.join(chr(b) if 32 <= b < 127 else '.' for b in chunk)
-        print(f" 0x{i:04x}: {hex_part:<48} |{ascii_part}|")
+#       print(f" 0x{i:04x}: {hex_part:<48} |{ascii_part}|")
         outdump.append(f" 0x{i:04x}: {hex_part:<48} |{ascii_part}|\n")
 
     attr_M2["dump"] = "".join(outdump)
@@ -246,7 +245,7 @@ def parse_m2_packet(data, buf_addr):
 
 # Normalnya buffer terisi setelah akhir fungsi, tapi recvmsg kayanya gak
 def buffer_trace(func):
-    if func == "recvmsg":
+    if func == "recvmsg" or func == "sendmsg":
         inf = gdb.selected_inferior()
         frame = gdb.selected_frame()
         is64 = "x86-64" in frame.architecture().name()
@@ -273,7 +272,7 @@ def buffer_trace(func):
             control, controllen = struct.unpack(fmt, h[16:20])[0], struct.unpack(fmt, h[20:24])[0]
             flags = struct.unpack(fmt, h[24:28])[0]
 
-        print(f" -> recvmsg fd={sockfd} msg_addr=0x{msg_addr:x} iovlen={iovlen} ctrllen={controllen} flags=0x{flags:x}")
+        print(f" -> {func} fd={sockfd} msg_addr=0x{msg_addr:x} iovlen={iovlen} ctrllen={controllen} flags=0x{flags:x}")
 
         # 1. Ekstrak buffer data dari iovec
         out_m2 = None
@@ -289,6 +288,7 @@ def buffer_trace(func):
         ts = int(time.time() * 1000)
         output = {
             "time": ts,
+            "sink": func,
             "fd": sockfd,
             "msg_addr": msg_addr,
             "iov": iov,

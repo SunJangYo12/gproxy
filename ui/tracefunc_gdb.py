@@ -529,7 +529,7 @@ class FuncListDockWidget(QWidget, DockContextHandler):
     def refresh_from_global_owindow_mikrotikSniff(self):
         self.sw_menu = "mikrotik_sniff"
 
-        self.msdlg = DialogMikrotikSniff(sid="Sniff", data=self.bv)
+        self.msdlg = DialogMikrotikSniff(sid="M2 Sniffing", data=self.bv)
         self.msdlg.resize(300, 450) # w,h
         self.msdlg.show()
         self.msdlg.raise_()

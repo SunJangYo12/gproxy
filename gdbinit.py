@@ -11,7 +11,7 @@ MYFILE = os.path.abspath(os.path.expanduser(__file__))
 if os.path.islink(MYFILE):
     MYFILE = os.readlink(MYFILE)
 sys.path.insert(0, os.path.dirname(MYFILE) + "/gdbutils")
-sys.path.insert(0, os.path.dirname(MYFILE) + "/examples/mikrotik")
+sys.path.insert(0, os.path.dirname(MYFILE) + "/target/mikrotik")
 sys.path.insert(0, os.path.dirname(MYFILE))
 
 from settings import Settings
@@ -168,6 +168,7 @@ class StepSync:
 
             proxy.jump("%#x" % self.last_rip)
 
+mikrotik_sniff = deque([], maxlen=20)
 
 class TraceBreakpoint(gdb.Breakpoint):
     def __init__(self, addr, func_name=None, bn=None, hook=None, bb=False, target=None):
@@ -183,7 +184,6 @@ class TraceBreakpoint(gdb.Breakpoint):
         self.target = target
 
         if self.target == "mikrotik":
-            self.mikrotik_sniff = deque([], maxlen=20)
             self.pmikrotik_sniff = "/tmp/mikrotik-sniff.json"
 
         if bb:
@@ -312,11 +312,11 @@ class TraceBreakpoint(gdb.Breakpoint):
 
             if self.target == "mikrotik":
                 mikrotik_data = sniff_m2.buffer_trace(self.func_name)
-                self.mikrotik_sniff.append(mikrotik_data)
+                mikrotik_sniff.append(mikrotik_data)
 
                 with open(self.pmikrotik_sniff, "w") as fd:
-                    #fd.write(json.dumps(mikrotik_data))
-                    json.dump(list(self.mikrotik_sniff), fd, indent=2)
+                    json.dump(list(mikrotik_sniff), fd, indent=2)
+
                 proxy.settofrida_func("", "update_gdb_mikrotik")
 
             elif self.target == "zzzzzzz":

@@ -1,0 +1,68 @@
+
+from gproxy.data_global import GLOBAL, SIGNALS
+
+# add color
+GLOBAL.graph_attr = {
+"n_color": HighlightStandardColor.GreenHighlightColor,
+"e_color": BranchType.FalseBranch,
+"node_color": ["loader", "www"],
+"edge_color": ["loader", "www"],
+"node_members": ["loader", "www", "mproxy", "ftp", "user"],
+"node_root": "loader"
+}
+
+# update ui
+bv.offset = 0x401260
+
+
+
+login,1039
+    sys_to = [13, 4] #13(target) 4(handler)
+    sys_from = []
+    name: admin
+    password: password
+loader,0
+    sys_to = [4]
+    sys_from = [1039]
+    name: admin
+    password: password
+user,13
+    sys_to = []
+    sys_from = [1039]
+    name: admin
+    password: password
+        handle,4
+            process autentikasi
+
+
+
+# foo mengirim data ke bar > sub
+foo,12
+    sys_to: [34, 50]
+    sys_from: []
+
+loader
+    sys_to: [50] #remove 34
+    sys_from: [12]
+
+bar,34
+    sys_to: []
+    sys_from: [12]
+    HANDLE-sub,50
+        process data
+
+
+# sub di bar mengirim data ke foo
+bar,34
+    HANDLE-sub,50
+        sys_to: [12]
+        sys_from: []
+
+loader
+    sys_to: [12]
+    sys_from: [50]
+
+foo,12
+    sys_to: []
+    sys_from: [34, 50]
+

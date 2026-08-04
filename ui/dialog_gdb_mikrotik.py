@@ -26,6 +26,7 @@ from ..data_global import SIGNALS, GLOBAL
 import base64
 import time
 import json
+import socket
 import subprocess
 from binaryninja import *
 import binaryninja as binja
@@ -82,6 +83,8 @@ class DialogMikrotikSniff(QDialog):
         self.bv = data
         self.expanded_items = set()
         self.viz = {}
+        self.prepare_send = {}
+        self.ex_vizinit = False
         self.showData()
         SIGNALS.gdb_updated_mikrotik_sniff.connect(self.showData)
 
@@ -114,13 +117,82 @@ class DialogMikrotikSniff(QDialog):
             pass
         return data
 
+    def add_ext_window_node(self, node_name, parent_name, an_from=None, an_to=None):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect(("127.0.0.1", 9999))
+            msg = {
+                "node": node_name,
+                "parent": parent_name,
+                "animate": True,
+                "an_from": an_from,
+                "an_to": an_to
+            }
+            s.sendall(json.dumps(msg).encode())
+
+    def updateGraphExtWindow(self, who):
+        if not self.ex_vizinit:
+            self.ex_vizinit = True
+            for x3 in GLOBAL.graph_nodes:
+                isi = f'{x3["x3_id"]} {x3["binary"]}'
+                self.add_ext_window_node(isi, "ROOT")
+                time.sleep(1)
+            print(f"[+] Load x3 binary done.")
+        else:
+            # TODO susah njir
+            # FUCK mikrotik
+            if who['sink'] == "recvmsg":
+                if len(self.viz['sys_from']) == 0:
+                    print("prepare")
+                    self.prepare_send = self.viz['sys_to']
+                else:
+                    #from handler
+                    print("prepare from handler")
+                    self.prepare_send = self.viz['sys_to']
+
+            elif who['sink'] == "sendmsg":
+                sys_from = self.viz['sys_from'] #whois send
+
+                if len(sys_from) > 0:
+                    mto = self.prepare_send
+
+                    # send caller to ROOT
+                    f = sys_from[0]
+                    self.add_ext_window_node(f, "ROOT", an_from=f, an_to="ROOT")
+                    time.sleep(1)
+
+                    # send ROOT to target
+                    self.add_ext_window_node("ROOT", mto[0], an_from="ROOT", an_to=mto[0])
+
+                    # send target to handler
+                    if len(mto) > 1:
+                        print("have handler")
+                        handler = f"{mto[0]},{mto[1]}"
+                        self.add_ext_window_node(mto[0], handler)
+                        time.sleep(1)
+                        self.add_ext_window_node(mto[0], handler, an_from=mto[0], an_to=handler)
+
+
+
     def updateGraph(self, who):
-        x = f"{hex(who['iov'])} {who['out_m2']['packet_length']}"
-        print(f"[+] vizual: {x}")
+        title = f"{who['sink']} {hex(who['iov'])} {who['out_m2']['packet_length']}"
+        print(title)
         print(self.viz)
 
+
+        # Context: loader binary
+        # 1). Send
+        # who is send
+        #   -sink     : sendmsg
+        #   -opration : SYS_FROM => www(70)
+        # send to
+        #   -sink     : recvmsg
+        #   -opration : SYS_TO => user(13) handler(1)
+
+        # other
         # sys_to == [0xff0002, 1,2,3,] #multicast
         # sys_to == [0xff0001] #broadcast
+
+
 
         # add color
         #GLOBAL.graph_attr = {
@@ -181,8 +253,8 @@ class DialogMikrotikSniff(QDialog):
                                 for x3 in GLOBAL.graph_nodes:
                                     if x3["x3_id"] == f"{isi}":
                                         isi = f'{isi} {x3["binary"]}'
-                                        if zz == 1:
-                                            self.viz[op_key].append(x3['binary'])
+                                if zz == 1:
+                                    self.viz[op_key].append(isi)
                         except:
                             isi = ival
                         mival_item.setText(0, f"{isi}")
@@ -203,11 +275,31 @@ class DialogMikrotikSniff(QDialog):
 
     def on_item_double_clicked(self, item, column):
         try:
-            addr = int(item.text(column), 0)
-            print("jump to:", hex(addr))
-            self.bv.offset = addr
+            i = item.data(0, Qt.UserRole)
+            for z in i["out_m2"]["m2_data"]:
+                op_key = None
+                for key, op in M2_OPRATION.items():
+                    if z['id'] == key:
+                        op_key = op
+                        self.viz[op_key] = []
+
+                if isinstance(z['value'], list):
+                    for ival in z['value']:
+                        try:
+                            isi = ival.split("=>")
+                            isi = int(isi[1], 0)
+                            if op_key:
+                                for x3 in GLOBAL.graph_nodes:
+                                    if x3["x3_id"] == f"{isi}":
+                                        isi = f"{isi} {x3['binary']}"
+                                self.viz[op_key].append(isi)
+                        except:
+                            pass
+            #self.updateGraph(i)
+            self.updateGraphExtWindow(i)
         except Exception as e:
             print(e)
+
 
     def on_tree_context_menu(self, position: QPoint):
         item = self.tree_widget.itemAt(position)
@@ -232,7 +324,28 @@ class DialogMikrotikSniff(QDialog):
                 pass
 
         elif action == "Visual in graph":
-            self.updateGraph()
+            i = item.data(0, Qt.UserRole)
+            for z in i["out_m2"]["m2_data"]:
+                op_key = None
+                for key, op in M2_OPRATION.items():
+                    if z['id'] == key:
+                        op_key = op
+                        self.viz[op_key] = []
+
+                if isinstance(z['value'], list):
+                    for ival in z['value']:
+                        try:
+                            isi = ival.split("=>")
+                            isi = int(isi[1], 0)
+                            if op_key:
+                                for x3 in GLOBAL.graph_nodes:
+                                    if x3["x3_id"] == f"{isi}":
+                                        isi = f"{isi} {x3['binary']}"
+                                self.viz[op_key].append(isi)
+                        except:
+                            pass
+            #self.updateGraph(i)
+            self.updateGraphExtWindow(i)
 
         elif action == "Info recvmsg structure":
             try:

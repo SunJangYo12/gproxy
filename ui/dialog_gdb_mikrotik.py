@@ -74,6 +74,7 @@ class DialogMikrotikSniff(QDialog):
         self.tree_widget.itemDoubleClicked.connect(self.on_item_double_clicked)
         self.tree_widget.itemExpanded.connect(self.click_expand)
         self.tree_widget.itemCollapsed.connect(self.click_collap)
+        self.tree_widget.setExpandsOnDoubleClick(False)
 
 
         layout = QVBoxLayout()
@@ -83,7 +84,8 @@ class DialogMikrotikSniff(QDialog):
         self.bv = data
         self.expanded_items = set()
         self.viz = {}
-        self.prepare_send = {}
+        self.recvmsg_to = None   #this tmp
+        self.recvmsg_from = None #this tmp
         self.ex_vizinit = False
         self.showData()
         SIGNALS.gdb_updated_mikrotik_sniff.connect(self.showData)
@@ -128,58 +130,56 @@ class DialogMikrotikSniff(QDialog):
                 "an_to": an_to
             }
             s.sendall(json.dumps(msg).encode())
+            time.sleep(1)
 
     def updateGraphExtWindow(self, who):
+        title = f"{who['sink']} {hex(who['iov'])} {who['out_m2']['packet_length']}"
+        print(title)
+        print(self.viz)
+
         if not self.ex_vizinit:
             self.ex_vizinit = True
             for x3 in GLOBAL.graph_nodes:
                 isi = f'{x3["x3_id"]} {x3["binary"]}'
                 self.add_ext_window_node(isi, "ROOT")
-                time.sleep(1)
             print(f"[+] Load x3 binary done.")
         else:
-            # TODO susah njir
-            # FUCK mikrotik
             if who['sink'] == "recvmsg":
-                if len(self.viz['sys_from']) == 0:
-                    print("prepare")
-                    self.prepare_send = self.viz['sys_to']
-                else:
-                    #from handler
-                    print("prepare from handler")
-                    self.prepare_send = self.viz['sys_to']
+                self.recvmsg_to = self.viz['sys_to']
+                self.recvmsg_from = self.viz['sys_from']
 
             elif who['sink'] == "sendmsg":
-                sys_from = self.viz['sys_from'] #whois send
+                sys_to = self.recvmsg_to[0]
+                sys_from = self.viz['sys_from'][0]
 
-                if len(sys_from) > 0:
-                    mto = self.prepare_send
+                # Balik?
+                if len(self.viz['sys_from']) > 1:
+                    print("[+] sendmsg have handler")
+                    handler = f"{sys_from},{self.viz['sys_from'][1]}"
+                    self.add_ext_window_node(handler, sys_from, an_from=handler, an_to=sys_from)
 
-                    # send caller to ROOT
-                    f = sys_from[0]
-                    self.add_ext_window_node(f, "ROOT", an_from=f, an_to="ROOT")
-                    time.sleep(1)
+                # send sys_from to loader
+                self.add_ext_window_node(sys_from, "ROOT", an_from=sys_from, an_to="ROOT")
 
-                    # send ROOT to target
-                    self.add_ext_window_node("ROOT", mto[0], an_from="ROOT", an_to=mto[0])
+                # send loader to sys_to
+                self.add_ext_window_node("ROOT", sys_to, an_from="ROOT", an_to=sys_to)
 
-                    # send target to handler
-                    if len(mto) > 1:
-                        print("have handler")
-                        handler = f"{mto[0]},{mto[1]}"
-                        self.add_ext_window_node(mto[0], handler)
-                        time.sleep(1)
-                        self.add_ext_window_node(mto[0], handler, an_from=mto[0], an_to=handler)
+                # Kirim?
+                if len(self.recvmsg_to) > 1:
+                    print("[+] recvmsg have handler")
+                    handler = f"{sys_to},{self.recvmsg_to[1]}"
+                    self.add_ext_window_node(sys_to, handler, an_from=sys_to, an_to=handler)
 
-
+                self.recvmsg_to = None
+                self.recvmsg_from = None
 
     def updateGraph(self, who):
         title = f"{who['sink']} {hex(who['iov'])} {who['out_m2']['packet_length']}"
         print(title)
         print(self.viz)
 
-
         # Context: loader binary
+        # TODO
         # 1). Send
         # who is send
         #   -sink     : sendmsg
@@ -191,8 +191,6 @@ class DialogMikrotikSniff(QDialog):
         # other
         # sys_to == [0xff0002, 1,2,3,] #multicast
         # sys_to == [0xff0001] #broadcast
-
-
 
         # add color
         #GLOBAL.graph_attr = {
@@ -271,7 +269,8 @@ class DialogMikrotikSniff(QDialog):
                 ttip.append(f'{z["id"]} ({z["type"]})\n')
             item.setToolTip(0, "".join(ttip))
 
-        self.updateGraph(mydata[0])
+        #self.updateGraph(mydata[0])
+        self.updateGraphExtWindow(mydata[0]) # BUG: race data, efek saat update sink tidak tepat
 
     def on_item_double_clicked(self, item, column):
         try:

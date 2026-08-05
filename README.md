@@ -83,7 +83,7 @@ modprobed,1
 [7/79] licupgr
 ```
 
-# GDB & binja mikrotik binary IPC sniffing protocol (M2)
+# GDB & binja mikrotik binary IPC sniffing protocol (M2) + VISUALIZE
 Saat binary mikrotik berkomunikasi melalui ipc, alat ini bisa sniffing
 protocol M2 dan extrack datanya lalu divisualisasikan ke binaryninja 
 ```
@@ -96,6 +96,10 @@ protocol M2 dan extrack datanya lalu divisualisasikan ke binaryninja
     (gdb) cmdtracefunc generate => edit /tmp/funcs.txt sisakan recvmsg
     (gdb) target remote 192.168.43.1:8243
     (gdb) cmdtracefunc run-mikrotik
+4.) Untuk visualisasi pakai ui external
+    $ python target/mikrotik/external_window/server2.py
+    tunggu semua nova binary di load.
+
 NOTE: otomatis ada ui baru (Gdb mikrotik).
 port 443 asal pakai karena ngangur di pengaturan qemu dan bisa diakses
 diluar jaringan dengan port 8243. kita bisa mencocokan data dengan dump

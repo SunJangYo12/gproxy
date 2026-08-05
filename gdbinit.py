@@ -168,7 +168,7 @@ class StepSync:
 
             proxy.jump("%#x" % self.last_rip)
 
-mikrotik_sniff = deque([], maxlen=20)
+mikrotik_sniff = deque([], maxlen=40)
 
 class TraceBreakpoint(gdb.Breakpoint):
     def __init__(self, addr, func_name=None, bn=None, hook=None, bb=False, target=None):

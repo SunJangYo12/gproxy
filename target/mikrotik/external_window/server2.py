@@ -44,13 +44,13 @@ def redraw():
 
     if drag_data["mode"]!= "node":
         fixed_nodes = [n for n in pos.keys() if n!= drag_data["node"]]
-        pos = nx.spring_layout(G, k=0.8, iterations=50, pos=pos, fixed=fixed_nodes, seed=42 )
+        pos = nx.spring_layout(G, k=0.4, iterations=50, pos=pos, fixed=fixed_nodes, seed=42 )
 
     # gambar edge biasa
     for u, v in G.edges():
         x1, y1 = to_pixel(*pos[u])
         x2, y2 = to_pixel(*pos[v])
-        canvas.create_line(x1, y1, x2, y2, width=2, fill="black")
+        canvas.create_line(x1, y1, x2, y2, width=2, fill="#111")
 
     r = 20
     for node, (x, y) in pos.items():

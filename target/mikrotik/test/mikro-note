@@ -21,7 +21,7 @@ login,1039
     sys_from = []
     name: admin
     password: password
-loader,0
+loader
     sys_to = [4]
     sys_from = [1039]
     name: admin

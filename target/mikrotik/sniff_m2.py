@@ -222,8 +222,8 @@ def parse_m2_packet(data, buf_addr):
             m2_data = parse_m2_attribute(data[0:pkt_len+50])
             attr_M2["m2_data"] = m2_data
 
-            #for i in m2_data:
-            #    print(i)
+            for i in m2_data:
+                print(i)
         except Exception as e:
             traceback.print_exc()
     else:
@@ -237,7 +237,7 @@ def parse_m2_packet(data, buf_addr):
         chunk = data[i:i+16]
         hex_part = ' '.join(f"{b:02x}" for b in chunk)
         ascii_part = ''.join(chr(b) if 32 <= b < 127 else '.' for b in chunk)
-#       print(f" 0x{i:04x}: {hex_part:<48} |{ascii_part}|")
+        print(f" 0x{i:04x}: {hex_part:<48} |{ascii_part}|")
         outdump.append(f" 0x{i:04x}: {hex_part:<48} |{ascii_part}|\n")
 
     attr_M2["dump"] = "".join(outdump)

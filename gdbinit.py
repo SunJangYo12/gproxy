@@ -168,7 +168,8 @@ class StepSync:
 
             proxy.jump("%#x" % self.last_rip)
 
-mikrotik_sniff = deque([], maxlen=40)
+mikrotik_dump_iter = 0
+mikrotik_dump_index = 0
 
 class TraceBreakpoint(gdb.Breakpoint):
     def __init__(self, addr, func_name=None, bn=None, hook=None, bb=False, target=None):
@@ -184,7 +185,7 @@ class TraceBreakpoint(gdb.Breakpoint):
         self.target = target
 
         if self.target == "mikrotik":
-            self.pmikrotik_sniff = "/tmp/mikrotik-sniff.json"
+            self.mikrotik_dump = "/tmp/mikrotik-dump"
 
         if bb:
             proxy.set_global("")
@@ -311,11 +312,21 @@ class TraceBreakpoint(gdb.Breakpoint):
             print(f"[TRACE] Hit {self.func_name}  => {self.addr}")
 
             if self.target == "mikrotik":
-                mikrotik_data = sniff_m2.buffer_trace(self.func_name)
-                mikrotik_sniff.append(mikrotik_data)
+                global mikrotik_dump_iter
+                global mikrotik_dump_index
 
-                with open(self.pmikrotik_sniff, "w") as fd:
-                    json.dump(list(mikrotik_sniff), fd, indent=2)
+                if mikrotik_dump_iter > 1 and mikrotik_dump_iter % 30 == 1:
+                    mikrotik_dump_index += 1
+                    mikrotik_dump_iter = 0
+                else:
+                    mikrotik_dump_iter += 1
+
+                if not os.path.exists(self.mikrotik_dump):
+                    os.mkdir(self.mikrotik_dump)
+
+                mikrotik_data = sniff_m2.buffer_trace(self.func_name)
+                with open(f"{self.mikrotik_dump}/mik-{mikrotik_dump_index}.jsonl", "a") as fd:
+                    fd.write(json.dumps(mikrotik_data) + "\n")
 
                 proxy.settofrida_func("", "update_gdb_mikrotik")
 

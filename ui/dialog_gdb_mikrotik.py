@@ -76,9 +76,47 @@ class DialogMikrotikSniff(QDialog):
         self.tree_widget.itemCollapsed.connect(self.click_collap)
         self.tree_widget.setExpandsOnDoubleClick(False)
 
+        #count history
+        self.label_his = QLabel("")
+        self.label_his.setFont(self.font)
+
+        #forward
+        self.btnF = QToolButton()
+        self.btnF.setIcon(self.style().standardIcon(QStyle.SP_ArrowForward))
+        self.btnF.setIconSize(QSize(20,20))
+        self.btnF.setToolTip("History forward")
+
+        #back
+        self.btnB = QToolButton()
+        self.btnB.setIcon(self.style().standardIcon(QStyle.SP_ArrowBack))
+        self.btnB.setIconSize(QSize(20,20))
+        self.btnB.setToolTip("History backward")
+
+        #search
+        self.lineEdit = QLineEdit()
+        self.lineEdit.setObjectName(u"lineEdit")
+
+        self.btnS = QToolButton()
+        self.btnS.setIcon(self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
+        self.btnS.setIconSize(QSize(20,20))
+        self.btnS.setToolTip("Search")
+
+        # set layout
+        h_layout = QHBoxLayout()
+        h_layout.addWidget(self.btnB)
+        h_layout.addWidget(self.btnF)
+        h_layout.addWidget(self.label_his)
+        h_layout.addWidget(self.lineEdit)
+        h_layout.addWidget(self.btnS)
 
         layout = QVBoxLayout()
         layout.addWidget(self.tree_widget)
+        layout.addLayout(h_layout)
+
+        # action
+        self.btnF.clicked.connect(self.click_stateF)
+        self.btnB.clicked.connect(self.click_stateB)
+        self.btnS.clicked.connect(self.click_search)
 
         self.setLayout(layout)
         self.bv = data
@@ -87,8 +125,27 @@ class DialogMikrotikSniff(QDialog):
         self.recvmsg_to = None   #this tmp
         self.recvmsg_from = None #this tmp
         self.ex_vizinit = False
+        self.fpointer = 0
+        self.fpointer_total = 0
         self.showData()
         SIGNALS.gdb_updated_mikrotik_sniff.connect(self.showData)
+
+    def click_stateF(self):
+        if self.fpointer >= self.fpointer_total-1:
+            return
+
+        self.fpointer += 1
+        self.showData()
+
+    def click_stateB(self):
+        if self.fpointer == 0:
+            return
+
+        self.fpointer -= 1
+        self.showData()
+
+    def click_search(self):
+        print("senksjdksdk")
 
     def cekandset_expand(self, tree, id):
         for data in self.expanded_items:
@@ -113,10 +170,15 @@ class DialogMikrotikSniff(QDialog):
     def open_json(self, pf):
         data = []
         try:
-            with open(pf) as f:
-                data = json.load(f)
-        except:
-            pass
+            print(pf)
+            #with open(pf) as f:
+            #    data = json.load(f)
+
+            with open(pf, "r") as fd:
+                for line in fd:
+                    data.append(json.loads(line))
+        except Exception as e:
+            print(e)
         return data
 
     def add_ext_window_node(self, node_name, parent_name, an_from=None, an_to=None):
@@ -173,42 +235,26 @@ class DialogMikrotikSniff(QDialog):
                 self.recvmsg_to = None
                 self.recvmsg_from = None
 
-    def updateGraph(self, who):
-        title = f"{who['sink']} {hex(who['iov'])} {who['out_m2']['packet_length']}"
-        print(title)
-        print(self.viz)
-
-        # Context: loader binary
-        # TODO
-        # 1). Send
-        # who is send
-        #   -sink     : sendmsg
-        #   -opration : SYS_FROM => www(70)
-        # send to
-        #   -sink     : recvmsg
-        #   -opration : SYS_TO => user(13) handler(1)
-
-        # other
-        # sys_to == [0xff0002, 1,2,3,] #multicast
-        # sys_to == [0xff0001] #broadcast
-
-        # add color
-        #GLOBAL.graph_attr = {
-        #    "n_color": HighlightStandardColor.GreenHighlightColor,
-        #    "e_color": BranchType.FalseBranch,
-        #    "node_color": ["loader", "www"],
-        #    "edge_color": ["loader", "www"]
-        #}
-        #self.bv.offset = 0x401260 # change this
-
     def showData(self):
         self.tree_widget.clear()
-        mydata = self.open_json("/tmp/mikrotik-sniff.json")
+
+        pf = "/tmp/mikrotik-dump"
+        try:
+            with os.scandir(pf) as entries:
+                dump_files = [entry.name for entry in entries if entry.is_file()]
+        except:
+            return
+
+        self.fpointer_total = len(dump_files)
+        self.label_his.setText(f"{self.fpointer}/{self.fpointer_total-1}")
+        mydata = self.open_json(pf+"/"+dump_files[self.fpointer])
+
         if len(mydata) == 0:
             return
+
         mydata.reverse() #balik terakhir diatas (terbaru)
 
-        self.tree_widget.headerItem().setText(0, "Buffer iov Total: %s" %len(mydata) )
+        self.tree_widget.headerItem().setText(0, f"Buffer iov Total: {len(mydata)} ({dump_files[self.fpointer]})")
 
         zz = 0
         self.viz = {}
@@ -269,7 +315,6 @@ class DialogMikrotikSniff(QDialog):
                 ttip.append(f'{z["id"]} ({z["type"]})\n')
             item.setToolTip(0, "".join(ttip))
 
-        #self.updateGraph(mydata[0])
         self.updateGraphExtWindow(mydata[0]) # BUG: race data, efek saat update sink tidak tepat
 
     def on_item_double_clicked(self, item, column):
@@ -294,7 +339,6 @@ class DialogMikrotikSniff(QDialog):
                                 self.viz[op_key].append(isi)
                         except:
                             pass
-            #self.updateGraph(i)
             self.updateGraphExtWindow(i)
         except Exception as e:
             print(e)
@@ -343,7 +387,6 @@ class DialogMikrotikSniff(QDialog):
                                 self.viz[op_key].append(isi)
                         except:
                             pass
-            #self.updateGraph(i)
             self.updateGraphExtWindow(i)
 
         elif action == "Info recvmsg structure":

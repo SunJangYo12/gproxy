@@ -258,6 +258,7 @@ class DialogMikrotikSniff(QDialog):
 
         zz = 0
         self.viz = {}
+        ttip = []
         for i in mydata:
             zz += 1
             title = f"{i['sink']} {hex(i['iov'])} {i['out_m2']['packet_length']}"
@@ -275,13 +276,16 @@ class DialogMikrotikSniff(QDialog):
                 for key, op in M2_OPRATION.items():
                     if z['id'] == key:
                         mid_item.setText(0, f"{z['id']} ({op.upper()})")
+
                         op_key = op
                         if zz == 1:
                             self.viz[op_key] = []
+                        break
 
                 mid_item.setFont(0, self.font)
                 mid_item.setToolTip(0, f"Type: {z['type']}")
 
+                tisi = []
                 if isinstance(z['value'], list):
                     mval_item = QTreeWidgetItem(mid_item)
                     mval_item.setText(0, f"Value: {len(z['value'])}")
@@ -297,10 +301,12 @@ class DialogMikrotikSniff(QDialog):
                                 for x3 in GLOBAL.graph_nodes:
                                     if x3["x3_id"] == f"{isi}":
                                         isi = f'{isi} {x3["binary"]}'
+
                                 if zz == 1:
                                     self.viz[op_key].append(isi)
                         except:
                             isi = ival
+                        tisi.append(isi)
                         mival_item.setText(0, f"{isi}")
                         mival_item.setFont(0, self.font)
                         mival_item.setToolTip(0, f"{ival}")
@@ -310,12 +316,17 @@ class DialogMikrotikSniff(QDialog):
                     mval_item.setFont(0, self.font)
                     mval_item.setToolTip(0, f"{z['value']}")
 
-            ttip = []
-            for z in i["out_m2"]["m2_data"]:
-                ttip.append(f'{z["id"]} ({z["type"]})\n')
-            item.setToolTip(0, "".join(ttip))
+                if op_key:
+                    if len(tisi) == 0:
+                        ttip.append(f"{z['id']} ({op_key.upper()})\n")
+                    else:
+                        ttip.append(f"{z['id']} ({op_key.upper()})\n    {tisi}\n")
+                    tisi = []
 
-        self.updateGraphExtWindow(mydata[0]) # BUG: race data, efek saat update sink tidak tepat
+            item.setToolTip(0, "".join(ttip))
+            ttip = []
+
+        #self.updateGraphExtWindow(mydata[0]) # BUG: race data, efek saat update sink tidak tepat
 
     def on_item_double_clicked(self, item, column):
         try:

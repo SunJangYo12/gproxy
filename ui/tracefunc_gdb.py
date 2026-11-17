@@ -1,8 +1,8 @@
 from binaryninjaui import DockHandler, DockContextHandler, UIActionHandler, getMonospaceFont
-from PySide2 import QtCore
-from PySide2.QtGui import QColor, QBrush, QFont
-from PySide2.QtCore import Qt, QPoint, QEvent, QSize, QThread, Signal, QTimer
-from PySide2.QtWidgets import (
+from PySide6 import QtCore
+from PySide6.QtGui import QColor, QBrush, QFont
+from PySide6.QtCore import Qt, QPoint, QEvent, QSize, QThread, Signal, QTimer
+from PySide6.QtWidgets import (
      QApplication,
      QHBoxLayout,
      QVBoxLayout,

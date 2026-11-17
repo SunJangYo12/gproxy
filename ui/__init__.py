@@ -1,6 +1,6 @@
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 from binaryninjaui import DockHandler, UIAction, UIActionHandler, Menu, ViewType
-from PySide2.QtCore import Qt
+from PySide6.QtCore import Qt
 from .state_angr_list import StateAngrListDockWidget
 from .tracefunc_gdb import FuncListDockWidget, BasicBlockDockWidget
 from .tracefunc_frida import FridaFuncListDockWidget

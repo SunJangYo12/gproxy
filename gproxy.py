@@ -197,9 +197,11 @@ class Gproxy:
             #    if sym:
             #        if sym.type == SymbolType.FunctionSymbol:
             #            out.write(f"{hex(func.start)} {func.symbol.full_name}\n")
+            #for f in self.view.functions:
+            #    out.write(f"{hex(f.start)} {f.symbol.full_name}\n")
 
-            for f in self.view.functions:
-                out.write(f"{hex(f.start)} {f.symbol.full_name}\n")
+            for f in self.view.get_symbols_of_type(SymbolType.ImportedFunctionSymbol):
+                out.write(f"{hex(f.address)} {f.full_name}\n")
 
         return True
 

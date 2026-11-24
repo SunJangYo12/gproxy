@@ -328,7 +328,7 @@ class TraceBreakpoint(gdb.Breakpoint):
                 with open(f"{self.mikrotik_dump}/mik-{mikrotik_dump_index}.jsonl", "a") as fd:
                     fd.write(json.dumps(mikrotik_data) + "\n")
 
-                proxy.settofrida_func("", "update_gdb_mikrotik")
+                #proxy.settofrida_func("", "update_gdb_mikrotik")
 
             elif self.target == "zzzzzzz":
                 trace_buffer.buffer_trace(self.func_name)

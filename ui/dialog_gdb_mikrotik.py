@@ -248,7 +248,10 @@ class DialogMikrotikSniff(QDialog):
 
         self.fpointer_total = len(dump_files)
         self.label_his.setText(f"{self.fpointer}/{self.fpointer_total-1}")
-        mydata = self.open_json(pf+"/"+dump_files[self.fpointer])
+        try:
+            mydata = self.open_json(pf+"/"+dump_files[self.fpointer])
+        except:
+            mydata = []
 
         if len(mydata) == 0:
             return

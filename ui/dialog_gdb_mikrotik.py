@@ -1,6 +1,6 @@
 from binaryninjaui import DockHandler, DockContextHandler, UIActionHandler, getMonospaceFont
 from PySide6 import QtCore
-from PySide6.QtGui import QColor, QBrush
+from PySide6.QtGui import QColor, QBrush, QIcon
 from PySide6.QtCore import Qt, QPoint, QEvent, QSize, QThread, Signal, QTimer
 from PySide6.QtWidgets import (
      QApplication,
@@ -80,15 +80,16 @@ class DialogMikrotikSniff(QDialog):
         self.label_his = QLabel("")
         self.label_his.setFont(self.font)
 
+
         #forward
         self.btnF = QToolButton()
-        self.btnF.setIcon(self.style().standardIcon(QStyle.SP_ArrowForward))
+        self.btnF.setIcon(QIcon.fromTheme("go-next"))
         self.btnF.setIconSize(QSize(20,20))
         self.btnF.setToolTip("History forward")
 
         #back
         self.btnB = QToolButton()
-        self.btnB.setIcon(self.style().standardIcon(QStyle.SP_ArrowBack))
+        self.btnB.setIcon(QIcon.fromTheme("go-previous"))
         self.btnB.setIconSize(QSize(20,20))
         self.btnB.setToolTip("History backward")
 
@@ -97,7 +98,7 @@ class DialogMikrotikSniff(QDialog):
         self.lineEdit.setObjectName(u"lineEdit")
 
         self.btnS = QToolButton()
-        self.btnS.setIcon(self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
+        self.btnS.setIcon(QIcon.fromTheme("system-search"))
         self.btnS.setIconSize(QSize(20,20))
         self.btnS.setToolTip("Search")
 

@@ -93,7 +93,7 @@ protocol M2 dan extrack datanya lalu divisualisasikan ke binaryninja
     $ ./rw/disk/gdbserver.i686 --attach 192.168.43.1:443 `pidof loader`
 3.) remote attach
     $ gdb ./loader
-    (gdb) cmdtracefunc generate => edit /tmp/funcs.txt sisakan recvmsg
+    (gdb) cmdtracefunc generate => edit /tmp/funcs.txt sisakan recvmsg atau jika alamat adalah lazy pakai gdb p recvmsg > copy ke /tmp/funcs.txt
     (gdb) target remote 192.168.43.1:8243
     (gdb) cmdtracefunc run-mikrotik
 4.) Untuk visualisasi pakai ui external

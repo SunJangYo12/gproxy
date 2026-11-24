@@ -3,7 +3,7 @@ Bandingkan fungsi antara binary lama dan baru di Binary Ninja.
 
 Cara pakai di console Python (tab binary BARU harus aktif, jadi `bv` = versi baru):
 
-    exec(open("/path/ke/diff_funcs.py").read())
+    exec(open("/home/jin/.binaryninja/plugins/gproxy/analyses/diff_funcs.py").read())
     bandingkan("/path/ke/old.bndb")
 
 Hasil tersimpan di variabel console:

@@ -14,7 +14,8 @@ from binaryninja import (
     core_version,
     log_info,
     highlight,
-    SymbolType
+    SymbolType,
+    SymbolBinding
 )
 
 from .constants import (
@@ -186,7 +187,7 @@ class Gproxy:
             return False
 
     @expose
-    def setgeneratesymbol(self):
+    def setgeneratesymbol(self, sw):
         """
         generate symbol to file
         """
@@ -200,8 +201,14 @@ class Gproxy:
             #for f in self.view.functions:
             #    out.write(f"{hex(f.start)} {f.symbol.full_name}\n")
 
-            for f in self.view.get_symbols_of_type(SymbolType.ImportedFunctionSymbol):
-                out.write(f"{hex(f.address)} {f.full_name}\n")
+            if sw == "import":
+                for f in self.view.get_symbols_of_type(SymbolType.ImportedFunctionSymbol):
+                    out.write(f"{hex(f.address)} {f.full_name}\n")
+
+            elif sw == "export":
+                for sym in self.view.get_symbols():
+                    if sym.type == SymbolType.FunctionSymbol and sym.binding == SymbolBinding.GlobalBinding:
+                        out.write(f"{hex(sym.address)} {sym.full_name}\n")
 
         return True
 

@@ -286,7 +286,7 @@ class TraceBreakpoint(gdb.Breakpoint):
 
                 gdb_stack = "".join(result)
 
-        if self.read_dynamic_config("read_registers") != "":
+        elif self.read_dynamic_config("read_registers") != "":
             func_name = self.read_dynamic_config("read_registers")
             if self.func_name == func_name:
                 print(f"show regs => {func_name}")
@@ -308,7 +308,7 @@ class TraceBreakpoint(gdb.Breakpoint):
                     result.append(f"{val[0]}={arch.format_address(addr)}{label} {val_reg}\n")
                 gdb_memregs = "".join(result)
 
-        if self.func_name:
+        elif self.func_name:
             print(f"[TRACE] Hit {self.func_name}  => {self.addr}")
 
             if self.target == "mikrotik":
@@ -337,6 +337,7 @@ class TraceBreakpoint(gdb.Breakpoint):
                 output = f"{self.addr}|||{self.func_name}T_T{gdb_memregs}T_T{gdb_memstruct}T_T{gdb_stack}"
                 output = base64.b64encode(output.encode()).decode()
                 proxy.settogdb(output)
+
             # Custom hook
             if self.hook:
                 kernel_cmd.hook(self.func_name, proxy)
@@ -516,8 +517,8 @@ class LoadTrace(gdb.Command):
 
         elif arg == "run-mikrotik":
             target = "mikrotik"
-            bn = True
-            proxy.settofrida_func("gdb_func", "refresh")
+            bn = False
+            #proxy.settofrida_func("gdb_func", "refresh")
 
             bipc_out = []
             for bipc in sniff_m2.x3_system:
@@ -526,7 +527,7 @@ class LoadTrace(gdb.Command):
                     "binary": dat[0],
                     "x3_id": dat[1]
                 })
-            proxy.settofrida_openwindow("gdb_mikrotik_sniff", bipc_out)
+            #proxy.settofrida_openwindow("gdb_mikrotik_sniff", bipc_out)
 
         elif arg == "run-bn":
             print("[+] starting traces..")
@@ -554,18 +555,26 @@ class LoadTrace(gdb.Command):
             t.start()
             proxy.settofrida_func("gdb_func_dprintf", "refresh")
 
-
-        elif arg == "generate":
-            proc = proxy.setgeneratesymbol()
+        elif arg == "gen-import":
+            proc = proxy.setgeneratesymbol("import")
             if proc:
-                print("[+] success generate symbol in /tmp/funcs.txt")
+                print("[+] success generate import symbol in /tmp/funcs.txt")
+            else:
+                print("[+] failed!")
+            return
+
+        elif arg == "gen-export":
+            proc = proxy.setgeneratesymbol("export")
+            if proc:
+                print("[+] success generate export symbol in /tmp/funcs.txt")
             else:
                 print("[+] failed!")
             return
 
         else:
             print("\nImportant: binaryninja harus di rebase mengikuti base address gdb")
-            print("Usage: cmdtracefunc generate <= generate function addr from binja")
+            print("Usage: cmdtracefunc gen-import <= generate function import addr from binja")
+            print("Usage: cmdtracefunc gen-export <= generate function export addr from binja")
             print("Usage: cmdtracefunc dprintf <= trace with dprintf(old) now using breakpoint")
             print("Usage: cmdtracefunc run <= setup breakpoint, continue for start")
             print("Usage: cmdtracefunc run-bn")
@@ -600,11 +609,9 @@ class LoadTrace(gdb.Command):
                     # Pasang trace-breakpoint
                     if bblock:
                         TraceBreakpoint(addr, name, bn, hook, bb=True)
-
                     elif dprintf:
                         #gdb.execute(f'dprintf *{addr}, "{name}\\n"')
                         CountBP(addr, name)
-
                     else:
                         TraceBreakpoint(addr, name, bn, hook, target=target)
 
@@ -641,15 +648,15 @@ class KernelProcList(gdb.Command):
             print("\nusage: cmdkernelproclist run\n")
 
 
-RegsCommand()
-CommandVersion()
-CommandJump()
-CommandFuzzPtrace()
-CommandComment()
-CommandColor()
-CommandColorBlock()
-StepSync()
+#RegsCommand()
+#CommandVersion()
+#CommandJump()
+#CommandFuzzPtrace()
+#CommandComment()
+#CommandColor()
+#CommandColorBlock()
+#StepSync()
 LoadTrace()
-LoadTraceMemory()
-KernelProcList()
-detect_struct.install_all()
+#LoadTraceMemory()
+#KernelProcList()
+#detect_struct.install_all()

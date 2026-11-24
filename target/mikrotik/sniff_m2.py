@@ -210,11 +210,11 @@ def parse_m2_packet(data, buf_addr):
     attr_M2["msg_length"]    = total_len
     attr_M2["magic"]         = magic.hex()
 
-#    print(f" -> M2 PACKET HEADER => {hex(buf_addr)}")
-#    print(f" Packet Length    : 0x{pkt_len:02x} ({pkt_len})")
-#    print(f" Security Mode    : 0x{sec_mode:02x} ({sec_mode})")
-#    print(f" Total Msg Length : 0x{total_len:04x} ({total_len})")
-#    print(f" Magic            : {magic} = 0x{magic.hex()}")
+    print(f" -> M2 PACKET HEADER => {hex(buf_addr)}")
+    print(f" Packet Length    : 0x{pkt_len:02x} ({pkt_len})")
+    print(f" Security Mode    : 0x{sec_mode:02x} ({sec_mode})")
+    print(f" Total Msg Length : 0x{total_len:04x} ({total_len})")
+    print(f" Magic            : {magic} = 0x{magic.hex()}")
 
     # Dump attribute
     if magic == b"M2":
@@ -222,8 +222,8 @@ def parse_m2_packet(data, buf_addr):
             m2_data = parse_m2_attribute(data[0:pkt_len+50])
             attr_M2["m2_data"] = m2_data
 
-            for i in m2_data:
-                print(i)
+            #for i in m2_data:
+            #    print(i)
         except Exception as e:
             traceback.print_exc()
     else:

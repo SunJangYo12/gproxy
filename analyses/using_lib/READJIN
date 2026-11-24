@@ -1,0 +1,6 @@
+1. buka lib.so di binaryninja, lalu console
+exec(open("/home/jin/.binaryninja/plugins/gproxy/analyses/libexport.py").read())
+maka akan tersimpan di /tmp/exports.json
+
+2. buka binary yang pakai lib.so itu, lalu console
+exec(open("/home/jin/.binaryninja/plugins/gproxy/analyses/libexport_using.py").read())

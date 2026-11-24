@@ -96,14 +96,18 @@ protocol M2 dan extrack datanya lalu divisualisasikan ke binaryninja
     (gdb) cmdtracefunc generate => edit /tmp/funcs.txt sisakan recvmsg atau jika alamat adalah lazy pakai gdb p recvmsg > copy ke /tmp/funcs.txt
     (gdb) target remote 192.168.43.1:8243
     (gdb) cmdtracefunc run-mikrotik
-4.) Untuk visualisasi pakai ui external
+4.) ini memicu window baru "Gdb mikroti.." yang memiliki opsi visual external(python)
+5.) Untuk visualisasi pakai ui external
     $ python target/mikrotik/external_window/server2.py
     tunggu semua nova binary di load.
 
-NOTE: otomatis ada ui baru (Gdb mikrotik).
-port 443 asal pakai karena ngangur di pengaturan qemu dan bisa diakses
-diluar jaringan dengan port 8243. kita bisa mencocokan data dengan dump
-hex dari klik kanan > Dump hex
+NOTE:
+- window gdb mikrotik:
+  list data 
+    
+- port 443 asal pakai karena ngangur di pengaturan qemu dan bisa
+  diakses diluar jaringan dengan port 8243.
+- kita bisa mencocokan data dengan dump hex dari klik kanan > Dump hex
 
 ```
 

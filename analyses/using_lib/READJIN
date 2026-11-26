@@ -4,3 +4,5 @@ maka akan tersimpan di /tmp/exports.json
 
 2. buka binary yang pakai lib.so itu, lalu console
 exec(open("/home/jin/.binaryninja/plugins/gproxy/analyses/libexport_using.py").read())
+
+3. di binaryninja view > other docks > show function list

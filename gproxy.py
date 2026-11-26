@@ -187,11 +187,15 @@ class Gproxy:
             return False
 
     @expose
-    def setgeneratesymbol(self, sw):
+    def setgeneratesymbol(self, sw, block_addr=None):
         """
         generate symbol to file
         """
-        with open("/tmp/funcs.txt", "w") as out:
+        myfd = "w"
+        if sw == "gen-block":
+            myfd = "a"
+
+        with open("/tmp/funcs.txt", myfd) as out:
 
             #for func in self.view.functions:
             #    sym = self.view.get_symbol_at(func.start)
@@ -209,6 +213,13 @@ class Gproxy:
                 for sym in self.view.get_symbols():
                     if sym.type == SymbolType.FunctionSymbol and sym.binding == SymbolBinding.GlobalBinding:
                         out.write(f"{hex(sym.address)} {sym.full_name}\n")
+
+            elif sw == "gen-block" and block_addr:
+                for sym in self.view.functions:
+
+                    if sym.symbol.address == int(block_addr, 0):
+                        for bb in sym.basic_blocks:
+                            out.write(f"{hex(bb.start)} {sym.symbol.full_name}-{hex(bb.start)}\n")
 
         return True
 

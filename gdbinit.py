@@ -227,17 +227,19 @@ class TraceBreakpoint(gdb.Breakpoint):
             pass
         return out
 
-    def _append_gdbfunc(self, s):
+    def _append_gdbfunc(self, s, a):
         now = time.time()
 
         if s in gdb_functions:
             gdb_functions[s]["count"] += 1
             gdb_functions[s]["time"] = now + 3
+            gdb_functions[s]["addr"] = a
         else:
             gdb_functions[s] = {
                 "count": 1,
                 "time": now + 3,
-                "block": []
+                "block": [],
+                "addr": a
             }
 
     def stop(self):
@@ -347,11 +349,13 @@ class TraceBreakpoint(gdb.Breakpoint):
 
 
             elif self.target == "call-count":
-                self._append_gdbfunc(self.func_name)
+                self._append_gdbfunc(self.func_name, self.addr)
 
                 for f_name, data in gdb_functions.items():
-                    print(f"[TRACE] Hit {data['count']} {f_name}")
+                    print(f"[TRACE] Hit {data['count']} {f_name}  => {data['addr']}")
                 print("\n")
+
+
 
             elif self.target == "zzzzzzz":
                 trace_buffer.buffer_trace(self.func_name)
@@ -535,9 +539,15 @@ class LoadTrace(gdb.Command):
         dprintf = False
         target = ""
 
+        cmd = arg.split(" ")
+        arg = cmd[0]
+        try:
+            myparam = cmd[1]
+        except:
+            myparam = ""
+
         if arg == "run":
             print("[+] starting traces..")
-
 
         elif arg == "run-cc":
             print("[+] starting traces call-count..")
@@ -601,10 +611,24 @@ class LoadTrace(gdb.Command):
                 print("[+] failed!")
             return
 
+
+        elif arg == "gen-block":
+            if myparam == "":
+                print("[!] type param eg. cmdtracefunc gen-block 0x123")
+                return
+
+            proc = proxy.setgeneratesymbol("gen-block", myparam)
+            if proc:
+                print("[+] success generate export symbol in /tmp/funcs.txt")
+            else:
+                print("[+] failed!")
+            return
+
         else:
             print("\nImportant: binaryninja harus di rebase mengikuti base address gdb")
             print("Usage: cmdtracefunc gen-import <= generate function import addr from binja")
             print("Usage: cmdtracefunc gen-export <= generate function export addr from binja")
+            print("Usage: cmdtracefunc gen-block 0x123 <= generate function addr from binja by address function block")
             print("Usage: cmdtracefunc dprintf <= trace with dprintf(old) now using breakpoint")
             print("Usage: cmdtracefunc run <= setup breakpoint, continue for start")
             print("Usage: cmdtracefunc run-bn")

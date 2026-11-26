@@ -170,6 +170,7 @@ class StepSync:
 
 mikrotik_dump_iter = 0
 mikrotik_dump_index = 0
+gdb_functions = {}
 
 class TraceBreakpoint(gdb.Breakpoint):
     def __init__(self, addr, func_name=None, bn=None, hook=None, bb=False, target=None):
@@ -225,6 +226,19 @@ class TraceBreakpoint(gdb.Breakpoint):
         except:
             pass
         return out
+
+    def _append_gdbfunc(self, s):
+        now = time.time()
+
+        if s in gdb_functions:
+            gdb_functions[s]["count"] += 1
+            gdb_functions[s]["time"] = now + 3
+        else:
+            gdb_functions[s] = {
+                "count": 1,
+                "time": now + 3,
+                "block": []
+            }
 
     def stop(self):
         gdb_memregs = ""
@@ -309,7 +323,8 @@ class TraceBreakpoint(gdb.Breakpoint):
                 gdb_memregs = "".join(result)
 
         elif self.func_name:
-            print(f"[TRACE] Hit {self.func_name}  => {self.addr}")
+            if self.target != "call-count":
+                print(f"[TRACE] Hit {self.func_name}  => {self.addr}")
 
             if self.target == "mikrotik":
                 global mikrotik_dump_iter
@@ -329,6 +344,14 @@ class TraceBreakpoint(gdb.Breakpoint):
                     fd.write(json.dumps(mikrotik_data) + "\n")
 
                 #proxy.settofrida_func("", "update_gdb_mikrotik")
+
+
+            elif self.target == "call-count":
+                self._append_gdbfunc(self.func_name)
+
+                for f_name, data in gdb_functions.items():
+                    print(f"[TRACE] Hit {data['count']} {f_name}")
+                print("\n")
 
             elif self.target == "zzzzzzz":
                 trace_buffer.buffer_trace(self.func_name)
@@ -515,6 +538,12 @@ class LoadTrace(gdb.Command):
         if arg == "run":
             print("[+] starting traces..")
 
+
+        elif arg == "run-cc":
+            print("[+] starting traces call-count..")
+            target = "call-count"
+            bn = True
+
         elif arg == "run-mikrotik":
             target = "mikrotik"
             bn = False
@@ -533,6 +562,7 @@ class LoadTrace(gdb.Command):
             print("[+] starting traces..")
             proxy.settofrida_func("gdb_func", "refresh")
             bn = True
+
         elif arg == "run-bn-block":
             print("[+] starting traces..")
             bn = True
@@ -579,6 +609,8 @@ class LoadTrace(gdb.Command):
             print("Usage: cmdtracefunc run <= setup breakpoint, continue for start")
             print("Usage: cmdtracefunc run-bn")
             print("          setup breakpoint, continue for start, with send to binaryninja")
+            print("Usage: cmdtracefunc run-cc")
+            print("          setup breakpoint, continue for start, call count in gdb and dump to file")
             print("Usage: cmdtracefunc run-mikrotik <= custom function hook in binary mikrotik for sniff M2 message protocol")
 
             print("Usage: cmdtracefunc run-bn-block")

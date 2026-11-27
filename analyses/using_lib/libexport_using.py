@@ -17,8 +17,11 @@ matched = loader_imports & libumsg_exports.keys()
 print(f"loader imports {len(loader_imports)} functions total")
 print(f"{len(matched)} of them match libumsg.so exports:\n")
 
-GLOBAL.gdb_functions = {}
+#GLOBAL.gdb_functions = {}
 for name in sorted(matched):
-    GLOBAL.append_gdbfunc(libumsg_exports[name]["name_resolve"]) #name_resolve/address
+    #GLOBAL.append_gdbfunc(libumsg_exports[name]["name_resolve"]) #name_resolve/address
+    print(libumsg_exports[name]["name_resolve"]) #name_resolve/address
+    print(libumsg_exports[name]["address"]) #name_resolve/address
+    print()
 
-SIGNALS.gdb_updated.emit()
+#SIGNALS.gdb_updated.emit()

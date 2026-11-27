@@ -351,9 +351,21 @@ class TraceBreakpoint(gdb.Breakpoint):
             elif self.target == "call-count":
                 self._append_gdbfunc(self.func_name, self.addr)
 
+                out = []
                 for f_name, data in gdb_functions.items():
+                    data_cc = {
+                        "count": data['count'],
+                        "addr": data['addr'],
+                        "name": f_name
+                    }
+                    out.append(data_cc)
                     print(f"[TRACE] Hit {data['count']} {f_name}  => {data['addr']}")
+
                 print("\n")
+
+                with open(f"/dev/shm/gdb-hit-cc.jsonl", "w") as fd:
+                    fd.write(json.dumps(out) + "\n")
+
 
 
 

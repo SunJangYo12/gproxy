@@ -111,6 +111,18 @@ NOTE:
 
 ```
 
+# Warnain jejak eksekusi dengan GDB & binja (PASIF)
+```
+1. open bn > plugin > gproxy > start service
+2. (gdb) cmdtracefunc gen-block <addr fungsi, target func block>
+3. edit di /tmp/funcs.txt jika perlu
+4. (gdb) cmdtracefunc run-cc
+5. (gdb) cc
+6. akan tersimpan di /dev/shm/gdb-hit-cc.jsonl
+7. untuk menampilkan di binja
+    - buka bn lalu cursor di posisi fungsi yang akan dianalisis blocknya
+    - plugins > gproxy > color block
+```
 
 # Trace function basic block
 ```

@@ -1,7 +1,7 @@
 import socket
 import threading
 import xmlrpc.server, xmlrpc.client
-
+import json
 
 from binaryninja import (
     log_info,
@@ -9,6 +9,7 @@ from binaryninja import (
     show_message_box,
     MessageBoxButtonSet,
     MessageBoxIcon,
+    highlight
 )
 from binaryninjaui import DockHandler
 
@@ -139,4 +140,32 @@ def analysesSkor(bv):
 PluginCommand.register(
     "Gproxy\\Start analyses",
     "untuk mengumpulkan skor", analysesSkor)
+
+
+
+def warnaJejak(bv, addr, count):
+    color = '0xaa00aa'
+    addr = int(addr, 0)
+    bbs = bv.get_basic_blocks_at(addr)
+
+    if (bbs):
+        color = int(color, 0)
+        R,G,B = (color >> 16)&0xff, (color >> 8)&0xff, (color&0xff)
+        color = highlight.HighlightColor(red=R, blue=G, green=B)
+
+        bb = bbs[0]
+        bb.highlight = color
+
+def tampilkanJejak(bv):
+    with open("/dev/shm/gdb-hit-cc.jsonl") as f:
+        func_hit = json.load(f)
+
+    for f in func_hit:
+        print(f"[+] block color: {f['name']} => {f['addr']}")
+        warnaJejak(bv, f['addr'], f['count'])
+
+
+PluginCommand.register(
+    "Gproxy\\Color blocks",
+    "hasil jejak eksekusi gdb", tampilkanJejak)
 
